@@ -1475,6 +1475,12 @@ func (d *Database) runMenuConsolidationMigrations() {
 	if err := d.runAndRecord(249, "duty_pools_menu_state", migrations.Migrate249DutyPoolsMenuState); err != nil {
 		applogger.Errorf("值班池菜单状态归位迁移失败 (非阻断,留待下次启动): %v", err)
 	}
+	// 250：周期工单模板 4 条动作权限码播种（RBAC-EXC-01 清偿）。
+	// enable/disable/generate/logs 迁严格写组后，若 sys_menu 无 F 型承载行，
+	// 非超管角色必然 403（与 OQ-7 / migration 237 同型）。故补齐授权载体。
+	if err := d.runAndRecord(250, "workorder_periodic_action_perm_seed", migrations.Migrate250WorkOrderPeriodicActionPermSeed); err != nil {
+		applogger.Errorf("周期工单动作权限码播种迁移失败 (非阻断,留待下次启动): %v", err)
+	}
 }
 
 // ensureSQLiteJoinTableColumns many2many join 表的列级对齐兜底（task-23）。

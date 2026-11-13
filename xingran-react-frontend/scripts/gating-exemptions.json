@@ -230,12 +230,6 @@
       "evidence": "src/constants/permissionCodes.ts 无 workorder 区块；pkg/permission/config.go 无 workorder: 前缀"
     },
     {
-      "page": "src/pages/workorder/periodic/templates/index.tsx",
-      "category": "no-permission-code",
-      "reason": "周期工单模板页有新增/编辑/删除写入口，但前端权限码清单无 workorder 区块；等后端拆分 phase 回补后再铺开门控。该页 Switch 命中为表单字段 Switch（通知处理人 <Form.Item name=\"notifyAssignee\" valuePropName=\"checked\"> 内、无 onChange），随表单提交生效，不构成独立业务写入口。",
-      "evidence": "src/constants/permissionCodes.ts 无 workorder 区块；pkg/permission/config.go 无 workorder: 前缀；Switch 命中 src/pages/workorder/periodic/templates/index.tsx:590"
-    },
-    {
       "page": "src/pages/workorder/statistics/index.tsx",
       "category": "read-only",
       "reason": "工单统计页为纯统计/图表视图，扫描器写入口特征零命中、人工复核亦无写向按钮，无可门控的写入口。",

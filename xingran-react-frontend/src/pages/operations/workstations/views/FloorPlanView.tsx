@@ -9,7 +9,7 @@ import type { WorkstationOps } from "@/types";
 import type { WorkstationNode } from "@/components/shared/FloorPlanEditor.types";
 import FloorPlanEditor from "@/components/shared/FloorPlanEditor";
 import {
-  getWorkstationTypeText,
+  resolveWorkstationTypeText,
   getWorkstationStatusText,
   getWorkstationStatusColor,
 } from "../constants";
@@ -28,6 +28,11 @@ export interface WorkstationFloorPlanViewProps {
   ) => Promise<void>;
   onEdit: (workstation: WorkstationNode) => void;
   onCloseFloorPlan: () => void;
+  /**
+   * 工位类型字典（ops_workstation_type）——由页面层 useDict 提供。
+   * 不传 = 退化为静态映射（字典空态/接口异常），行为与迁移前一致。
+   */
+  typeDict?: ReadonlyArray<{ dictValue: string; dictLabel: string }>;
 }
 
 export function WorkstationFloorPlanView({
@@ -39,6 +44,7 @@ export function WorkstationFloorPlanView({
   onPositionUpdate,
   onEdit,
   onCloseFloorPlan,
+  typeDict,
 }: WorkstationFloorPlanViewProps) {
   return (
     <div style={{ display: "flex", gap: 16, height: "calc(100vh - 280px)", minHeight: 600 }}>
@@ -149,7 +155,7 @@ export function WorkstationFloorPlanView({
           ) : (
             <Space orientation="vertical" style={{ width: "100%" }} size={[8, 8]}>
               {floorPlanWorkstations.map((ws) => {
-                const typeText = getWorkstationTypeText(ws.type);
+                const typeText = resolveWorkstationTypeText(ws.type, typeDict);
                 return (
                   <Card
                     key={ws.id}

@@ -286,6 +286,15 @@ func TestSetupPeriodicWorkOrderRouter_RegistersActionRoutes(t *testing.T) {
 		Edit:   writeGroups.Group(""),
 		Delete: writeGroups.Group(""),
 	}, writeCore)
+	// RBAC-EXC-01 清偿：4 条动作端点已迁至逐动作 strict 组，注册形态同步更新。
+	actionCore := setupRouterTestCore(t, gormDB)
+	actionGroups := engine.Group("/workorder/periodic/templates")
+	SetupPeriodicWorkOrderActionRouter(PeriodicWorkOrderActionRouteGroups{
+		Enable:   actionGroups.Group(""),
+		Disable:  actionGroups.Group(""),
+		Generate: actionGroups.Group(""),
+		Logs:     actionGroups.Group(""),
+	}, actionCore)
 
 	registered := map[string]bool{}
 	for _, ri := range engine.Routes() {

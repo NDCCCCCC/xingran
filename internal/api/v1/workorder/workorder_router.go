@@ -143,20 +143,40 @@ func SetupPeriodicWorkOrderRouter(r *gin.RouterGroup, core *core.Core) {
 		// 读操作（task-3 G1 整改：模板主体写端点已拆至下方 strict 写组）
 		templates.POST("/list", handler.ListPeriodic)
 		templates.POST("/statistics", handler.GetPeriodicStatistics)
-
-		// 模板动作（启停 / 立即生成 / 执行记录）——与前端 workorderApi 对齐。
-		// 历史上这 4 条路由因路由重构（cd306b359）丢失 HTTP 通路而仅存注释，
-		// service 层 PeriodicService 实现一直可用，现已恢复注册。
-		//
-		// RBAC 例外 RBAC-EXC-01（不得静默保留）：这 4 条 86 新端点按任务书
-		// 豁免、仍挂本 ANY-of 读组，未按 #87 全域治理口径迁 strict 写组。
-		// 理由 / 风险 / 清偿窗口 / 到期复核见 scripts/RBAC-EXCEPTIONS.md。
-		// 迁移时需同步补权限码播种与前端门控，故本轮仅登记不迁。
-		templates.POST("/:id/enable", handler.EnablePeriodic)
-		templates.POST("/:id/disable", handler.DisablePeriodic)
-		templates.POST("/:id/generate", handler.GeneratePeriodic)
-		templates.POST("/:id/logs", handler.GetPeriodicLogs)
 	}
+}
+
+// SetupPeriodicWorkOrderActionRouter 设置周期工单模板**动作**路由（逐动作严格权限）。
+//
+// RBAC-EXC-01 已清偿（2026-11-13，见 scripts/RBAC-EXCEPTIONS.md）：
+// 此前 enable/disable/generate/logs 4 条端点挂在 ANY-of 读组，仅持只读 list 码的
+// 角色也能调用状态变更 / 生成工单等写操作，违反 #87 最小权限口径。
+// 现按逐动作口径拆独立权限码并挂 RequireStrictPermissions：
+//
+//	启用     POST /workorder/periodic/templates/:id/enable   → ops:workorder:periodic:enable
+//	停用     POST /workorder/periodic/templates/:id/disable  → ops:workorder:periodic:disable
+//	立即生成 POST /workorder/periodic/templates/:id/generate → ops:workorder:periodic:generate
+//	执行记录 POST /workorder/periodic/templates/:id/logs     → ops:workorder:periodic:logs（只读语义独立码）
+//
+// 历史事故保护（scripts/FIX-PROTOCOL.md）：这 4 条端点曾是 PR #85 误判「废弃」
+// 删掉、1.5h 后 #86 恢复的对象。迁移挂载面必须与权限码播种、前端门控同步落地，
+// 否则非超管角色会 403（等价于「用户可见功能消失」）。三者缺一不得迁移。
+func SetupPeriodicWorkOrderActionRouter(groups PeriodicWorkOrderActionRouteGroups, core *core.Core) {
+	service := getWorkOrderService(core)
+	handler := NewWorkOrderHandler(service).WithCore(core)
+
+	groups.Enable.POST("/:id/enable", handler.EnablePeriodic)
+	groups.Disable.POST("/:id/disable", handler.DisablePeriodic)
+	groups.Generate.POST("/:id/generate", handler.GeneratePeriodic)
+	groups.Logs.POST("/:id/logs", handler.GetPeriodicLogs)
+}
+
+// PeriodicWorkOrderActionRouteGroups 周期工单模板动作路由分组（逐动作严格权限）。
+type PeriodicWorkOrderActionRouteGroups struct {
+	Enable   *gin.RouterGroup
+	Disable  *gin.RouterGroup
+	Generate *gin.RouterGroup
+	Logs     *gin.RouterGroup
 }
 
 // PeriodicWorkOrderWriteRouteGroups 周期工单模板写操作路由分组（task-3 G1）。
@@ -167,9 +187,8 @@ type PeriodicWorkOrderWriteRouteGroups struct {
 }
 
 // SetupPeriodicWorkOrderWriteRouter 设置周期工单模板写路由（严格写组）。
-// 仅模板主体 CRUD 拆入 strict；enable/disable/generate/logs 4 条 86 新路由
-// 按 RBAC-EXC-01 豁免、仍挂 ANY-of 读组（口径见 SetupPeriodicWorkOrderRouter
-// 内注释与 scripts/RBAC-EXCEPTIONS.md）。
+// 仅模板主体 CRUD 在此组；enable/disable/generate/logs 4 条动作端点已随
+// RBAC-EXC-01 清偿迁至 SetupPeriodicWorkOrderActionRouter 的逐动作严格组。
 //
 //	新增   POST /workorder/periodic/templates            → ops:workorder:periodic:add
 //	编辑   POST /workorder/periodic/templates/:id/update → ops:workorder:periodic:edit

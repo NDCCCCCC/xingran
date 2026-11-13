@@ -1,16 +1,21 @@
 package workorder
 
-// rbac_exception_test.go —— 周期工单 4 条 86 新端点 RBAC 例外断言（#87 配套）。
+// rbac_exception_test.go —— 周期工单 4 条动作端点 RBAC 例外清偿断言（#87 配套）。
 //
-// 背景：#87 全域治理口径是「写端点逐动作严格权限」；但 enable/disable/
-// generate/logs 4 条端点按任务书豁免、仍挂 ANY-of 读组（RBAC-EXC-01）。
-// 本测试做三件事，确保例外**不是静默保留**：
-//  1. 4 条端点仍由 SetupPeriodicWorkOrderRouter 注册（不得被再次误下线，
-//     防 PR #85 事故复发，见 scripts/FIX-PROTOCOL.md）；
-//  2. strict 写组 SetupPeriodicWorkOrderWriteRouter 只含模板主体 CRUD，
-//     不含这 4 条动作（锁定「例外仍存在」这一事实，迁移时本测试需同步更新）；
-//  3. scripts/RBAC-EXCEPTIONS.md 存在、含 RBAC-EXC-01 / reason / window / review，
-//     且本包源码注释引用了文档路径（代码↔文档双向可追溯）。
+// 历史背景：#87 全域治理口径是「写端点逐动作严格权限」；enable/disable/
+// generate/logs 4 条端点曾按任务书豁免、挂在 ANY-of 读组（RBAC-EXC-01），
+// 仅持只读 list 码的角色也能调用状态变更 / 生成工单等写操作。
+//
+// 2026-11-13 已清偿：4 条端点迁至逐动作严格权限点
+// （ops:workorder:periodic:enable/disable/generate/logs），并同步落地
+//   - pkg/permission/config.go 权限码常量 + 路由表登记；
+//   - internal/core/db/migrations/migration_250_..._perm_seed.go F 型授权载体播种；
+//   - 前端 permissionCodes.ts 常量 + 周期工单模板页按钮门控。
+//
+// 本测试锁定「清偿后的事实」，防止回退：
+//  1. 4 条端点仍注册（不得被误下线，防 PR #85 事故复发，见 scripts/FIX-PROTOCOL.md）；
+//  2. 4 条端点**必须**出现在动作 strict 写组内，且**不得**留在 ANY-of 读组；
+//  3. scripts/RBAC-EXCEPTIONS.md 记录清偿结果（留痕，防静默删除历史）。
 //
 // 与 router_task3_smoke_test.go 共用 ci87WorkOrderCore / ci87RouteSet fixture。
 
@@ -27,15 +32,15 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// periodicExceptionPaths 4 条按任务书豁免、仍挂 ANY-of 读组的动作端点。
-var periodicExceptionPaths = []string{
+// periodicActionPaths 4 条已迁逐动作严格权限的动作端点。
+var periodicActionPaths = []string{
 	"/workorder/periodic/templates/:id/enable",
 	"/workorder/periodic/templates/:id/disable",
 	"/workorder/periodic/templates/:id/generate",
 	"/workorder/periodic/templates/:id/logs",
 }
 
-// periodicStrictWritePaths 模板主体 CRUD（已迁 strict 写组，作为对照组）。
+// periodicStrictWritePaths 模板主体 CRUD（逐动作严格写组，作为对照组）。
 var periodicStrictWritePaths = []string{
 	"/workorder/periodic/templates",
 	"/workorder/periodic/templates/:id/update",
@@ -63,9 +68,35 @@ func rbacExceptionRepoRoot(t *testing.T) string {
 	return ""
 }
 
-// TestPeriodicActionRoutes_RegisteredInReadGroup 4 条动作端点仍注册在
-// SetupPeriodicWorkOrderRouter（ANY-of 读组）内，防 PR #85 误下线复发。
-func TestPeriodicActionRoutes_RegisteredInReadGroup(t *testing.T) {
+// TestPeriodicActionRoutes_RegisteredInStrictActionGroup 4 条动作端点必须注册在
+// SetupPeriodicWorkOrderActionRouter 的逐动作严格组内（清偿后的事实锁定）。
+func TestPeriodicActionRoutes_RegisteredInStrictActionGroup(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	c := ci87WorkOrderCore(t)
+	engine := gin.New()
+	root := engine.Group("/workorder/periodic/templates")
+
+	groups := PeriodicWorkOrderActionRouteGroups{
+		Enable:   root.Group(""),
+		Disable:  root.Group(""),
+		Generate: root.Group(""),
+		Logs:     root.Group(""),
+	}
+	require.NotPanics(t, func() {
+		SetupPeriodicWorkOrderActionRouter(groups, c)
+	})
+	routes := ci87RouteSet(engine)
+
+	for _, p := range periodicActionPaths {
+		assert.True(t, routes[http.MethodPost+" "+p],
+			"周期工单动作端点 %s 不应下线（PR #85 误判事故），须保持注册", p)
+	}
+}
+
+// TestPeriodicActionRoutes_NotInReadGroup 锁定清偿结果：4 条动作端点
+// 不得再出现在 ANY-of 读组（SetupPeriodicWorkOrderRouter）内。
+// 若将来因故回退到读组，本测试失败并提示同步更新权限口径。
+func TestPeriodicActionRoutes_NotInReadGroup(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	c := ci87WorkOrderCore(t)
 	engine := gin.New()
@@ -76,19 +107,20 @@ func TestPeriodicActionRoutes_RegisteredInReadGroup(t *testing.T) {
 	})
 	routes := ci87RouteSet(engine)
 
-	for _, p := range periodicExceptionPaths {
-		assert.True(t, routes[http.MethodPost+" "+p],
-			"周期工单动作端点 %s 不应下线（PR #85 误判事故），须保持注册", p)
-	}
-	// 读组也含 list/statistics，确认挂载面完整。
+	// 读组只剩 list/statistics 两个读端点。
 	assert.True(t, routes[http.MethodPost+" /workorder/periodic/templates/list"])
 	assert.True(t, routes[http.MethodPost+" /workorder/periodic/templates/statistics"])
+
+	// 4 条动作端点必须已迁出读组。
+	for _, p := range periodicActionPaths {
+		assert.False(t, routes[http.MethodPost+" "+p],
+			"RBAC-EXC-01 已清偿：%s 应迁至逐动作 strict 组，不应留在 ANY-of 读组", p)
+	}
 }
 
-// TestPeriodicException_NotInStrictWriteGroup 锁定例外事实：4 条动作端点
-// 不在 SetupPeriodicWorkOrderWriteRouter 的 strict 写组里（若将来清偿
-// RBAC-EXC-01 把它们迁入 strict，本测试会提醒同步更新文档与断言）。
-func TestPeriodicException_NotInStrictWriteGroup(t *testing.T) {
+// TestPeriodicStrictWritePaths_StillInWriteGroup 模板主体 CRUD 保持在
+// 逐动作 strict 写组（对照组，防止清偿动作误伤既有路由）。
+func TestPeriodicStrictWritePaths_StillInWriteGroup(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	c := ci87WorkOrderCore(t)
 	engine := gin.New()
@@ -108,27 +140,21 @@ func TestPeriodicException_NotInStrictWriteGroup(t *testing.T) {
 		assert.True(t, routes[http.MethodPost+" "+p],
 			"模板主体 CRUD %s 应保持在 strict 写组", p)
 	}
-	for _, p := range periodicExceptionPaths {
-		assert.False(t, routes[http.MethodPost+" "+p],
-			"RBAC-EXC-01：%s 仍为 ANY-of 读组例外，不应出现在 strict 写组；"+
-				"若已清偿例外，请同步更新 scripts/RBAC-EXCEPTIONS.md 与本断言", p)
-	}
 }
 
-// TestPeriodicActionRoutes_RBACExceptionDeclared 文档 + 代码注释双向守卫：
-// scripts/RBAC-EXCEPTIONS.md 必须存在且含三要素，源码注释必须引用该文档。
-func TestPeriodicActionRoutes_RBACExceptionDeclared(t *testing.T) {
+// TestPeriodicActionRoutes_RBACExceptionCleared 清偿留痕守卫：
+// scripts/RBAC-EXCEPTIONS.md 必须记录 RBAC-EXC-01 的清偿结果，
+// 且源码注释引用该文档（代码↔文档双向可追溯，防静默删除历史）。
+func TestPeriodicActionRoutes_RBACExceptionCleared(t *testing.T) {
 	root := rbacExceptionRepoRoot(t)
 
 	docPath := filepath.Join(root, "scripts", "RBAC-EXCEPTIONS.md")
 	data, err := os.ReadFile(docPath)
-	require.NoError(t, err, "scripts/RBAC-EXCEPTIONS.md 必须存在（例外不得静默保留）")
+	require.NoError(t, err, "scripts/RBAC-EXCEPTIONS.md 必须存在（清偿留痕）")
 	doc := string(data)
 	for _, must := range []string{
 		"RBAC-EXC-01",
-		"reason",
-		"window",
-		"review",
+		"已清偿",
 		"enable",
 		"disable",
 		"generate",
@@ -142,7 +168,7 @@ func TestPeriodicActionRoutes_RBACExceptionDeclared(t *testing.T) {
 	wrSrc, err := os.ReadFile(wrPath)
 	require.NoError(t, err)
 	assert.Contains(t, string(wrSrc), "scripts/RBAC-EXCEPTIONS.md",
-		"workorder_router.go 的 4 条例外端点注释必须引用 RBAC-EXCEPTIONS.md")
+		"workorder_router.go 的动作路由注释必须引用 RBAC-EXCEPTIONS.md")
 
 	rtPath := filepath.Join(root, "internal", "api", "router.go")
 	rtSrc, err := os.ReadFile(rtPath)
@@ -150,14 +176,14 @@ func TestPeriodicActionRoutes_RBACExceptionDeclared(t *testing.T) {
 	assert.Contains(t, string(rtSrc), "scripts/RBAC-EXCEPTIONS.md",
 		"router.go 的 periodic 组注释必须引用 RBAC-EXCEPTIONS.md")
 
-	// 例外端点注册处附近（4 条 POST 上方）确实带 RBAC-EXC-01 标注：
-	// 取 SetupPeriodicWorkOrderRouter 函数体做局部校验。
-	start := strings.Index(string(wrSrc), "func SetupPeriodicWorkOrderRouter")
-	require.GreaterOrEqual(t, start, 0, "找不到 SetupPeriodicWorkOrderRouter")
+	// 清偿后的动作路由注册处必须带 RBAC-EXC-01 标注：
+	// 取 SetupPeriodicWorkOrderActionRouter 函数体做局部校验。
+	start := strings.Index(string(wrSrc), "func SetupPeriodicWorkOrderActionRouter")
+	require.GreaterOrEqual(t, start, 0, "找不到 SetupPeriodicWorkOrderActionRouter")
 	fnBody := string(wrSrc)[start:]
 	if end := strings.Index(fnBody, "\nfunc "); end > 0 {
 		fnBody = fnBody[:end]
 	}
 	assert.Contains(t, fnBody, "RBAC-EXC-01",
-		"4 条例外路由注册处必须带 RBAC-EXC-01 标注")
+		"动作路由注册处必须带 RBAC-EXC-01 标注")
 }

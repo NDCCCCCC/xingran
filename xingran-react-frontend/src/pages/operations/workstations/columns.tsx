@@ -8,7 +8,7 @@ import { confirmDelete } from "@/components/shared/confirmDelete";
 import { EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import type { WorkstationOps } from "@/types";
 import ActionButtons from "@/components/shared/ActionButtons";
-import { renderWorkstationTypeTag, renderWorkstationStatusTag } from "./constants";
+import { renderWorkstationTypeTagWithDict, renderWorkstationStatusTag } from "./constants";
 import { createDateTimeColumn } from "@/utils/tableHelpers";
 import type { SortOrder } from "@/hooks/useServerSort";
 
@@ -23,12 +23,25 @@ export interface WorkstationColumnsParams {
    */
   editPermission?: string;
   deletePermission?: string;
+  /**
+   * 工位类型字典（ops_workstation_type）——由页面层 useDict 提供。
+   * 不传 = 退化为静态映射（字典空态/接口异常），行为与迁移前一致。
+   * 传入后新增字典项（如「虚拟工位」）可正确显示，不再退化为 "-"。
+   */
+  typeDict?: ReadonlyArray<{ dictValue: string; dictLabel: string }>;
 }
 
 export function getWorkstationColumns(
   params: WorkstationColumnsParams
 ): ColumnsType<WorkstationOps> {
-  const { handleEdit, handleDelete, getColumnSortOrder, editPermission, deletePermission } = params;
+  const {
+    handleEdit,
+    handleDelete,
+    getColumnSortOrder,
+    editPermission,
+    deletePermission,
+    typeDict,
+  } = params;
 
   return [
     {
@@ -94,7 +107,7 @@ export function getWorkstationColumns(
       width: 100,
       sorter: true,
       sortOrder: getColumnSortOrder("type"),
-      render: (type) => renderWorkstationTypeTag(type),
+      render: (type) => renderWorkstationTypeTagWithDict(type, typeDict),
     },
     // 工位状态为 3 态枚举（0=空闲, 1=占用, 2=维护），不能使用 createStatusColumn（该 helper 硬编码 0=正常/非0=停用的 2 态语义）。
     // 改用本模块的 renderWorkstationStatusTag，与卡片视图/平面图/模态框/搜索下拉保持一致。

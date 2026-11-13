@@ -392,8 +392,10 @@ const WorkstationManagement: FC = () => {
         getColumnSortOrder,
         editPermission: PERMISSION_CODES.opsWorkstation.edit,
         deletePermission: PERMISSION_CODES.opsWorkstation.delete,
+        // 工位类型字典：新增字典项（如「虚拟工位」）在列表可正确显示
+        typeDict,
       }),
-    [getColumnSortOrder]
+    [getColumnSortOrder, typeDict]
   );
 
   const handleDeptChange = (deptId: string) => {
@@ -758,6 +760,7 @@ const WorkstationManagement: FC = () => {
           // 卡片视图与表格视图共用页面层同一组门控决策
           editDecision={permEdit}
           deleteDecision={permDelete}
+          typeDict={typeDict}
         />
       );
     }
@@ -775,6 +778,7 @@ const WorkstationManagement: FC = () => {
           handleOpenModal(workstations.find((w) => w.id === ws.id));
         }}
         onCloseFloorPlan={() => setViewMode("table")}
+        typeDict={typeDict}
       />
     );
   };

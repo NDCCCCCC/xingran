@@ -90,9 +90,14 @@ describe("RestoreModal — 选择 .zip 后的二次确认文案", () => {
     fireEvent.change(input as HTMLInputElement, { target: { files: [file] } });
 
     // 「开始恢复」是 confirmDelete 的 actionLabel（页面 Modal 自身没有该按钮）
-    await waitFor(() => {
-      expect(screen.getByRole("button", { name: "开始恢复" })).toBeTruthy();
-    });
+    // 该弹窗由 Upload.Dragger 的 customRequest 异步触发，CI 分片高负载下
+    // 默认 waitFor 超时（1s）偶发不足 → 放宽到 5s，避免 flaky 假失败。
+    await waitFor(
+      () => {
+        expect(screen.getByRole("button", { name: "开始恢复" })).toBeTruthy();
+      },
+      { timeout: 5000 }
+    );
     // 标题「确认导入恢复」出现（页面 Modal + 确认弹窗，用 getAllByText 容纳多命中）
     expect(screen.getAllByText("确认导入恢复").length).toBeGreaterThan(0);
     // contentText 里的 {target} 已被替换为「备份文件（full-backup.zip）」

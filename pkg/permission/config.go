@@ -103,6 +103,17 @@ const (
 	// 独立写码：评价创建属于业务写操作，挂严格单一权限点，不与工单 CRUD 写码共用。
 	WorkOrderRatingCreate PermissionCode = "ops:workorder:rating:create"
 
+	// 周期工单模板动作权限（RBAC-EXC-01 清偿，#87 逐动作口径）。
+	// 此前 enable/disable/generate/logs 4 条端点挂在 ANY-of 读组
+	// （ops:workorder:periodic:list/add/edit/delete），仅持只读 list 码的角色
+	// 也能调用状态变更 / 生成工单等写操作，违反最小权限。
+	// 现按逐动作口径拆独立码，路由挂 RequireStrictPermissions 严格写组。
+	WorkOrderPeriodicEnable   PermissionCode = "ops:workorder:periodic:enable"
+	WorkOrderPeriodicDisable  PermissionCode = "ops:workorder:periodic:disable"
+	WorkOrderPeriodicGenerate PermissionCode = "ops:workorder:periodic:generate"
+	// 日志是只读端点，按读语义独立成码（不与写动作混用）。
+	WorkOrderPeriodicLogs PermissionCode = "ops:workorder:periodic:logs"
+
 	// API Key 管理权限(Phase 61 / AUTH-04 — 由 resource_action_map.go 引用)
 	// 词汇约定(WR-01): 删除权限统一为 remove(system:* 模块约定, D-04)。
 	// router.go apikeys 组级检查已从历史字面量 "system:apikey:delete" 对齐到
@@ -428,6 +439,13 @@ func GetRoutePermissions() []RoutePermission {
 
 		// 工单评价写路由（FIX-06 / Phase 136）：严格单一权限点，登记供路由守卫静态核对。
 		{"/workorder/orders/ratings", "POST", WorkOrderRatingCreate, "创建工单评价"},
+
+		// 周期工单模板动作路由（RBAC-EXC-01 清偿）：4 条端点从 ANY-of 读组
+		// 迁至逐动作严格权限点，登记供路由守卫静态核对。
+		{"/workorder/periodic/templates/:id/enable", "POST", WorkOrderPeriodicEnable, "启用周期工单模板"},
+		{"/workorder/periodic/templates/:id/disable", "POST", WorkOrderPeriodicDisable, "停用周期工单模板"},
+		{"/workorder/periodic/templates/:id/generate", "POST", WorkOrderPeriodicGenerate, "立即生成周期工单"},
+		{"/workorder/periodic/templates/:id/logs", "POST", WorkOrderPeriodicLogs, "查看周期工单执行记录"},
 
 		// Phase 144 同步漂移告警（ALRT-01/02/03）：读组 ANY-of list/config，
 		// 写组严格单一 edit/trigger。

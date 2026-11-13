@@ -10,7 +10,7 @@ import type { WorkstationOps } from "@/types";
 import type { ActionPermissionDecision } from "@/components/shared";
 import { confirmDelete } from "@/components/shared/confirmDelete";
 import {
-  getWorkstationTypeText,
+  resolveWorkstationTypeText,
   getWorkstationStatusText,
   getWorkstationStatusColor,
 } from "../constants";
@@ -25,6 +25,11 @@ export interface WorkstationCardViewProps {
    */
   editDecision?: ActionPermissionDecision;
   deleteDecision?: ActionPermissionDecision;
+  /**
+   * 工位类型字典（ops_workstation_type）——由页面层 useDict 提供。
+   * 不传 = 退化为静态映射（字典空态/接口异常），行为与迁移前一致。
+   */
+  typeDict?: ReadonlyArray<{ dictValue: string; dictLabel: string }>;
 }
 
 /** 卡片视图图标动作的禁用态样式（antd `Card.actions` 只接受 ReactNode，无 disabled 位） */
@@ -40,6 +45,7 @@ export function WorkstationCardView({
   onDelete,
   editDecision,
   deleteDecision,
+  typeDict,
 }: WorkstationCardViewProps) {
   if (workstations.length === 0) {
     return (
@@ -113,7 +119,7 @@ export function WorkstationCardView({
                   </div>
                   <div>
                     <strong>类型：</strong>
-                    {getWorkstationTypeText(workstation.type)}
+                    {resolveWorkstationTypeText(workstation.type, typeDict)}
                   </div>
                 </div>
               }

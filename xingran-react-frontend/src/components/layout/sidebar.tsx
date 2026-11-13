@@ -12,7 +12,7 @@ import {
   isSecondLevelMenu,
   isTopLevelMenu,
 } from "./sidebar-helper";
-import { getIconComponent } from "@/utils/iconUtils";
+import { getSidebarIconComponent } from "@/utils/iconUtils";
 import { buildFullPath, findMenuById, findMenuByFullPath } from "./sidebar.utils";
 import { DEFAULT_SIDEBAR_WIDTH, MENU_FONT_SIZE, NAVIGATION_DELAY } from "./sidebar.constants";
 
@@ -20,10 +20,12 @@ const { Sider } = Layout;
 
 type MenuItem = NonNullable<MenuProps["items"]>[number];
 
-const getIcon = (iconName?: string | null): React.ReactNode => getIconComponent(iconName);
+// 无 icon 时返回透明占位（getSidebarIconComponent），保证同级菜单文字左缩进一致。
+const getIcon = (iconName?: string | null): React.ReactNode => getSidebarIconComponent(iconName);
 
 const convertToMenuItem = (menu: MenuType, parentPath: string = ""): MenuItem => {
-  // 无子菜单项与普通菜单项统一使用配置的图标（无 icon 则为 undefined，不渲染易引起展开误导的箭头）
+  // 无子菜单项与普通菜单项统一使用配置的图标；缺图标用透明占位对齐文字缩进
+  // （不渲染易引起展开误导的箭头）。
   const icon = getIcon(menu.icon);
 
   if (menu.menuType === "F" || menu.visible !== 1) {

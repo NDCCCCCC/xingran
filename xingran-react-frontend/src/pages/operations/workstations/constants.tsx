@@ -29,9 +29,41 @@ const TYPE_TEXT_MAP: Record<number, string> = {
   2: "管理工位",
 };
 
-// 获取工位类型文本
+// 获取工位类型文本（静态映射 = 字典空态/接口异常时的降级）
 export function getWorkstationTypeText(type: number): string {
   return TYPE_TEXT_MAP[type] || "-";
+}
+
+/**
+ * 字典感知的工位类型文本解析。
+ *
+ * 背景：工位类型是**数据字典**（ops_workstation_type），管理员可在字典管理页
+ * 新增类型（如「虚拟工位」）。若只用硬编码的 TYPE_TEXT_MAP（仅 0/1/2 三项），
+ * 新增字典项在列表/卡片/平面图会显示为 "-"。
+ *
+ * 口径：优先按字典 dictValue → dictLabel 解析；字典未命中时降级静态映射；
+ * 两者皆无才返回 "-"。字典数据由页面层 useDict("ops_workstation_type") 提供，
+ * 本模块不调 hook（保持纯函数，便于测试与复用）。
+ */
+export function resolveWorkstationTypeText(
+  type: number,
+  dictItems?: ReadonlyArray<{ dictValue: string; dictLabel: string }>
+): string {
+  if (dictItems) {
+    const hit = dictItems.find((d) => Number(d.dictValue) === type);
+    if (hit?.dictLabel) return hit.dictLabel;
+  }
+  return getWorkstationTypeText(type);
+}
+
+/**
+ * 字典感知的工位类型标签渲染（与 resolveWorkstationTypeText 同口径）。
+ */
+export function renderWorkstationTypeTagWithDict(
+  type: number,
+  dictItems?: ReadonlyArray<{ dictValue: string; dictLabel: string }>
+) {
+  return <Tag>{resolveWorkstationTypeText(type, dictItems)}</Tag>;
 }
 
 // 获取工位状态文本（Phase 69 DICT-03: 改用共享 tag 配置，删除本地重复映射）

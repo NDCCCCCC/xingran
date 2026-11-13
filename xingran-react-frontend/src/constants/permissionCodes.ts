@@ -168,6 +168,18 @@ export const PERMISSION_CODES = {
   workorderRating: {
     create: "ops:workorder:rating:create",
   },
+  // 周期工单模板动作（RBAC-EXC-01 清偿）：4 条动作端点从 ANY-of 读组迁至
+  // 逐动作严格权限点，后端 pkg/permission/config.go + migration_250 播种同源。
+  workorderPeriodic: {
+    list: "ops:workorder:periodic:list",
+    add: "ops:workorder:periodic:add",
+    edit: "ops:workorder:periodic:edit",
+    delete: "ops:workorder:periodic:delete",
+    enable: "ops:workorder:periodic:enable",
+    disable: "ops:workorder:periodic:disable",
+    generate: "ops:workorder:periodic:generate",
+    logs: "ops:workorder:periodic:logs",
+  },
   // ==================== monitor 域 RBAC 全链路接线（migration_244 同源） ====================
   // 24 码与 pkg/permission/config.go monitor 域常量、sys_menu F 型播种（migration_244
   // / menu_catalog_seed.sql 同源追加）三方一致。后端路由端点级挂载见

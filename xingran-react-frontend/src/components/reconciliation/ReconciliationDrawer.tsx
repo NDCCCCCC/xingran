@@ -18,12 +18,13 @@
  * Phase 45 R4 / Plan 02 (SC9): 申请例外按钮携带 workstationId + assetIp + conflictType
  * 三个 query 参数,跳转后由 /asset/reconciliation/exception-rules/new 页面 useSearchParams 解析
  */
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { Drawer, Tabs, Tag, Descriptions, Button, Skeleton, Empty, message } from "antd";
-import { type TimelineRecord } from "./ReconciliationTimeline";
-import { type ExceptionRuleItem } from "./ExceptionMatchList";
+import { ReconciliationTimeline, type TimelineRecord } from "./ReconciliationTimeline";
+import { ExceptionMatchList, type ExceptionRuleItem } from "./ExceptionMatchList";
 import { useAssetHealth } from "./hooks/useAssetHealth";
 import { useReconciliationVisibility } from "./hooks/useReconciliationVisibility";
+import { reconciliationApi, type ExceptionListItem } from "@/lib/assetApi";
 
 export type DrawerTabKey = "summary" | "timeline" | "exception";
 
@@ -64,15 +65,96 @@ const DrawerInner: React.FC<ReconciliationDrawerProps> = ({
   onApplyException,
 }) => {
   const visible = useReconciliationVisibility();
-  const [_timeline] = useState<TimelineRecord[]>([]);
-  const [_timelineLoading] = useState(false);
-  const [_rules] = useState<ExceptionRuleItem[]>([]);
-  const [_rulesLoading] = useState(false);
+  const [timeline, setTimeline] = useState<TimelineRecord[]>([]);
+  const [timelineLoading, setTimelineLoading] = useState(false);
+  const [rules, setRules] = useState<ExceptionRuleItem[]>([]);
+  const [rulesLoading, setRulesLoading] = useState(false);
 
   const asset = useAssetHealth(selectedAssetId, workstationId ?? "");
 
-  // Plan 01:timeline / rules 实际数据由 Plan 02 接入(实时查询 sys_data_reconciliation /
-  //   sys_reconciliation_exception)。当前 local state 保留供 Plan 02 填充。
+  // P67:timeline / rules 接入真实数据源(复用既有端点,不新增后端接口)。
+  //   - timeline:reconciliationApi.exceptionList → 冲突记录(检出/解决时间),
+  //     映射为 TimelineRecord。
+  //   - rules:reconciliationApi.exceptionRule.list → 例外规则列表,
+  //     映射为 ExceptionRuleItem(规则名/作用范围/IP 段/例外动作)。
+  // 缺列字段降级为空串,渲染层按空值显示 "-" 而非报错。
+  useEffect(() => {
+    if (!visible || !open || !selectedAssetId) {
+      setTimeline([]);
+      setRules([]);
+      return;
+    }
+    let cancelled = false;
+
+    const loadTimeline = async () => {
+      setTimelineLoading(true);
+      try {
+        const res = await reconciliationApi.exceptionList({
+          current: 1,
+          pageSize: 50,
+        });
+        const items: ExceptionListItem[] = res?.list ?? [];
+        if (cancelled) return;
+        // 后端例外列表返回全部命中记录,前端按当前资产过滤出该资产的历史。
+        const mine = items.filter((it) => !it.assetCode || it.assetCode === asset?.assetCode);
+        setTimeline(
+          mine.map((it) => ({
+            id: it.id,
+            conflictType: it.conflictType,
+            detectedAt: it.detectedAt,
+            resolvedAt: it.resolvedAt ?? "",
+            resolvedByUsername: it.responsibleUsername ?? "",
+            resolutionNote: it.exceptionRuleId ?? undefined,
+          }))
+        );
+      } catch (error) {
+        if (!cancelled) {
+          console.error("Failed to load reconciliation timeline:", error);
+          setTimeline([]);
+        }
+      } finally {
+        if (!cancelled) setTimelineLoading(false);
+      }
+    };
+
+    const loadRules = async () => {
+      setRulesLoading(true);
+      try {
+        const res = await reconciliationApi.exceptionRule.list<Record<string, unknown>>({
+          current: 1,
+          pageSize: 50,
+        });
+        const items = (res?.list ?? []) as Record<string, unknown>[];
+        if (cancelled) return;
+        setRules(
+          items.map((raw) => ({
+            id: String(raw.id ?? ""),
+            name: String(raw.name ?? raw.ruleName ?? "-"),
+            scopeType: (raw.scopeType as ExceptionRuleItem["scopeType"]) ?? "global",
+            ipRange: String(raw.ipRange ?? raw.ip_range ?? ""),
+            exceptionActions: Array.isArray(raw.exceptionActions)
+              ? (raw.exceptionActions as string[])
+              : [],
+            reason: raw.reason ? String(raw.reason) : undefined,
+            expiresAt: raw.expiresAt ? String(raw.expiresAt) : null,
+          }))
+        );
+      } catch (error) {
+        if (!cancelled) {
+          console.error("Failed to load reconciliation exception rules:", error);
+          setRules([]);
+        }
+      } finally {
+        if (!cancelled) setRulesLoading(false);
+      }
+    };
+
+    void loadTimeline();
+    void loadRules();
+    return () => {
+      cancelled = true;
+    };
+  }, [visible, open, selectedAssetId, asset?.assetCode]);
 
   // 🆕 Plan 02 / SC9: 申请例外按钮 — 携带 workstationId + assetIp + conflictType
   // 三参数(优先用父级 onApplyException 回调,否则用本组件内联 navigate)
@@ -150,8 +232,17 @@ const DrawerInner: React.FC<ReconciliationDrawerProps> = ({
     </div>
   );
 
-  // STOP-06: timelineTab / exceptionTab 渲染逻辑随 Tab 一并隐藏（原为永久空态），
-  // TODO(P67) 接入数据源后随 Tab 恢复。
+  // P67:数据源接入后恢复 timeline / exception 两个 Tab。
+  const timelineTab = <ReconciliationTimeline records={timeline} loading={timelineLoading} />;
+  const exceptionTab = (
+    <ExceptionMatchList
+      rules={rules}
+      loading={rulesLoading}
+      assetIp={asset?.ip}
+      conflictType={asset?.conflictType}
+      onCreateRule={handleApplyException}
+    />
+  );
 
   return (
     <Drawer
@@ -167,12 +258,14 @@ const DrawerInner: React.FC<ReconciliationDrawerProps> = ({
       destroyOnHidden
     >
       <Tabs
-        // STOP-06: timeline / exception 数据源未接入（原为永久空态），接入前不展示空 Tab
-        // TODO(P67): 接入 useReconciliationTimeline / 例外规则接口后恢复这两个 Tab
-        activeKey={activeTab === "summary" ? activeTab : "summary"}
+        activeKey={activeTab}
         onChange={(k) => onTabChange(k as DrawerTabKey)}
         tabBarGutter={24}
-        items={[{ key: "summary", label: "冲突摘要", children: summaryTab }]}
+        items={[
+          { key: "summary", label: "冲突摘要", children: summaryTab },
+          { key: "timeline", label: "历史变更", children: timelineTab },
+          { key: "exception", label: "例外规则", children: exceptionTab },
+        ]}
       />
     </Drawer>
   );

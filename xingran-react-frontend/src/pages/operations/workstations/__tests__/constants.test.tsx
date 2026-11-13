@@ -8,6 +8,8 @@ import {
   getWorkstationStatusColor,
   renderWorkstationTypeTag,
   renderWorkstationStatusTag,
+  resolveWorkstationTypeText,
+  renderWorkstationTypeTagWithDict,
   toWorkstationNode,
   STATUS_OPTIONS,
   TYPE_OPTIONS,
@@ -27,6 +29,39 @@ describe("workstations constants", () => {
     expect(getWorkstationTypeText(0)).toBe("固定工位");
     expect(getWorkstationTypeText(1)).toBe("灵活工位");
     expect(getWorkstationTypeText(99)).toBe("-");
+  });
+
+  // 字典感知解析：管理员在字典管理页新增的工位类型（如「虚拟工位」）
+  // 必须在列表/卡片/平面图正确显示，不能退化为 "-"。
+  it("resolveWorkstationTypeText 命中新增字典项", () => {
+    const dict = [
+      { dictValue: "0", dictLabel: "固定工位" },
+      { dictValue: "1", dictLabel: "灵活工位" },
+      { dictValue: "2", dictLabel: "管理工位" },
+      { dictValue: "3", dictLabel: "虚拟工位" },
+    ];
+    expect(resolveWorkstationTypeText(3, dict)).toBe("虚拟工位");
+    expect(resolveWorkstationTypeText(0, dict)).toBe("固定工位");
+  });
+
+  it("resolveWorkstationTypeText 字典未命中降级静态映射", () => {
+    const dict = [{ dictValue: "3", dictLabel: "虚拟工位" }];
+    // 字典里没有 0 → 降级静态映射（固定工位）
+    expect(resolveWorkstationTypeText(0, dict)).toBe("固定工位");
+    // 字典与静态映射都没有 → "-"
+    expect(resolveWorkstationTypeText(99, dict)).toBe("-");
+  });
+
+  it("resolveWorkstationTypeText 无字典时等价静态映射", () => {
+    expect(resolveWorkstationTypeText(1)).toBe("灵活工位");
+    expect(resolveWorkstationTypeText(99)).toBe("-");
+  });
+
+  it("renderWorkstationTypeTagWithDict 命中新增字典项", () => {
+    const dict = [{ dictValue: "3", dictLabel: "虚拟工位" }];
+    const node = renderWorkstationTypeTagWithDict(3, dict);
+    expect(node).toBeDefined();
+    expect(node.props.children).toBe("虚拟工位");
   });
 
   it("getWorkstationStatusText 已知/未知", () => {

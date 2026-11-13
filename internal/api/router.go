@@ -799,10 +799,10 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 			}, core)
 		}
 
-		// 周期性工单模板管理（task-3 G1 整改：仅模板主体 CRUD 拆 strict 写组；
-		// enable/disable/generate/logs 4 条 86 新路由按任务书豁免，保持继承组口径）。
-		// RBAC 例外 RBAC-EXC-01：理由/风险/清偿窗口见 scripts/RBAC-EXCEPTIONS.md，
-		// 不得静默保留例外；此处 ANY-of 与 #87 严格写组口径的差异以该文档为准。
+		// 周期性工单模板管理（task-3 G1 整改：模板主体 CRUD 拆 strict 写组；
+		// enable/disable/generate/logs 4 条动作端点已随 RBAC-EXC-01 清偿
+		// 迁至逐动作 strict 组，见下方 SetupPeriodicWorkOrderActionRouter 调用；
+		// 清偿留痕见 scripts/RBAC-EXCEPTIONS.md）。
 		periodic := workorder.Group("/periodic")
 		periodic.Use(middleware.RequirePermissions([]string{
 			"ops:workorder:periodic:list",
@@ -819,6 +819,17 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 				Add:    strictLiteralRouteGroup(periodicWrites, "ops:workorder:periodic:add", core),
 				Edit:   strictLiteralRouteGroup(periodicWrites, "ops:workorder:periodic:edit", core),
 				Delete: strictLiteralRouteGroup(periodicWrites, "ops:workorder:periodic:delete", core),
+			}, core)
+		}
+		// RBAC-EXC-01 清偿：4 条动作端点按逐动作口径挂严格单一权限点
+		// （enable/disable/generate 写动作 + logs 只读语义独立码）。
+		periodicActions := workorder.Group("/periodic/templates")
+		{
+			workorderV1.SetupPeriodicWorkOrderActionRouter(workorderV1.PeriodicWorkOrderActionRouteGroups{
+				Enable:   strictLiteralRouteGroup(periodicActions, "ops:workorder:periodic:enable", core),
+				Disable:  strictLiteralRouteGroup(periodicActions, "ops:workorder:periodic:disable", core),
+				Generate: strictLiteralRouteGroup(periodicActions, "ops:workorder:periodic:generate", core),
+				Logs:     strictLiteralRouteGroup(periodicActions, "ops:workorder:periodic:logs", core),
 			}, core)
 		}
 
