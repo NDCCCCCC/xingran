@@ -96,9 +96,7 @@ const DrawerInner: React.FC<ReconciliationDrawerProps> = ({
         const items: ExceptionListItem[] = res?.list ?? [];
         if (cancelled) return;
         // 后端例外列表返回全部命中记录,前端按当前资产过滤出该资产的历史。
-        const mine = items.filter(
-          (it) => !it.assetCode || it.assetCode === asset?.assetCode
-        );
+        const mine = items.filter((it) => !it.assetCode || it.assetCode === asset?.assetCode);
         setTimeline(
           mine.map((it) => ({
             id: it.id,
@@ -122,9 +120,10 @@ const DrawerInner: React.FC<ReconciliationDrawerProps> = ({
     const loadRules = async () => {
       setRulesLoading(true);
       try {
-        const res = await reconciliationApi.exceptionRule.list<
-          Record<string, unknown>
-        >({ current: 1, pageSize: 50 });
+        const res = await reconciliationApi.exceptionRule.list<Record<string, unknown>>({
+          current: 1,
+          pageSize: 50,
+        });
         const items = (res?.list ?? []) as Record<string, unknown>[];
         if (cancelled) return;
         setRules(

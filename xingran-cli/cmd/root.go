@@ -70,7 +70,7 @@ func readStdinIfAvailable() ([]byte, bool) {
 		return nil, false
 	}
 	// 模式有管道输入或者普通文件重定向时
-	if (fi.Mode() & (os.ModeCharDevice | os.ModeNamedPipe)) == os.ModeNamedPipe || (fi.Mode()&os.ModeType == 0 && fi.Size() > 0) {
+	if (fi.Mode()&(os.ModeCharDevice|os.ModeNamedPipe)) == os.ModeNamedPipe || (fi.Mode()&os.ModeType == 0 && fi.Size() > 0) {
 		data, err := io.ReadAll(os.Stdin)
 		if err != nil {
 			return nil, false

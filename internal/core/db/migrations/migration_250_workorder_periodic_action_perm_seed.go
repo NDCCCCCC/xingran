@@ -38,6 +38,7 @@ var workOrderPeriodicActionFTypeSeedCodes = []string{
 	"ops:workorder:periodic:generate",
 	"ops:workorder:periodic:logs",
 }
+
 // F_TYPE_SEED_END
 
 var workOrderPeriodicActionSeeds = []actionPermissionSeed{
