@@ -17,6 +17,7 @@ import {
   renderSystemTemplateTag,
 } from "./constants";
 import type { SorterMeta } from "@/utils/tableHelpers";
+import type { DictItem } from "@/hooks/useDict";
 
 export interface TemplateColumnsParams {
   handlePreview: (id: string) => void;
@@ -27,10 +28,23 @@ export interface TemplateColumnsParams {
   getColumnSortOrder?: (field: string) => "ascend" | "descend" | null | undefined;
   /** 可排序列白名单（对应后端白名单 key） */
   sorterMetas?: Array<SorterMeta<ConfigTemplate> | undefined>;
+  /**
+   * 设备类型字典（network_device_type）——由页面层 useDict 提供。
+   * 不传 = 退化为静态映射（字典空态 / 接口异常），行为与迁移前一致；
+   * 传入后新增字典项可正确显示，不再渲染空 Tag。
+   */
+  deviceTypeDict?: DictItem[];
 }
 
 export function getTemplateColumns(params: TemplateColumnsParams): ColumnsType<ConfigTemplate> {
-  const { handlePreview, handleClone, handleDelete, openModal, getColumnSortOrder } = params;
+  const {
+    handlePreview,
+    handleClone,
+    handleDelete,
+    openModal,
+    getColumnSortOrder,
+    deviceTypeDict,
+  } = params;
 
   return [
     {
@@ -74,7 +88,7 @@ export function getTemplateColumns(params: TemplateColumnsParams): ColumnsType<C
       width: 120,
       sorter: true,
       sortOrder: getColumnSortOrder?.("deviceType"),
-      render: (deviceType: string) => renderDeviceTypeTag(deviceType),
+      render: (deviceType: string) => renderDeviceTypeTag(deviceType, deviceTypeDict),
     },
     {
       title: "系统模板",

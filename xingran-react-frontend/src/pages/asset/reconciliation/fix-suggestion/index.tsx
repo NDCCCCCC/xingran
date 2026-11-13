@@ -38,6 +38,14 @@ import {
   type FixStatus,
 } from "@/lib/assetApi";
 import { queryKeys } from "@/lib/queryKeys";
+import { useDict } from "@/hooks/useDict";
+import {
+  buildDictLabelIndex,
+  buildDictOptions,
+  resolveDictLabel,
+  resolveDictTagColor,
+  CONFLICT_TYPE_LABELS,
+} from "@/components/reconciliation/dictLabels";
 import { useMenuStore } from "@/store/menuStore";
 import { FIX_STATUS_OPTIONS, FIX_STATUS_TAG_CONFIG } from "@/constants/status";
 import { FixSuggestionDetailDrawer } from "./components/FixSuggestionDetailDrawer";
@@ -89,15 +97,32 @@ const FixSuggestion = () => {
     defaultSort: { orderByColumn: "createdAt", isAsc: false },
   });
 
+  // 字典驱动:冲突类型下拉与列文案优先取字典(管理员新增枚举项即可选到/看到)
+  const { data: conflictTypeDict = [] } = useDict("asset_reconciliation_conflict_type");
+  const conflictTypeIndex = useMemo(
+    () => buildDictLabelIndex(conflictTypeDict),
+    [conflictTypeDict]
+  );
+  const conflictTypeOptions = useMemo(() => {
+    const options = buildDictOptions(conflictTypeDict);
+    return options.length > 0
+      ? options
+      : // 字典空态回退:复用共享静态映射的 keys(A-F)构造选项
+        Object.keys(CONFLICT_TYPE_LABELS).map((key) => ({
+          value: key,
+          label: CONFLICT_TYPE_LABELS[key],
+        }));
+  }, [conflictTypeDict]);
+
   // 初始 filter 从 URL 读
+  // 字典驱动:冲突类型取值来自 asset_reconciliation_conflict_type,可能超出 A-F,故用 string
   const [filterValues, setFilterValues] = useState<{
     fixStatus?: FixStatus;
-    conflictType?: "A" | "B" | "C" | "D" | "E" | "F";
+    conflictType?: string;
     responsibleDeptId?: string;
   }>(() => ({
     fixStatus: (searchParams.get("fixStatus") as FixStatus) || undefined,
-    conflictType:
-      (searchParams.get("conflictType") as "A" | "B" | "C" | "D" | "E" | "F") || undefined,
+    conflictType: searchParams.get("conflictType") || undefined,
     responsibleDeptId: searchParams.get("deptId") || undefined,
   }));
 
@@ -110,7 +135,9 @@ const FixSuggestion = () => {
   const listParams = useMemo<FixSuggestionListParams>(() => {
     const p: FixSuggestionListParams = { current, pageSize };
     if (filterValues.fixStatus) p.fixStatus = filterValues.fixStatus;
-    if (filterValues.conflictType) p.conflictType = filterValues.conflictType;
+    // 后端参数类型仍锁定 A-F;字典新增项经断言透传,由后端按实际字典值筛选
+    if (filterValues.conflictType)
+      p.conflictType = filterValues.conflictType as FixSuggestionListParams["conflictType"];
     if (filterValues.responsibleDeptId) p.responsibleDeptId = filterValues.responsibleDeptId;
     if (orderByColumn) {
       p.orderByColumn = orderByColumn;
@@ -332,7 +359,11 @@ const FixSuggestion = () => {
       dataIndex: "conflictType",
       key: "conflictType",
       width: 80,
-      render: (v: string) => <Tag color="orange">Type {v}</Tag>,
+      render: (v: string) => (
+        <Tag color={resolveDictTagColor(v, conflictTypeIndex, "orange")}>
+          {resolveDictLabel(v, conflictTypeIndex.labels, CONFLICT_TYPE_LABELS)}
+        </Tag>
+      ),
     },
     {
       title: "状态",
@@ -456,10 +487,7 @@ const FixSuggestion = () => {
               style={{ width: 120 }}
               showSearch
               onSearch={() => undefined}
-              options={["A", "B", "C", "D", "E", "F"].map((v) => ({
-                value: v,
-                label: `Type ${v}`,
-              }))}
+              options={conflictTypeOptions}
             />
           </Form.Item>
           <Form.Item name="responsibleDeptId" label="责任部门">

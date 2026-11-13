@@ -6,6 +6,23 @@ import (
 	"time"
 )
 
+// ⚠️ 遗留定义（DEPRECATED）：本文件的 RPA* 模型与枚举常量**不是生产事实源**。
+//
+// 生产代码（internal/services/rpa/*、internal/core/db/database.go 的 AutoMigrate）
+// 统一使用 internal/models/rpa 子包（rpamodels.*）。database.go 已明确标注：
+// 「internal/models/rpa.go 的 RPAWorker/RPAExecution 为无引用遗留定义,不注册」。
+//
+// 两套同名枚举取值并不一致（例：本文件 TaskStatusEnabled=1，
+// 子包 rpa/task.go TaskStatusEnabled=0；子包 WorkerStatus 更是 string 枚举）。
+// 本文件保留的原因：models 包内单测（models_pure_80_03_test.go 的 ScriptAction
+// JSON 列、models_hooks_80_03_test.go 的 TableName 断言）依赖这些类型与常量，
+// 直接删除会破坏测试与覆盖率门禁。
+//
+// 因此：
+//   - 新代码一律用 rpamodels.*，禁止再引用本文件的类型/常量；
+//   - 本文件常量取值已登记进 status_constants_test.go 冻结（防误改）；
+//   - 未来若要清理，须先迁移/重写上述 models 包内单测，再整体删除本文件。
+//
 // ==================== RPA 枚举定义 ====================
 
 // TaskStatus 任务状态枚举

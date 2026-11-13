@@ -7,12 +7,19 @@
  *   - 历史变更:同 exception_id 的所有 fix_suggestion 记录
  */
 
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { Drawer, Tabs, Descriptions, Tag, Timeline, Empty, Spin } from "antd";
 import { useQuery } from "@tanstack/react-query";
 import { fixSuggestionApi, type FixSuggestionListItem } from "@/lib/assetApi";
 import { queryKeys } from "@/lib/queryKeys";
 import { FIX_STATUS_TAG_CONFIG } from "@/constants/status";
+import { useDict } from "@/hooks/useDict";
+import {
+  buildDictLabelIndex,
+  resolveDictLabel,
+  resolveDictTagColor,
+  CONFLICT_TYPE_LABELS,
+} from "@/components/reconciliation/dictLabels";
 
 interface FixSuggestionDetailDrawerProps {
   open: boolean;
@@ -75,6 +82,15 @@ export const FixSuggestionDetailDrawer = ({
     enabled: !!suggestionId && open,
   });
 
+  // 字典驱动:冲突类型 / 严重度的文案与颜色优先取字典(三级回退见 dictLabels)
+  const { data: conflictTypeDict = [] } = useDict("asset_reconciliation_conflict_type");
+  const { data: severityDict = [] } = useDict("asset_reconciliation_severity");
+  const conflictTypeIndex = useMemo(
+    () => buildDictLabelIndex(conflictTypeDict),
+    [conflictTypeDict]
+  );
+  const severityIndex = useMemo(() => buildDictLabelIndex(severityDict), [severityDict]);
+
   useEffect(() => {
     if (!open) return;
   }, [open]);
@@ -95,7 +111,15 @@ export const FixSuggestionDetailDrawer = ({
                   <Descriptions bordered column={1} size="small">
                     <Descriptions.Item label="资产编号">{sugg.assetCode}</Descriptions.Item>
                     <Descriptions.Item label="冲突类型">
-                      <Tag color="orange">Type {sugg.conflictType}</Tag>
+                      <Tag
+                        color={resolveDictTagColor(sugg.conflictType, conflictTypeIndex, "orange")}
+                      >
+                        {resolveDictLabel(
+                          sugg.conflictType,
+                          conflictTypeIndex.labels,
+                          CONFLICT_TYPE_LABELS
+                        )}
+                      </Tag>
                     </Descriptions.Item>
                     <Descriptions.Item label="置信度">
                       {(sugg.confidenceScore * 100).toFixed(0)}%
@@ -104,7 +128,13 @@ export const FixSuggestionDetailDrawer = ({
                       {data?.exception?.detectedAt ?? "-"}
                     </Descriptions.Item>
                     <Descriptions.Item label="异常严重度">
-                      {data?.exception?.severity ?? "-"}
+                      {data?.exception?.severity ? (
+                        <Tag color={resolveDictTagColor(data.exception.severity, severityIndex)}>
+                          {resolveDictLabel(data.exception.severity, severityIndex.labels)}
+                        </Tag>
+                      ) : (
+                        "-"
+                      )}
                     </Descriptions.Item>
                     <Descriptions.Item label="建议原因">{sugg.reason}</Descriptions.Item>
                   </Descriptions>

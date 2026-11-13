@@ -5,12 +5,35 @@
  * Phase 67 T1 迁移收窄：操作列整体挪至页面 rowActions（查看结果 + createDeleteAction
  * → ConfirmDelete）；getSortOrder 手工视觉与删除 confirm 块删除——排序视觉/确认
  * 由 antd 原生受控排序与 ConfirmDelete 唯一入口承接。其余列逐字未动。
+ *
+ * 设备类型文案统一复用 templates/constants 的三级回退口径（字典 → 静态映射 → 原始值），
+ * 不在此重复维护静态映射；列工厂内不调 hook，字典由页面层 useDict 透传。
  */
 
 import type { ColumnsType } from "antd/es/table";
 import { Tag, Progress } from "antd";
 import type { DeviceDiscovery, NetworkDevice } from "@/types";
+import type { DictItem } from "@/hooks/useDict";
 import { DISCOVERY_TYPE_OPTIONS, renderStatusTag } from "./constants";
+import { resolveDeviceTypeLabel } from "@/pages/network/templates/constants";
+
+/** 发现结果表格列（字典由页面层透传，不传则退化为静态映射） */
+export function getDeviceColumns<T extends object = NetworkDevice>(
+  dictItems?: DictItem[]
+): ColumnsType<T> {
+  return [
+    { title: "设备名称", dataIndex: "deviceName", key: "deviceName" },
+    { title: "IP地址", dataIndex: "ipAddress", key: "ipAddress" },
+    { title: "厂商", dataIndex: "vendor", key: "vendor" },
+    { title: "型号", dataIndex: "model", key: "model" },
+    {
+      title: "设备类型",
+      dataIndex: "deviceType",
+      key: "deviceType",
+      render: (deviceType: string) => resolveDeviceTypeLabel(deviceType, dictItems),
+    },
+  ];
+}
 
 export function getDiscoveryColumns(): ColumnsType<DeviceDiscovery> {
   return [
@@ -83,11 +106,5 @@ export function getDiscoveryColumns(): ColumnsType<DeviceDiscovery> {
   ];
 }
 
-/** 发现结果表格列 */
-export const deviceColumns: ColumnsType<NetworkDevice> = [
-  { title: "设备名称", dataIndex: "deviceName", key: "deviceName" },
-  { title: "IP地址", dataIndex: "ipAddress", key: "ipAddress" },
-  { title: "厂商", dataIndex: "vendor", key: "vendor" },
-  { title: "型号", dataIndex: "model", key: "model" },
-  { title: "设备类型", dataIndex: "deviceType", key: "deviceType" },
-];
+/** 发现结果表格列（静态默认；字典驱动请用 getDeviceColumns） */
+export const deviceColumns = getDeviceColumns();
