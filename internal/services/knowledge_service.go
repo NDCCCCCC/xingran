@@ -61,22 +61,22 @@ func (s *KnowledgeService) GetArticleStatistics(ctx context.Context) (*Knowledge
 // KnowledgeArticleListRequest 知识库文章列表请求
 type KnowledgeArticleListRequest struct {
 	base.BaseListRequest
-	Title      string `json:"title"`
-	CategoryID string `json:"categoryId"`
-	TagID      string `json:"tagId"`
-	Status     *int   `json:"status"`
-	CreatedBy  string `json:"createdBy"`
+	Title      string                         `json:"title"`
+	CategoryID string                         `json:"categoryId"`
+	TagID      string                         `json:"tagId"`
+	Status     *models.KnowledgeArticleStatus `json:"status"`
+	CreatedBy  string                         `json:"createdBy"`
 }
 
 // knowledgeArticleAllowedSortFields 知识库文章可排序字段白名单。
 var knowledgeArticleAllowedSortFields = map[string]string{
-	"title":         "title",
-	"categoryId":    "category_id",
-	"viewCount":     "view_count",
-	"likeCount":     "like_count",
-	"status":        "status",
-	"createdAt":     "created_at",
-	"updatedAt":     "updated_at",
+	"title":      "title",
+	"categoryId": "category_id",
+	"viewCount":  "view_count",
+	"likeCount":  "like_count",
+	"status":     "status",
+	"createdAt":  "created_at",
+	"updatedAt":  "updated_at",
 }
 
 // KnowledgeArticleCreateRequest 创建知识库文章请求

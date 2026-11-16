@@ -52,7 +52,7 @@ type BatchOperationRequest struct {
 
 // StatusRequest 状态筛选请求（基础结构）
 type StatusRequest struct {
-	Status *int `json:"status"` // 状态（0=正常/启用 1=停用/禁用）
+	Status *int `json:"status" binding:"omitempty,min=0,max=2"` // 状态筛选（值域由实体定：二态 0/1，三态 0/1/2——workstation/room_device/infopoint/line 为三态）
 }
 
 // HasStatus 检查是否有状态筛选

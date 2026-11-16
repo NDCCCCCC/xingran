@@ -50,7 +50,7 @@ type OperLogListParams struct {
 	base.BaseListRequest
 	Title        *string
 	BusinessType *int
-	Status       *int
+	Status       *models.OperLogStatus
 	OperName     *string
 	BeginTime    *string
 	EndTime      *string

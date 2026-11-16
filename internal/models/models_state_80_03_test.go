@@ -26,7 +26,7 @@ func TestMst8003_ADServiceAccount_StateMachine(t *testing.T) {
 
 	tests := []struct {
 		name             string
-		status           int
+		status           ADAccountStatus
 		breakerUntil     *time.Time
 		wantAvailable    bool
 		wantCircuitBreak bool

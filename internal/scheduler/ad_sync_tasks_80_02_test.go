@@ -55,7 +55,7 @@ func (s *stubAccountPool8002) PickAvailable(ctx context.Context, configID string
 func (s *stubAccountPool8002) ListAvailable(ctx context.Context, configID string) ([]models.ADServiceAccount, error) {
 	return nil, nil
 }
-func (s *stubAccountPool8002) ListAll(ctx context.Context, configID string, page, pageSize int, statusFilter *int) ([]models.ADServiceAccount, int64, error) {
+func (s *stubAccountPool8002) ListAll(ctx context.Context, configID string, page, pageSize int, statusFilter *models.ADAccountStatus) ([]models.ADServiceAccount, int64, error) {
 	return nil, 0, nil
 }
 func (s *stubAccountPool8002) CountByStatus(ctx context.Context, configID string) (total, available, disabled, circuitBroken int64, err error) {
@@ -589,7 +589,7 @@ func TestAds8002_CheckAndSync_GoroutineDrain(t *testing.T) {
 		VALUES (?, ?, ?, ?, ?, NULL)`,
 		"cfg-drain", "排空测试", 1, models.ADConfigStatusEnabled, 3600).Error)
 
-	s := NewADSyncScheduler(db, 1) // 容量 1:goroutine 独占
+	s := NewADSyncScheduler(db, 1)  // 容量 1:goroutine 独占
 	s.pool = &stubAccountPool8002{} // stub 空池:SyncDataByID 内 FailoverClient 零拨号
 
 	// cipher 为 nil → NewADDomainService varargs 为空 → 不改全局 cipher

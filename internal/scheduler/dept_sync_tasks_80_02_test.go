@@ -53,7 +53,7 @@ func (s *stubADPool8002) PickAvailable(ctx context.Context, configID string) (*m
 func (s *stubADPool8002) ListAvailable(ctx context.Context, configID string) ([]models.ADServiceAccount, error) {
 	return nil, nil
 }
-func (s *stubADPool8002) ListAll(ctx context.Context, configID string, page, pageSize int, statusFilter *int) ([]models.ADServiceAccount, int64, error) {
+func (s *stubADPool8002) ListAll(ctx context.Context, configID string, page, pageSize int, statusFilter *models.ADAccountStatus) ([]models.ADServiceAccount, int64, error) {
 	return nil, 0, nil
 }
 func (s *stubADPool8002) CountByStatus(ctx context.Context, configID string) (total, available, disabled, circuitBroken int64, err error) {
@@ -65,15 +65,23 @@ func (s *stubADPool8002) PickFirstAvailable(ctx context.Context, configID string
 func (s *stubADPool8002) RecoverExpiredBreakers(ctx context.Context) (int, error) {
 	return 0, nil
 }
-func (s *stubADPool8002) InvalidateCache(configID string) {}
+func (s *stubADPool8002) InvalidateCache(configID string)          {}
 func (s *stubADPool8002) StartHotReload(ctx context.Context) error { return nil }
-func (s *stubADPool8002) Create(ctx context.Context, account *models.ADServiceAccount) error { return nil }
-func (s *stubADPool8002) Update(ctx context.Context, account *models.ADServiceAccount) error { return nil }
-func (s *stubADPool8002) Delete(ctx context.Context, accountID string) error { return nil }
-func (s *stubADPool8002) MarkSuccess(ctx context.Context, accountID string) error { return nil }
+func (s *stubADPool8002) Create(ctx context.Context, account *models.ADServiceAccount) error {
+	return nil
+}
+func (s *stubADPool8002) Update(ctx context.Context, account *models.ADServiceAccount) error {
+	return nil
+}
+func (s *stubADPool8002) Delete(ctx context.Context, accountID string) error              { return nil }
+func (s *stubADPool8002) MarkSuccess(ctx context.Context, accountID string) error         { return nil }
 func (s *stubADPool8002) MarkFailure(ctx context.Context, accountID, reason string) error { return nil }
-func (s *stubADPool8002) ManualUnlock(ctx context.Context, accountID, operator, reason string) error { return nil }
-func (s *stubADPool8002) SetEnabled(ctx context.Context, accountID string, enabled bool) error { return nil }
+func (s *stubADPool8002) ManualUnlock(ctx context.Context, accountID, operator, reason string) error {
+	return nil
+}
+func (s *stubADPool8002) SetEnabled(ctx context.Context, accountID string, enabled bool) error {
+	return nil
+}
 
 var _ addomain.AccountPool = (*stubADPool8002)(nil)
 

@@ -233,7 +233,7 @@ func TestKsv7904_ArticleCRUD_RoundTrip(t *testing.T) {
 	assert.NotNil(t, list[0].Category, "列表必须 Preload(Category)")
 
 	// 状态过滤:只看已发布 → 3 篇
-	pub := int(models.KnowledgeArticleStatusPublished)
+	pub := models.KnowledgeArticleStatusPublished
 	_, total, err = svc.GetKnowledgeArticleList(ctx, &KnowledgeArticleListRequest{
 		BaseListRequest: baseListReq7904(1, 10),
 		Status:          &pub,

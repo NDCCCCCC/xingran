@@ -17,7 +17,7 @@ import (
 // LoginLogHandler 登录日志处理器 — embeds MonitorLogHandler for Delete/BatchDelete.
 type LoginLogHandler struct {
 	*MonitorLogHandler[models.LoginLog] // shared Delete/BatchDelete
-	svc                               monitorServices.LoginLogService
+	svc                                 monitorServices.LoginLogService
 }
 
 // NewLoginLogHandler creates a LoginLogHandler.
@@ -42,11 +42,11 @@ func (h *LoginLogHandler) WithCore(core *core.Core) *LoginLogHandler {
 // LoginLogListRequest 登录日志列表请求
 type LoginLogListRequest struct {
 	base.BaseListRequest
-	Username  *string `json:"username,omitempty"`
-	IPAddr   *string `json:"ipaddr,omitempty"`
-	Status   *int    `json:"status,omitempty"`
-	BeginTime *string `json:"beginTime,omitempty"`
-	EndTime  *string `json:"endTime,omitempty"`
+	Username  *string                `json:"username,omitempty"`
+	IPAddr    *string                `json:"ipaddr,omitempty"`
+	Status    *models.LoginLogStatus `json:"status,omitempty"`
+	BeginTime *string                `json:"beginTime,omitempty"`
+	EndTime   *string                `json:"endTime,omitempty"`
 }
 
 // List 查询登录日志列表
@@ -63,11 +63,11 @@ func (h *LoginLogHandler) List(c *gin.Context) {
 
 	params := monitorServices.LoginLogListParams{
 		BaseListRequest: req.BaseListRequest,
-		Username:       req.Username,
-		IPAddr:         req.IPAddr,
-		Status:         req.Status,
-		BeginTime:      req.BeginTime,
-		EndTime:        req.EndTime,
+		Username:        req.Username,
+		IPAddr:          req.IPAddr,
+		Status:          req.Status,
+		BeginTime:       req.BeginTime,
+		EndTime:         req.EndTime,
 	}
 
 	result, err := h.svc.List(c.Request.Context(), params)

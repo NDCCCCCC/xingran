@@ -52,7 +52,7 @@ type LoginLogListParams struct {
 	base.BaseListRequest
 	Username  *string
 	IPAddr    *string
-	Status    *int
+	Status    *models.LoginLogStatus
 	BeginTime *string
 	EndTime   *string
 }

@@ -66,10 +66,10 @@ type adAccountUnlockReq struct {
 
 // adAccountListReq 列表请求
 type adAccountListReq struct {
-	ConfigID string `json:"configId" binding:"required"`
-	Page     int    `json:"page"`
-	PageSize int    `json:"pageSize"`
-	Status   *int   `json:"status"` // nil = 全部
+	ConfigID string                  `json:"configId" binding:"required"`
+	Page     int                     `json:"page"`
+	PageSize int                     `json:"pageSize"`
+	Status   *models.ADAccountStatus `json:"status"` // nil = 全部
 }
 
 // List 列表

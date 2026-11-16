@@ -24,8 +24,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/glebarez/sqlite"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
@@ -35,11 +35,11 @@ import (
 
 // fakePool78 是一个同包最小 fake AccountPool 实现,用于注入 ListAvailable error 等边界。
 type fakePool78 struct {
-	listAvailableErr  error
+	listAvailableErr error
 	listAvailableRes []models.ADServiceAccount
-	markSuccessErr  error
+	markSuccessErr   error
 	markFailureCalls []struct{ id, reason string }
-	markFailureErr  error
+	markFailureErr   error
 }
 
 func (f *fakePool78) PickAvailable(ctx context.Context, configID string) (*models.ADServiceAccount, error) {
@@ -51,7 +51,7 @@ func (f *fakePool78) ListAvailable(ctx context.Context, configID string) ([]mode
 	}
 	return f.listAvailableRes, nil
 }
-func (f *fakePool78) ListAll(ctx context.Context, configID string, page, pageSize int, statusFilter *int) ([]models.ADServiceAccount, int64, error) {
+func (f *fakePool78) ListAll(ctx context.Context, configID string, page, pageSize int, statusFilter *models.ADAccountStatus) ([]models.ADServiceAccount, int64, error) {
 	return nil, 0, errors.New("not implemented")
 }
 func (f *fakePool78) CountByStatus(ctx context.Context, configID string) (total, available, disabled, circuitBroken int64, err error) {
@@ -60,9 +60,15 @@ func (f *fakePool78) CountByStatus(ctx context.Context, configID string) (total,
 func (f *fakePool78) PickFirstAvailable(ctx context.Context, configID string) (*models.ADServiceAccount, error) {
 	return nil, errors.New("not implemented")
 }
-func (f *fakePool78) Create(ctx context.Context, account *models.ADServiceAccount) error { return errors.New("not implemented") }
-func (f *fakePool78) Update(ctx context.Context, account *models.ADServiceAccount) error { return errors.New("not implemented") }
-func (f *fakePool78) Delete(ctx context.Context, accountID string) error { return errors.New("not implemented") }
+func (f *fakePool78) Create(ctx context.Context, account *models.ADServiceAccount) error {
+	return errors.New("not implemented")
+}
+func (f *fakePool78) Update(ctx context.Context, account *models.ADServiceAccount) error {
+	return errors.New("not implemented")
+}
+func (f *fakePool78) Delete(ctx context.Context, accountID string) error {
+	return errors.New("not implemented")
+}
 func (f *fakePool78) MarkSuccess(ctx context.Context, accountID string) error {
 	if f.markSuccessErr != nil {
 		return f.markSuccessErr
@@ -76,10 +82,16 @@ func (f *fakePool78) MarkFailure(ctx context.Context, accountID, reason string) 
 	f.markFailureCalls = append(f.markFailureCalls, struct{ id, reason string }{accountID, reason})
 	return nil
 }
-func (f *fakePool78) ManualUnlock(ctx context.Context, accountID, operator, reason string) error { return errors.New("not implemented") }
-func (f *fakePool78) SetEnabled(ctx context.Context, accountID string, enabled bool) error { return errors.New("not implemented") }
-func (f *fakePool78) RecoverExpiredBreakers(ctx context.Context) (int, error) { return 0, errors.New("not implemented") }
-func (f *fakePool78) InvalidateCache(configID string) {}
+func (f *fakePool78) ManualUnlock(ctx context.Context, accountID, operator, reason string) error {
+	return errors.New("not implemented")
+}
+func (f *fakePool78) SetEnabled(ctx context.Context, accountID string, enabled bool) error {
+	return errors.New("not implemented")
+}
+func (f *fakePool78) RecoverExpiredBreakers(ctx context.Context) (int, error) {
+	return 0, errors.New("not implemented")
+}
+func (f *fakePool78) InvalidateCache(configID string)          {}
 func (f *fakePool78) StartHotReload(ctx context.Context) error { return errors.New("not implemented") }
 
 // ==================== ExecuteWithFailover 边界 ====================

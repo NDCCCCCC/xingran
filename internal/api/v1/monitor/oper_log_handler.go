@@ -42,12 +42,12 @@ func (h *OperLogHandler) WithCore(core *core.Core) *OperLogHandler {
 // OperLogListRequest 操作日志列表请求
 type OperLogListRequest struct {
 	base.BaseListRequest
-	Title        *string `json:"title,omitempty"`
-	BusinessType *int    `json:"businessType,omitempty"`
-	Status       *int    `json:"status,omitempty"`
-	OperName     *string `json:"operName,omitempty"`
-	BeginTime    *string `json:"beginTime,omitempty"`
-	EndTime      *string `json:"endTime,omitempty"`
+	Title        *string               `json:"title,omitempty"`
+	BusinessType *int                  `json:"businessType,omitempty"`
+	Status       *models.OperLogStatus `json:"status,omitempty"`
+	OperName     *string               `json:"operName,omitempty"`
+	BeginTime    *string               `json:"beginTime,omitempty"`
+	EndTime      *string               `json:"endTime,omitempty"`
 }
 
 // List 查询操作日志列表

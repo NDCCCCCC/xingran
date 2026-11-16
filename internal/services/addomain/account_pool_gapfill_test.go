@@ -83,7 +83,7 @@ func TestAP_ListAll_Pagination(t *testing.T) {
 	assert.Equal(t, int64(3), total)
 
 	// statusFilter
-	disabled := 1
+	disabled := models.ADAccountStatusDisabled
 	list, total, err = p.ListAll(ctx, cid, 1, 10, &disabled)
 	require.NoError(t, err)
 	assert.Equal(t, int64(0), total)
@@ -139,11 +139,11 @@ func TestAP_CreateUpdateDelete(t *testing.T) {
 
 	// Create
 	acc := &models.ADServiceAccount{
-		ID:                  uuid.NewString(),
-		ConfigID:            uuid.NewString(),
-		Username:            "alice",
-		PasswordCiphertext:  "enc",
-		Status:              0,
+		ID:                 uuid.NewString(),
+		ConfigID:           uuid.NewString(),
+		Username:           "alice",
+		PasswordCiphertext: "enc",
+		Status:             0,
 	}
 	require.NoError(t, p.Create(ctx, acc))
 
