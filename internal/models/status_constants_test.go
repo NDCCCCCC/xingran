@@ -216,12 +216,12 @@ var expectedStatusValues = map[string]int{
 	"WorkOrderStatusCompleted":  2, // 已完成
 	"WorkOrderStatusClosed":     3, // 已关闭
 	"WorkOrderStatusRejected":   4, // 已拒绝
-	// 2026-11-13 补登记（captcha_background.go）——现状冻结：
-	// 该族 1=启用/0=禁用 与全局「0=正常/启用」约定相反，但代码内部自洽且贯穿
-	// core / handler / DB default:1 与前端，属历史设计；改极性需配套数据迁移 +
-	// 前后端联动，故此处只锁定不改动，防止未来被误「归一化」而破坏线上数据。
-	"CaptchaBgDisabled": 0, // 禁用
-	"CaptchaBgEnabled":  1, // 启用（反转族，见上注）
+	// 2026-11-16 归一（captcha_background.go）——极性已由反转族改为全局约定：
+	// 原为 1=启用/0=禁用（与全局「0=正常/启用」相反）。本批改动统一为
+	// 0=启用/1=禁用，配套数据侧 migration 251（翻转存量 + 归一列 DEFAULT）
+	// 与前端 settings/captcha-background.tsx 同步。
+	"CaptchaBgEnabled":  0, // 启用
+	"CaptchaBgDisabled": 1, // 禁用
 	"DifficultyEasy":    1, // 简单
 	"DifficultyMedium":  2, // 中等
 	"DifficultyHard":    3, // 困难

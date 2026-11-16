@@ -332,10 +332,17 @@ func TestCapBg8003_List_Paged(t *testing.T) {
 
 	t.Run("按status筛选_引用models常量", func(t *testing.T) {
 		statusVal := int(models.CaptchaBgDisabled)
-		// QUIRK-80-03-D(就地锁定):models.CaptchaBackground.Status 类型 CaptchaBackgroundStatus
-		// 带 gorm:"not null;default:1" —— GORM 在 db.Create 时把零值 (0/disabled) 视为
-		// "use default" 而覆盖为 1(enabled)。无法通过 model Create 落 status=0 行,
-		// 必须 raw SQL Exec 直接写值。下面通过 Exec 落 1 行 status=0 以真测筛选分支。
+		// 2026-11-16 极性归一后的夹具语义：
+		//   Status 列为 `not null;default:0`（0=启用 / 1=禁用）。
+		//   GORM 在 db.Create 时把零值视为 "use default" 并覆盖为列默认值 ——
+		//   归一后列默认值 0 即「启用」，与语义一致；而「禁用」(1) 是非零值，
+		//   Create 会原样写入。故上方 seedCaptchaBgRow8003 的 3 行现在真实落为
+		//   「2 启用(bg-list-1 / bg-list-3) + 1 禁用(bg-list-2)」。
+		//
+		//   注：旧语义下 default:1 会把种子里的 CaptchaBgDisabled(0) 覆盖成 1(启用)，
+		//   种子实际落成「2 启用 + 1 禁用」但与设计意图错位；归一后该怪癖消失。
+		//
+		// 这里额外用 raw SQL Exec 落 1 行「禁用」，确保筛选分支测的是真实 status 列。
 		require.NoError(t, db.Exec(
 			`INSERT INTO sys_captcha_background
 			 (id, file_name, file_path, file_size, file_width, file_height,
@@ -353,7 +360,8 @@ func TestCapBg8003_List_Paged(t *testing.T) {
 		require.Equal(t, 0, resp.Code, resp.Message)
 		var listResp models.CaptchaBackgroundListResponse
 		require.NoError(t, json.Unmarshal(resp.Data, &listResp))
-		assert.EqualValues(t, 1, listResp.Total, "只 1 行 disabled(raw 落库绕过 default 怪癖)")
+		assert.EqualValues(t, 2, listResp.Total,
+			"2 行禁用：种子 bg-list-2 + raw 直插 bg-ls-disabled-raw（归一后 default 怪癖消失）")
 	})
 
 	t.Run("pageSize越界_绑定失败", func(t *testing.T) {

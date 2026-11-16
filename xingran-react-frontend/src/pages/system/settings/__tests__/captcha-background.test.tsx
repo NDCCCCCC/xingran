@@ -1,14 +1,15 @@
 /**
- * Phase 70-04 — 验证码背景图网格墙 Wave 0 单测（D-08 status 反转语义锁定）
+ * Phase 70-04 — 验证码背景图网格墙 Wave 0 单测（D-08 status 语义锁定）
  *
  * 用例覆盖（70-VALIDATION.md Per-Task Map 的 D-08 行）：
- *   1. status=1 记录渲染「启用」徽标（xr-tag-green）—— captcha 例外语义 1=启用。
- *   2. status=0 记录渲染「禁用」徽标（中性 xr-tag，无 green）。
- *   3. 启停操作文案取反：status=1 卡提供「禁用」动作、status=0 卡提供「启用」动作。
+ *   1. status=0 记录渲染「启用」徽标（xr-tag-green）—— 归一后 0=启用。
+ *   2. status=1 记录渲染「禁用」徽标（中性 xr-tag，无 green）。
+ *   3. 启停操作文案取反：status=0 卡提供「禁用」动作、status=1 卡提供「启用」动作。
  *   4. statistics fixture（totalCount/enabledCount/disabledCount/totalUsage）渲染一行统计摘要。
  *
- * 关键语义（70-RESEARCH Pitfall 1）：captcha 背景 status 与全局「0=启用」惯例相反，
- * 后端契约为 1=启用 / 0=禁用，统计摘要与网格墙徽标均按 status===1 取「启用」，勿「纠正」。
+ * 关键语义（2026-11-16 归一）：captcha 背景 status 已由历史的反转族「1=启用 / 0=禁用」
+ * 改为全局约定「0=启用 / 1=禁用」，后端配套 migration 251（翻转存量 + 归一列 DEFAULT），
+ * 统计摘要与网格墙徽标均按 status===0 取「启用」。
  *
  * Mock 策略：vi.mock("@/services/captcha") 直通可控 fixture（vi.hoisted 规避 factory
  * 提升导致的 TDZ）；渲染三件套与 SettingsShell.test.tsx 同款（ResizeObserver stub +
@@ -77,8 +78,8 @@ const makeBackground = (
   previewUrl: `/preview/${fileName}`,
 });
 
-const enabledBg = makeBackground("bg-enabled-1", "forest-01.png", 1);
-const disabledBg = makeBackground("bg-disabled-2", "city-02.png", 0);
+const enabledBg = makeBackground("bg-enabled-1", "forest-01.png", 0);
+const disabledBg = makeBackground("bg-disabled-2", "city-02.png", 1);
 
 const statsFixture: StatisticsResponse = {
   totalCount: 5,
@@ -99,12 +100,12 @@ function renderPage() {
   );
 }
 
-describe("captcha-background 网格墙 — Phase 70-04 D-08 status 反转语义锁定", () => {
+describe("captcha-background 网格墙 — Phase 70-04 D-08 status 语义锁定（0=启用 / 1=禁用）", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("用例1: status=1 记录渲染「启用」徽标（xr-tag-green）—— captcha 例外语义 1=启用", async () => {
+  it("用例1: status=0 记录渲染「启用」徽标（xr-tag-green）—— 归一后 0=启用", async () => {
     getListMock.mockResolvedValue({ items: [enabledBg], total: 1 });
     getStatsMock.mockResolvedValue(statsFixture);
     renderPage();
@@ -112,14 +113,14 @@ describe("captcha-background 网格墙 — Phase 70-04 D-08 status 反转语义�
     // 列表已加载（文件名出现在卡脚）
     expect(await screen.findByText("forest-01.png")).toBeInTheDocument();
 
-    // 卡脚徽标 = 唯一 xr-tag，status=1 → 启用 + xr-tag-green
+    // 卡脚徽标 = 唯一 xr-tag，status=0 → 启用 + xr-tag-green
     const badges = document.querySelectorAll(".xr-captcha-grid .xr-tag");
     expect(badges).toHaveLength(1);
     expect(badges[0]).toHaveTextContent("启用");
     expect(badges[0].classList.contains("xr-tag-green")).toBe(true);
   });
 
-  it("用例2: status=0 记录渲染「禁用」徽标（中性 xr-tag，无 green）", async () => {
+  it("用例2: status=1 记录渲染「禁用」徽标（中性 xr-tag，无 green）", async () => {
     getListMock.mockResolvedValue({ items: [disabledBg], total: 1 });
     getStatsMock.mockResolvedValue(statsFixture);
     renderPage();
@@ -133,7 +134,7 @@ describe("captcha-background 网格墙 — Phase 70-04 D-08 status 反转语义�
     expect(document.querySelector(".xr-captcha-grid .xr-tag-green")).toBeNull();
   });
 
-  it("用例3: 启停操作文案取反 — status=1 卡提供「禁用」动作，status=0 卡提供「启用」动作", async () => {
+  it("用例3: 启停操作文案取反 — status=0 卡提供「禁用」动作，status=1 卡提供「启用」动作", async () => {
     getListMock.mockResolvedValue({ items: [enabledBg, disabledBg], total: 2 });
     getStatsMock.mockResolvedValue(statsFixture);
     renderPage();
@@ -143,13 +144,13 @@ describe("captcha-background 网格墙 — Phase 70-04 D-08 status 反转语义�
     const cards = document.querySelectorAll<HTMLElement>(".xr-captcha-card");
     expect(cards).toHaveLength(2);
 
-    // 启用卡（status=1）：徽标「启用」+ 操作行提供「禁用」（取反动作），无「启用」按钮
+    // 启用卡（status=0）：徽标「启用」+ 操作行提供「禁用」（取反动作），无「启用」按钮
     const enabledCard = within(cards[0]);
     expect(enabledCard.getByText("启用")).toBeInTheDocument(); // 徽标 span
     expect(enabledCard.getByRole("button", { name: "禁用" })).toBeInTheDocument();
     expect(enabledCard.queryByRole("button", { name: "启用" })).not.toBeInTheDocument();
 
-    // 禁用卡（status=0）：徽标「禁用」+ 操作行提供「启用」（取反动作），无「禁用」按钮
+    // 禁用卡（status=1）：徽标「禁用」+ 操作行提供「启用」（取反动作），无「禁用」按钮
     const disabledCard = within(cards[1]);
     expect(disabledCard.getByText("禁用")).toBeInTheDocument(); // 徽标 span
     expect(disabledCard.getByRole("button", { name: "启用" })).toBeInTheDocument();

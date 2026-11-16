@@ -13,11 +13,16 @@ import (
 )
 
 // CaptchaBackgroundStatus 背景图状态
+//
+// 极性说明（2026-11-16 起）：本族已归一为全局约定「0=启用 / 1=禁用」。
+// 历史为反转族「1=启用 / 0=禁用」，改动由 migration 251
+// （internal/core/db/migrations/migration_251_captcha_bg_status_polarity.go）
+// 承担存量翻转 + 列 DEFAULT 归一，前端同步见 settings/captcha-background.tsx。
 type CaptchaBackgroundStatus int
 
 const (
-	CaptchaBgDisabled CaptchaBackgroundStatus = 0 // 禁用
-	CaptchaBgEnabled  CaptchaBackgroundStatus = 1 // 启用
+	CaptchaBgEnabled  CaptchaBackgroundStatus = 0 // 启用
+	CaptchaBgDisabled CaptchaBackgroundStatus = 1 // 禁用
 )
 
 // String 实现 Stringer 接口
@@ -102,7 +107,8 @@ type CaptchaBackground struct {
 	SortOrder  int        `gorm:"default:0" json:"sortOrder"`
 
 	// 状态管理
-	Status CaptchaBackgroundStatus `gorm:"not null;default:1" json:"status"`
+	// Status 极性：0=启用 / 1=禁用（2026-11-16 归一，migration 251 同步存量与列 DEFAULT）
+	Status CaptchaBackgroundStatus `gorm:"not null;default:0" json:"status"`
 	Remark string                  `gorm:"size:500" json:"remark,omitempty"`
 }
 

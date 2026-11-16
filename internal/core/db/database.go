@@ -1481,6 +1481,14 @@ func (d *Database) runMenuConsolidationMigrations() {
 	if err := d.runAndRecord(250, "workorder_periodic_action_perm_seed", migrations.Migrate250WorkOrderPeriodicActionPermSeed); err != nil {
 		applogger.Errorf("周期工单动作权限码播种迁移失败 (非阻断,留待下次启动): %v", err)
 	}
+	// 251：验证码背景图 status 极性归一（历史 1=启用 → 归一为 0=启用）。
+	// 只改常量会静默反转线上所有背景图的启停状态，故由本迁移承担存量翻转
+	// （status = 1 - status）+ 列 DEFAULT 归一（default:1 → default:0）。
+	// 代码侧同步：models/captcha_background.go 常量反转、handler/core 用常量自动跟随、
+	// 前端 settings/captcha-background.tsx 的 status===0 判断。
+	if err := d.runAndRecord(251, "captcha_bg_status_polarity", migrations.Migrate251CaptchaBgStatusPolarity); err != nil {
+		applogger.Errorf("验证码背景图状态极性归一迁移失败 (非阻断,留待下次启动): %v", err)
+	}
 }
 
 // ensureSQLiteJoinTableColumns many2many join 表的列级对齐兜底（task-23）。
