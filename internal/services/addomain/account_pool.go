@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/xingran-next/xingran-go-backend/internal/models"
-	"github.com/xingran-next/xingran-go-backend/pkg/query"
 	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
+	"github.com/xingran-next/xingran-go-backend/pkg/query"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
@@ -49,9 +49,9 @@ var (
 	//   不烧 attempts、不判 dead、纯退避重试。修复前只有前者被识别，拨号失败被当成
 	//   业务失败 → 一次 ~15min 的 AD 宕机会把单轮最多 100 行永久打成 dead 终态。
 	ErrAllAccountsDialFailed = errors.New("账号池所有账号均拨号失败")
-	ErrAccountNotFound        = errors.New("账号不存在")
-	ErrInvalidOperator        = errors.New("operator 必填")
-	ErrInvalidUnlockReason    = errors.New("解锁原因必填且不少于10字符")
+	ErrAccountNotFound       = errors.New("账号不存在")
+	ErrInvalidOperator       = errors.New("operator 必填")
+	ErrInvalidUnlockReason   = errors.New("解锁原因必填且不少于10字符")
 	// ErrADTargetNotFound debug session ad-update-attr-no-such-object Fix 2:
 	// 标记目标 AD 对象不存在（LDAP code 32 No Such Object）。handler 层据此
 	// 短路重试，避免 3 次重试 + MarkFailure 累加触发应用层 breaker 熔断。
@@ -75,7 +75,7 @@ type AccountPool interface {
 	ListAvailable(ctx context.Context, configID string) ([]models.ADServiceAccount, error)
 
 	// ListAll 包含停用/熔断账号（供 UI 展示用）
-	ListAll(ctx context.Context, configID string, page, pageSize int, statusFilter *int) ([]models.ADServiceAccount, int64, error)
+	ListAll(ctx context.Context, configID string, page, pageSize int, statusFilter *models.ADAccountStatus) ([]models.ADServiceAccount, int64, error)
 
 	// CountByStatus 按状态分组统计（供 Stats 用，O(状态数) 而非 O(账号数)）
 	CountByStatus(ctx context.Context, configID string) (total, available, disabled, circuitBroken int64, err error)
@@ -214,7 +214,7 @@ func (p *accountPoolImpl) PickAvailable(ctx context.Context, configID string) (*
 }
 
 // ListAll 包含停用/熔断账号（分页）
-func (p *accountPoolImpl) ListAll(ctx context.Context, configID string, page, pageSize int, statusFilter *int) ([]models.ADServiceAccount, int64, error) {
+func (p *accountPoolImpl) ListAll(ctx context.Context, configID string, page, pageSize int, statusFilter *models.ADAccountStatus) ([]models.ADServiceAccount, int64, error) {
 	page, pageSize = query.NormalizePagination(page, pageSize)
 
 	q := p.db.WithContext(ctx).Model(&models.ADServiceAccount{}).
@@ -253,12 +253,12 @@ func (p *accountPoolImpl) CountByStatus(ctx context.Context, configID string) (t
 	defer rows.Close()
 
 	for rows.Next() {
-		var status, cnt int64
-		if scanErr := rows.Scan(&status, &cnt); scanErr != nil {
+		var rawStatus, cnt int64
+		if scanErr := rows.Scan(&rawStatus, &cnt); scanErr != nil {
 			return 0, 0, 0, 0, scanErr
 		}
 		total += cnt
-		switch status {
+		switch models.ADAccountStatus(rawStatus) {
 		case AccountStatusAvailable:
 			available = cnt
 		case AccountStatusDisabled:

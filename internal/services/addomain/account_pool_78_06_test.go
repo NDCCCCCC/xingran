@@ -66,7 +66,8 @@ func TestPool78_RecoverExpiredBreakers_Basic(t *testing.T) {
 	assert.Equal(t, 1, n, "仅 (a) 过期熔断 1 条被恢复")
 
 	// (a) 状态回 Available + until=NULL + failure_count=0（用 db.QueryRow 替代 GORM Scan 字段映射陷阱）
-	var aStatus, aCount int
+	var aStatus models.ADAccountStatus
+	var aCount int
 	var aUntil *time.Time
 	require.NoError(t, db.Raw(`SELECT status, failure_count, circuit_breaker_until FROM sys_ad_service_accounts WHERE id = ?`, aID).
 		Row().Scan(&aStatus, &aCount, &aUntil))
@@ -75,12 +76,13 @@ func TestPool78_RecoverExpiredBreakers_Basic(t *testing.T) {
 	assert.Nil(t, aUntil, "circuit_breaker_until 应被置 NULL")
 
 	// (b) 未过期熔断不应被改动
-	var bStatus int
+	var bStatus models.ADAccountStatus
 	require.NoError(t, db.Raw(`SELECT status FROM sys_ad_service_accounts WHERE id = ?`, bID).Row().Scan(&bStatus))
 	assert.Equal(t, AccountStatusCircuitBroken, bStatus)
 
 	// (c) Available 行不应被改动
-	var cStatus, cCount int
+	var cStatus models.ADAccountStatus
+	var cCount int
 	require.NoError(t, db.Raw(`SELECT status, failure_count FROM sys_ad_service_accounts WHERE id = ?`, cID).Row().Scan(&cStatus, &cCount))
 	assert.Equal(t, AccountStatusAvailable, cStatus)
 	assert.Equal(t, 5, cCount, "failure_count 应保持原值")

@@ -6,10 +6,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/glebarez/sqlite"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/glebarez/sqlite"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"gorm.io/gorm"
 )
 
@@ -49,7 +50,7 @@ func setupTestPool(t *testing.T) (AccountPool, *gorm.DB, string) {
 }
 
 // insertAccount 插入测试账号
-func insertAccount(t *testing.T, db *gorm.DB, configID, username string, status int) string {
+func insertAccount(t *testing.T, db *gorm.DB, configID, username string, status models.ADAccountStatus) string {
 	t.Helper()
 	id := uuid.NewString()
 	err := db.Exec(`
@@ -121,7 +122,10 @@ func TestMarkFailure_Boundary(t *testing.T) {
 
 	// 第 1 次失败
 	require.NoError(t, pool.MarkFailure(ctx, id, "fail1"))
-	var a struct{ FailureCount, Status int }
+	var a struct {
+		FailureCount int
+		Status       models.ADAccountStatus
+	}
 	db.Raw(`SELECT failure_count, status FROM sys_ad_service_accounts WHERE id = ?`, id).Scan(&a)
 	assert.Equal(t, 1, a.FailureCount)
 	assert.Equal(t, AccountStatusAvailable, a.Status, "1 次失败不应触发熔断")
@@ -163,7 +167,7 @@ func TestMarkFailure_Concurrent(t *testing.T) {
 	for i := 0; i < iterations; i++ {
 		go func() {
 			defer wg.Done()
-			mu.Lock()   // 模拟生产 PostgreSQL 行锁
+			mu.Lock() // 模拟生产 PostgreSQL 行锁
 			defer mu.Unlock()
 			_ = pool.MarkFailure(ctx, id, "concurrent-fail")
 		}()
@@ -211,11 +215,11 @@ func TestManualUnlock_ReasonValid(t *testing.T) {
 	require.NoError(t, err)
 
 	var a struct {
-		Status               int
-		FailureCount         int
-		CircuitBreakerUntil  *time.Time
-		ManualUnlockedBy     string
-		ManualUnlockReason   string
+		Status              models.ADAccountStatus
+		FailureCount        int
+		CircuitBreakerUntil *time.Time
+		ManualUnlockedBy    string
+		ManualUnlockReason  string
 	}
 	db.Raw(`SELECT status, failure_count, circuit_breaker_until, manual_unlocked_by, manual_unlock_reason
 			FROM sys_ad_service_accounts WHERE id = ?`, id).Scan(&a)
@@ -290,7 +294,7 @@ func TestMarkFailure_NoRecentlyFailedUntil(t *testing.T) {
 	}
 	// SQLite 不支持扫描可能不存在的列，跳过此断言
 	// 验证方式：检查 AccountStatus（仍为 0，未熔断）
-	var status int
+	var status models.ADAccountStatus
 	db.Raw(`SELECT status FROM sys_ad_service_accounts WHERE id = ?`, id).Scan(&status)
 	_ = a
 	assert.Equal(t, AccountStatusAvailable, status)
@@ -323,7 +327,7 @@ func TestManualUnlock_ClearsCircuitBreaker(t *testing.T) {
 	require.NoError(t, pool.ManualUnlock(ctx, id, "admin", "AD 域控已恢复（足够长）"))
 
 	var a struct {
-		Status              int
+		Status              models.ADAccountStatus
 		FailureCount        int
 		CircuitBreakerUntil *time.Time
 	}

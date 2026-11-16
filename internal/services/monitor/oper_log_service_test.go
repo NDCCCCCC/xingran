@@ -168,7 +168,7 @@ func TestOperLogService_List_FilterStatus(t *testing.T) {
 	seedOperLog(t, db, "op-2", "角色管理", "zhangsan", 2, 1, base)
 
 	svc := newOperLogServiceFixture(db)
-	status := 0 // OperLogStatusSuccess
+	status := models.OperLogStatusSuccess
 	result, err := svc.List(context.Background(), OperLogListParams{
 		BaseListRequest: baseListReq(1, 10), Status: &status,
 	})
@@ -194,7 +194,7 @@ func TestOperLogService_List_FilterOperName_BrokenColumn_Error(t *testing.T) {
 func TestOperLogService_List_FilterTimeRange(t *testing.T) {
 	db := setupTestOperLogDB(t)
 	base := time.Date(2026, 8, 20, 9, 0, 0, 0, time.UTC)
-	seedOperLog(t, db, "op-1", "用户管理", "admin", 1, 0, base)                    // 09:00
+	seedOperLog(t, db, "op-1", "用户管理", "admin", 1, 0, base)                     // 09:00
 	seedOperLog(t, db, "op-2", "角色管理", "zhangsan", 2, 1, base.Add(3*time.Hour)) // 12:00
 
 	svc := newOperLogServiceFixture(db)

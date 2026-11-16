@@ -18,7 +18,7 @@ import (
 // ADConfigListRequest AD配置列表请求
 type ADConfigListRequest struct {
 	base.BaseListRequest
-	Status *int `json:"status,omitempty"`
+	Status *models.ADConfigStatus `json:"status,omitempty"`
 }
 
 // ADConfigCreateRequest 创建AD配置请求
@@ -48,7 +48,7 @@ type ADConfigUpdateRequest struct {
 	SyncEnabled   bool   `json:"syncEnabled"`
 	SyncInterval  int    `json:"syncInterval" binding:"min=60"`
 	MemberOUDN    string `json:"memberOuDn,omitempty"` // 本部部门分组OU DN
-	Status        *int   `json:"status,omitempty"`
+	Status        *models.ADConfigStatus `json:"status,omitempty"`
 }
 
 // ADUserListRequest AD用户列表请求
@@ -157,7 +157,7 @@ func NewADDomainService(db *gorm.DB, pool AccountPool, cipher ...PasswordCipher)
 
 // GetADConfigList 获取AD配置列表（兼容旧API）
 // orderByColumn/isAsc 为服务端排序参数(可选,透传给底层 ApplySort 白名单)。
-func (s *ADDomainService) GetADConfigList(ctx context.Context, status *int, current, pageSize int, orderByColumn string, isAsc *bool) ([]models.ADConfig, int64, error) {
+func (s *ADDomainService) GetADConfigList(ctx context.Context, status *models.ADConfigStatus, current, pageSize int, orderByColumn string, isAsc *bool) ([]models.ADConfig, int64, error) {
 	return s.Config.GetList(ctx, &ListRequest{
 		BaseListRequest: base.BaseListRequest{
 			Current:       current,
@@ -313,6 +313,7 @@ func (s *ADDomainService) MoveADUser(ctx context.Context, config *models.ADConfi
 //  2. 反向对称性：停用是"AD → 系统"单向收敛的保守策略，恢复系统账号必须走
 //     系统用户管理页显式操作（system.UserService.Update），形成可审计的操作留痕；
 //  3. 避免 AD 端误操作（批量启用脚本）批量解锁本地被停用的账号。
+//
 // 恢复系统账号的正规路径：在「系统管理 → 用户管理」把该账号状态改回"正常"。
 func (s *ADDomainService) EnableADUser(ctx context.Context, config *models.ADConfig, userDN string) error {
 	if s.enableUserFn != nil {
@@ -411,9 +412,10 @@ func sysUserHasADConfigColumn(db *gorm.DB) bool {
 //  3. ad_config_id 非空但**不等于** config.ID → 不命中（避免跨配置误伤）
 //
 // ⚠ 当 sys_user 表**没有** ad_config_id 列时（当前 schema 即如此），
-//   规则 1/3 无从执行，退化为"只按 ad_dn 归一化匹配"（即规则 2 的口径）。
-//   这是安全的：AD 的完整 DN 自带域路径，同一个 DN 不可能同时归属两个配置，
-//   因此纯 DN 精确匹配不会跨配置误伤。
+//
+//	规则 1/3 无从执行，退化为"只按 ad_dn 归一化匹配"（即规则 2 的口径）。
+//	这是安全的：AD 的完整 DN 自带域路径，同一个 DN 不可能同时归属两个配置，
+//	因此纯 DN 精确匹配不会跨配置误伤。
 //
 // DN 比较一律走 addomain.NormalizeDN（dn_util.go）—— 唯一真实源，禁在此处
 // 手写归一化（大小写/空格差异会让 AD 回写的 DN 与本地存量 ad_dn 比不相等）。
@@ -480,11 +482,13 @@ func matchSysUserIDsByADDN(ctx context.Context, db *gorm.DB, config *models.ADCo
 //	AD 是状态的单向权威源，本地只做收敛。
 //
 // ⚠ 停用是**软性状态变更**：只改 status（0 正常 → 1 停用），
-//   **不改 deleted_at、不删行**（账号行保留，管理员可随时人工恢复）。
+//
+//	**不改 deleted_at、不删行**（账号行保留，管理员可随时人工恢复）。
 //
 // ⚠ 只更新当前仍为"启用"的行（status = 0）：已停用的行保持不动，重复调用幂等。
 //
 // ⚠ 缓存失效（已知残余风险，刻意不处理）：
+//
 //	addomain 包内没有 CacheProvider 注入路径（构造函数无 cache 参数），
 //	且 internal/services/system 与 internal/core 都 import addomain，
 //	addomain 反向 import 它们会形成**循环依赖** —— 故本包内无法安全失效

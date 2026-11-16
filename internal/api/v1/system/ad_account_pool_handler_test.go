@@ -45,7 +45,7 @@ func (f *fakeADPasswordCipher) Decrypt(ciphertext string) (string, error) {
 type mockAccountPool struct {
 	PickAvailableFunc      func(ctx context.Context, configID string) (*models.ADServiceAccount, error)
 	ListAvailableFunc      func(ctx context.Context, configID string) ([]models.ADServiceAccount, error)
-	ListAllFunc            func(ctx context.Context, configID string, page, pageSize int, statusFilter *int) ([]models.ADServiceAccount, int64, error)
+	ListAllFunc            func(ctx context.Context, configID string, page, pageSize int, statusFilter *models.ADAccountStatus) ([]models.ADServiceAccount, int64, error)
 	CountByStatusFunc      func(ctx context.Context, configID string) (total, available, disabled, circuitBroken int64, err error)
 	PickFirstAvailableFunc func(ctx context.Context, configID string) (*models.ADServiceAccount, error)
 	CreateFunc             func(ctx context.Context, account *models.ADServiceAccount) error
@@ -72,7 +72,7 @@ func (m *mockAccountPool) ListAvailable(ctx context.Context, configID string) ([
 	}
 	return nil, errors.New("not implemented")
 }
-func (m *mockAccountPool) ListAll(ctx context.Context, configID string, page, pageSize int, statusFilter *int) ([]models.ADServiceAccount, int64, error) {
+func (m *mockAccountPool) ListAll(ctx context.Context, configID string, page, pageSize int, statusFilter *models.ADAccountStatus) ([]models.ADServiceAccount, int64, error) {
 	if m.ListAllFunc != nil {
 		return m.ListAllFunc(ctx, configID, page, pageSize, statusFilter)
 	}
@@ -209,7 +209,7 @@ func invokeADAccount(t *testing.T, method, path string, body interface{}, handle
 
 func TestADAccountHandler_List_Success(t *testing.T) {
 	pool := &mockAccountPool{
-		ListAllFunc: func(_ context.Context, _ string, page, pageSize int, _ *int) ([]models.ADServiceAccount, int64, error) {
+		ListAllFunc: func(_ context.Context, _ string, page, pageSize int, _ *models.ADAccountStatus) ([]models.ADServiceAccount, int64, error) {
 			assert.Equal(t, 1, page)
 			assert.Equal(t, 20, pageSize)
 			return []models.ADServiceAccount{{ID: "a1"}}, 1, nil
@@ -222,7 +222,7 @@ func TestADAccountHandler_List_Success(t *testing.T) {
 
 func TestADAccountHandler_List_DefaultsPaging(t *testing.T) {
 	pool := &mockAccountPool{
-		ListAllFunc: func(_ context.Context, _ string, page, pageSize int, _ *int) ([]models.ADServiceAccount, int64, error) {
+		ListAllFunc: func(_ context.Context, _ string, page, pageSize int, _ *models.ADAccountStatus) ([]models.ADServiceAccount, int64, error) {
 			assert.Equal(t, 1, page)
 			assert.Equal(t, 20, pageSize)
 			return nil, 0, nil
@@ -241,7 +241,7 @@ func TestADAccountHandler_List_BindError(t *testing.T) {
 
 func TestADAccountHandler_List_Error(t *testing.T) {
 	pool := &mockAccountPool{
-		ListAllFunc: func(_ context.Context, _ string, _, _ int, _ *int) ([]models.ADServiceAccount, int64, error) {
+		ListAllFunc: func(_ context.Context, _ string, _, _ int, _ *models.ADAccountStatus) ([]models.ADServiceAccount, int64, error) {
 			return nil, 0, errors.New("boom")
 		},
 	}

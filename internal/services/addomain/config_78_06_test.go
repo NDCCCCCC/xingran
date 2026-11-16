@@ -33,12 +33,13 @@ import (
 // insertCfg78 插入一条 sys_ad_config 行（raw SQL，规避 GORM default:true quirk）。
 //
 // 可选参数顺序（按需）：
-//   [0] config_name   (string)
-//   [1] server_address (string)
-//   [2] server_port    (int)
-//   [3] base_dn        (string)
-//   [4] domain_name    (string)
-//   [5] status         (models.ADConfigStatus)
+//
+//	[0] config_name   (string)
+//	[1] server_address (string)
+//	[2] server_port    (int)
+//	[3] base_dn        (string)
+//	[4] domain_name    (string)
+//	[5] status         (models.ADConfigStatus)
 func insertCfg78(t *testing.T, db *gorm.DB, opts ...any) *models.ADConfig {
 	t.Helper()
 	id := uuid.NewString()
@@ -103,7 +104,7 @@ func reservedClosedPort78(t *testing.T) int {
 }
 
 // insertAccount78 raw SQL 插入一个 service account（避开 account_pool_test.go 的同包重定义风险）。
-func insertAccount78(t *testing.T, db *gorm.DB, configID, username string, status int) string {
+func insertAccount78(t *testing.T, db *gorm.DB, configID, username string, status models.ADAccountStatus) string {
 	t.Helper()
 	id := uuid.NewString()
 	now := time.Now()
@@ -151,7 +152,7 @@ func TestCfg78_GetList_FilterSortPage(t *testing.T) {
 	assert.Len(t, list, 5)
 
 	// status 过滤：仅 enabled
-	enabled := int(models.ADConfigStatusEnabled)
+	enabled := models.ADConfigStatusEnabled
 	list, total, err = svc.GetList(ctx, &ListRequest{
 		BaseListRequest: base.BaseListRequest{Current: 1, PageSize: 10},
 		Status:          &enabled,
@@ -161,7 +162,7 @@ func TestCfg78_GetList_FilterSortPage(t *testing.T) {
 	assert.Len(t, list, 4)
 
 	// status 过滤：仅 disabled
-	disabled := int(models.ADConfigStatusDisabled)
+	disabled := models.ADConfigStatusDisabled
 	_, total, err = svc.GetList(ctx, &ListRequest{
 		BaseListRequest: base.BaseListRequest{Current: 1, PageSize: 10},
 		Status:          &disabled,
@@ -274,7 +275,7 @@ func TestCfg78_Update(t *testing.T) {
 	ctx := context.Background()
 	cfg := insertCfg78(t, db, "old-name")
 
-	newStatus := int(models.ADConfigStatusDisabled)
+	newStatus := models.ADConfigStatusDisabled
 	upd := &UpdateRequest{
 		ID:            cfg.ID,
 		ConfigName:    "new-name",

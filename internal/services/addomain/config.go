@@ -25,17 +25,17 @@ func NewConfigService(db *gorm.DB, pool AccountPool) *ConfigService {
 
 // configAllowedSortFields AD配置可排序字段白名单(对应 sys_ad_config 表列名)。
 var configAllowedSortFields = map[string]string{
-	"configName":   "config_name",
+	"configName":    "config_name",
 	"serverAddress": "server_address",
-	"domainName":   "domain_name",
-	"status":       "status",
-	"createdAt":    "created_at",
+	"domainName":    "domain_name",
+	"status":        "status",
+	"createdAt":     "created_at",
 }
 
 // ListRequest 配置列表请求
 type ListRequest struct {
 	base.BaseListRequest
-	Status *int `json:"status,omitempty"`
+	Status *models.ADConfigStatus `json:"status,omitempty"`
 }
 
 // GetList 获取AD配置列表
@@ -133,7 +133,7 @@ type UpdateRequest struct {
 	SyncEnabled   bool   `json:"syncEnabled"`
 	SyncInterval  int    `json:"syncInterval" binding:"min=60"`
 	MemberOUDN    string `json:"memberOuDn,omitempty"` // 本部部门分组OU DN
-	Status        *int   `json:"status,omitempty"`
+	Status        *models.ADConfigStatus `json:"status,omitempty"`
 }
 
 // Update 更新AD配置

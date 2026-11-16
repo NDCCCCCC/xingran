@@ -48,7 +48,7 @@ func (m *mockAccountPool) ListAvailable(ctx context.Context, configID string) ([
 	return m.accounts, nil
 }
 
-func (m *mockAccountPool) ListAll(ctx context.Context, configID string, page, pageSize int, statusFilter *int) ([]models.ADServiceAccount, int64, error) {
+func (m *mockAccountPool) ListAll(ctx context.Context, configID string, page, pageSize int, statusFilter *models.ADAccountStatus) ([]models.ADServiceAccount, int64, error) {
 	return m.accounts, int64(len(m.accounts)), nil
 }
 
@@ -144,12 +144,12 @@ func setupFakeLDAP(t *testing.T) (string, func()) {
 					// Respond with LDAP Bind success (msgID=1, resultCode=0)
 					// BindResponse BER: SEQUENCE { INTEGER 1, APPLICATION 1 SEQUENCE { INTEGER 0, OCTET_STRING "", OCTET_STRING "" } }
 					resp := []byte{
-						0x30, 0x0c,       // SEQUENCE, length 12
+						0x30, 0x0c, // SEQUENCE, length 12
 						0x02, 0x01, 0x01, // INTEGER msgID = 1
-						0x61, 0x07,       // APPLICATION 1 (BindResponse), length 7
+						0x61, 0x07, // APPLICATION 1 (BindResponse), length 7
 						0x0a, 0x01, 0x00, // INTEGER resultCode = 0 (success)
-						0x04, 0x00,       // OCTET STRING matchedDN = ""
-						0x04, 0x00,       // OCTET STRING diagnosticMessage = ""
+						0x04, 0x00, // OCTET STRING matchedDN = ""
+						0x04, 0x00, // OCTET STRING diagnosticMessage = ""
 					}
 					c.Write(resp)
 				}

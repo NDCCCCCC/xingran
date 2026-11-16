@@ -3,9 +3,10 @@ package knowledge
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/xingran-next/xingran-go-backend/internal/core"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/internal/services"
-	knowledgeServices "github.com/xingran-next/xingran-go-backend/internal/services/knowledge"
 	"github.com/xingran-next/xingran-go-backend/internal/services/base"
+	knowledgeServices "github.com/xingran-next/xingran-go-backend/internal/services/knowledge"
 	"github.com/xingran-next/xingran-go-backend/internal/utils/operlog"
 	"github.com/xingran-next/xingran-go-backend/pkg/constants"
 	apperrors "github.com/xingran-next/xingran-go-backend/pkg/errors"
@@ -85,8 +86,8 @@ func (h *ArticleHandler) List(c *gin.Context) {
 		req.TagID = val
 	}
 	if val, ok := rawReq["status"].(float64); ok {
-		status := int(val)
-		req.Status = &status
+		st := models.KnowledgeArticleStatus(val)
+		req.Status = &st
 	}
 	if val, ok := rawReq["createdBy"].(string); ok && val != "" {
 		req.CreatedBy = val

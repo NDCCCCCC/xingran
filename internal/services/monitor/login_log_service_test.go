@@ -176,7 +176,7 @@ func TestLoginLogService_List_FilterStatus(t *testing.T) {
 	seedLoginLog(t, db, "log-3", "lisi", "10.0.0.3", 0, base)
 
 	svc := newLoginLogServiceFixture(db)
-	status := 0 // 0 = 成功(LoginLogStatusSuccess)
+	status := models.LoginLogStatusSuccess
 	result, err := svc.List(context.Background(), LoginLogListParams{
 		BaseListRequest: baseListReq(1, 10), Status: &status,
 	})
@@ -187,7 +187,7 @@ func TestLoginLogService_List_FilterStatus(t *testing.T) {
 func TestLoginLogService_List_FilterTimeRange(t *testing.T) {
 	db := setupTestLoginLogDB(t)
 	base := time.Date(2026, 8, 20, 10, 0, 0, 0, time.UTC)
-	seedLoginLog(t, db, "log-1", "admin", "10.0.0.1", 0, base)               // 10:00
+	seedLoginLog(t, db, "log-1", "admin", "10.0.0.1", 0, base)                     // 10:00
 	seedLoginLog(t, db, "log-2", "zhangsan", "10.0.0.2", 1, base.Add(2*time.Hour)) // 12:00
 
 	svc := newLoginLogServiceFixture(db)
