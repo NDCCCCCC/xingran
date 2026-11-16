@@ -100,7 +100,8 @@ XingRan-Next 项目的全部技术文档索引。最后整理：2026-11-12。
 
 > 2026-11-12 清理 docs 根与子目录同名重复副本时，遵循「先确认引用为零、宁可少删不可误删」：
 > - 已删除 29 份**全仓无引用**（或引用仅来自待删集合 / 将改写的 README / 已归档快照）的 docs 根旧副本；`docs/sangfor_*.txt`、`深信服*.doc` 等外部参考已收敛到 `reference/`（同名已有则跳过、不重复落盘）。
-> - **以下 16 份根副本因仍被白名单外文件引用而保留为例外**，不删除：`API响应规范.md`、`EXCEL_IMPORT_GUIDE.md`、`RPA-Worker-API认证方案-待办.md`、`RPA系统完成状态报告.md`、`RPA系统设计方案.md`、`agent-test-plan.md`、`cache_usage.md`、`code-review-report.md`、`deployment.md`、`interface-type-safe-migration-guide.md`、`启动流程清单.md`、`安全和认证设计（国密）.md`、`开发规范.md`、`数据库设计.md`、`部署和运维文档.md`、`项目概述和架构设计.md`。
+> - **以下 15 份根副本因仍被白名单外文件引用而保留为例外**，不删除：`API响应规范.md`、`EXCEL_IMPORT_GUIDE.md`、`RPA系统完成状态报告.md`、`RPA系统设计方案.md`、`agent-test-plan.md`、`cache_usage.md`、`code-review-report.md`、`deployment.md`、`interface-type-safe-migration-guide.md`、`启动流程清单.md`、`安全和认证设计（国密）.md`、`开发规范.md`、`数据库设计.md`、`部署和运维文档.md`、`项目概述和架构设计.md`。
+>   2026-11-16（handoff R15）：`RPA-Worker-API认证方案-待办.md` 根副本已删除——其两处 Go 注释引用（migration_230 / worker_token_service.go）已改指子目录权威版，权威版见 [`rpa/RPA-Worker-API认证方案-待办.md`](modules/rpa/RPA-Worker-API认证方案-待办.md)。
 >   引用来源是 `CLAUDE.md`、`CHANGELOG.md`、`scripts/README.md`、`scripts/agent/README.md`、Go 源码注释、`configs/`、`管理员使用手册.md`（归 A1）、`.planning/` 归档等，本任务无所有权、不得改写；这些根副本与子目录权威版并存，待各自维护方统一迁移引用后再收敛。**子目录版本为权威版**，README 与各索引均改指子目录。
 > - **`docs/管理员使用手册.md` 绝对不删、不改**（归 A1）。
 > - **品牌名历史归档例外**：`.planning/` 下除 `PROJECT.md` 外的文件（STATE / ROADMAP / MILESTONES / notes / reports / research / reviews 等）与 `.github/scripts/check-diff-coverage.sh` 注释中仍保留旧品牌名（RuoYi 系旧称，含 `Nect` 拼写错误变体）的历史字样，归 A4 / 代码维护方所有，本任务不改；这些是历史时点记录与重命名留痕，不代表当前产品名。当前产品名统一为 **XingRan-Next**，见 [`PRODUCT.md`](PRODUCT.md)。

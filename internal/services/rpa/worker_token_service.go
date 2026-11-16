@@ -2,7 +2,7 @@ package rpa
 
 // DEBT-03（v1.51）：RPA Worker API Token 认证 —— Token 服务层。
 //
-// 方案（docs/RPA-Worker-API认证方案-待办.md，Phase 35 搁置、v1.51 DEBT-03 落地）：
+// 方案（docs/modules/rpa/RPA-Worker-API认证方案-待办.md，Phase 35 搁置、v1.51 DEBT-03 落地）：
 //   - Provisioning Token：预共享白名单（configs yaml + env 注入），仅注册接口使用，
 //     命中后换发 Worker Token；
 //   - Worker Token：`wk_` 前缀 + 32 字节 hex 随机串，落库 sys_rpa_workers.token，
