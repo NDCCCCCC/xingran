@@ -35,7 +35,7 @@ func TestPhase134_UpdateStatus_Reenable_EnqueuesEnable(t *testing.T) {
 	userID := seedUserRow(t, db, "phase134-reenable-status", 1) // 已停用
 	svc := newTestUserService(t, db)
 
-	require.NoError(t, svc.UpdateStatus(context.Background(), userID, int(models.UserStatusEnabled)))
+	require.NoError(t, svc.UpdateStatus(context.Background(), userID, models.UserStatusEnabled))
 
 	assert.Equal(t, int64(1), countRowsByAction(t, db, userID, models.ADPushActionEnable),
 		"状态 1→0 启用必须同事务入队 enable")
@@ -58,7 +58,7 @@ func TestPhase134_UpdateStatus_Reenable_RollsBackWhenQueueInsertFails(t *testing
 	svc := newTestUserService(t, db)
 	require.NoError(t, db.Exec("DROP TABLE ad_push_queue").Error)
 
-	err := svc.UpdateStatus(context.Background(), userID, int(models.UserStatusEnabled))
+	err := svc.UpdateStatus(context.Background(), userID, models.UserStatusEnabled)
 	require.Error(t, err, "队列表不可写时启用必须整体失败")
 
 	var status int
@@ -74,7 +74,7 @@ func TestPhase134_UpdateStatus_Reenable_NoADConfig_NoEnqueue(t *testing.T) {
 	userID := seedUserRow(t, db, "phase134-reenable-nocfg", 1)
 	svc := newTestUserService(t, db)
 
-	require.NoError(t, svc.UpdateStatus(context.Background(), userID, int(models.UserStatusEnabled)),
+	require.NoError(t, svc.UpdateStatus(context.Background(), userID, models.UserStatusEnabled),
 		"无启用配置时状态变更必须放行")
 	assert.Equal(t, int64(0), countQueueRows(t, db, userID), "无启用配置时不应入队")
 }
@@ -105,11 +105,11 @@ func TestPhase134_DisableThenReenable_LatestIntentIsEnable(t *testing.T) {
 	svc := newTestUserService(t, db)
 
 	// 先停用 → 入队 disable
-	require.NoError(t, svc.UpdateStatus(context.Background(), userID, int(models.UserStatusDisabled)))
+	require.NoError(t, svc.UpdateStatus(context.Background(), userID, models.UserStatusDisabled))
 	require.Equal(t, int64(1), countRowsByAction(t, db, userID, models.ADPushActionDisable))
 
 	// 再启用 → 入队 enable，并压制上一条活跃 disable（dead 终态）
-	require.NoError(t, svc.UpdateStatus(context.Background(), userID, int(models.UserStatusEnabled)))
+	require.NoError(t, svc.UpdateStatus(context.Background(), userID, models.UserStatusEnabled))
 	require.Equal(t, int64(1), countRowsByAction(t, db, userID, models.ADPushActionEnable))
 
 	var oldDisable models.ADPushQueue

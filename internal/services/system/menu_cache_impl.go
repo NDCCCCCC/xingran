@@ -194,7 +194,7 @@ func (s *menuCacheService) BatchDelete(ctx context.Context, ids []string, cascad
 }
 
 // UpdateStatus 更新菜单状态（带缓存失效）
-func (s *menuCacheService) UpdateStatus(ctx context.Context, id string, status int) error {
+func (s *menuCacheService) UpdateStatus(ctx context.Context, id string, status models.MenuStatus) error {
 	if err := s.menuService.UpdateStatus(ctx, id, status); err != nil {
 		return err
 	}

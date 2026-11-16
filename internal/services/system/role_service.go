@@ -23,7 +23,7 @@ type RoleService interface {
 	Statistics(ctx context.Context) (*RoleStatisticsResult, error)
 	GetAllEnabled(ctx context.Context) ([]*models.Role, error)
 	BatchDelete(ctx context.Context, ids []string) error
-	UpdateStatus(ctx context.Context, id string, status int) error
+	UpdateStatus(ctx context.Context, id string, status models.RoleStatus) error
 
 	// 新增缓存方法
 	GetAllEnabledWithCache(ctx context.Context) ([]*models.Role, error)
@@ -335,7 +335,7 @@ func (s *roleService) BatchDelete(ctx context.Context, ids []string) error {
 }
 
 // UpdateStatus 更新角色状态
-func (s *roleService) UpdateStatus(ctx context.Context, id string, status int) error {
+func (s *roleService) UpdateStatus(ctx context.Context, id string, status models.RoleStatus) error {
 	// 检查角色是否存在
 	var role models.Role
 	if err := s.db.WithContext(ctx).First(&role, "id = ?", id).Error; err != nil {
@@ -512,4 +512,3 @@ func (s *roleService) InvalidateRoleCache(ctx context.Context, roleID string) er
 }
 
 // toStringPtr 函数已在 user_service.go 中定义
-

@@ -22,7 +22,7 @@ type DepartmentService interface {
 	GetTreeWithFilter(ctx context.Context, includeDisabled bool, params requests.DepartmentListParams) ([]*models.Department, error)
 	List(ctx context.Context, params requests.DepartmentListParams) ([]models.Department, error)
 	BatchDelete(ctx context.Context, ids []string) error
-	UpdateStatus(ctx context.Context, id string, status int) error
+	UpdateStatus(ctx context.Context, id string, status models.DeptStatus) error
 	GetRoleDeptIDs(ctx context.Context, roleID string, deptIDs *[]string) error
 	GetDB() *gorm.DB
 
@@ -391,7 +391,7 @@ func (s *departmentService) BatchDelete(ctx context.Context, ids []string) error
 	return nil
 }
 
-func (s *departmentService) UpdateStatus(ctx context.Context, id string, status int) error {
+func (s *departmentService) UpdateStatus(ctx context.Context, id string, status models.DeptStatus) error {
 	var dept models.Department
 	if err := s.db.WithContext(ctx).First(&dept, "id = ?", id).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {

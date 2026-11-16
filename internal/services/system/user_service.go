@@ -32,7 +32,7 @@ type UserService interface {
 	// StatisticsWithDataScope 带 data_scope 过滤的用户统计（与 List 复用同一过滤构造）。
 	StatisticsWithDataScope(ctx context.Context, scopeUserID string, dataScope models.DataScope) (*UserStatisticsResult, error)
 	BatchDelete(ctx context.Context, ids []string) error
-	UpdateStatus(ctx context.Context, id string, status int) error
+	UpdateStatus(ctx context.Context, id string, status models.UserStatus) error
 	ResetPassword(ctx context.Context, id string, newPassword string) error
 }
 
@@ -788,7 +788,7 @@ func (s *userService) BatchDelete(ctx context.Context, ids []string) error {
 //     （最新意图胜出，杜绝"先停用后启用却仍被禁用"的竞态）。
 //
 // 事务外的 First 只为取旧状态（diff 输入），不参与写。
-func (s *userService) UpdateStatus(ctx context.Context, id string, status int) error {
+func (s *userService) UpdateStatus(ctx context.Context, id string, status models.UserStatus) error {
 	// 检查用户是否存在（事务外：仅用于取旧状态做 0→1 diff）
 	var user models.User
 	if err := s.db.WithContext(ctx).First(&user, "id = ?", id).Error; err != nil {

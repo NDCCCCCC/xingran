@@ -235,7 +235,7 @@ func (s *roleCacheService) BatchDelete(ctx context.Context, ids []string) error 
 }
 
 // UpdateStatus 更新角色状态（带缓存失效）
-func (s *roleCacheService) UpdateStatus(ctx context.Context, id string, status int) error {
+func (s *roleCacheService) UpdateStatus(ctx context.Context, id string, status models.RoleStatus) error {
 	if err := s.roleService.UpdateStatus(ctx, id, status); err != nil {
 		return err
 	}

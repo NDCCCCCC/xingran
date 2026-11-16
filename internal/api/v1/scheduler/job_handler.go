@@ -242,7 +242,7 @@ func (h *JobHandler) UpdateStatus(c *gin.Context) {
 	}
 
 	var req struct {
-		Status int `json:"status"`
+		Status models.JobStatus `json:"status" binding:"oneof=0 1"`
 	}
 	if !responseHelpers.HandleJSONBinding(c, &req) {
 		return
@@ -255,7 +255,7 @@ func (h *JobHandler) UpdateStatus(c *gin.Context) {
 
 	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "定时任务", operlog.OperTypeStatus)
 	statusText := "启用"
-	if req.Status == int(models.JobStatusPause) {
+	if req.Status == models.JobStatusPause {
 		statusText = "暂停"
 	}
 

@@ -410,7 +410,7 @@ func TestRoleService_UpdateStatus_Disable(t *testing.T) {
 	svc := NewRoleService(db)
 	id := seedRoleSvc(t, db, "d", "d", models.RoleStatusEnabled)
 
-	require.NoError(t, svc.UpdateStatus(context.Background(), id, int(models.RoleStatusDisabled)))
+	require.NoError(t, svc.UpdateStatus(context.Background(), id, models.RoleStatusDisabled))
 
 	var status int
 	require.NoError(t, db.Raw("SELECT status FROM sys_role WHERE id = ?", id).Scan(&status).Error)
@@ -423,7 +423,7 @@ func TestRoleService_UpdateStatus_Enable(t *testing.T) {
 	svc := NewRoleService(db)
 	id := seedRoleSvc(t, db, "e", "e", models.RoleStatusDisabled)
 
-	require.NoError(t, svc.UpdateStatus(context.Background(), id, int(models.RoleStatusEnabled)))
+	require.NoError(t, svc.UpdateStatus(context.Background(), id, models.RoleStatusEnabled))
 
 	var status int
 	require.NoError(t, db.Raw("SELECT status FROM sys_role WHERE id = ?", id).Scan(&status).Error)

@@ -3,6 +3,7 @@ package system
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/xingran-next/xingran-go-backend/internal/core"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/internal/models/system/requests"
 	systemServices "github.com/xingran-next/xingran-go-backend/internal/services/system"
 	"github.com/xingran-next/xingran-go-backend/internal/utils/operlog"
@@ -263,7 +264,7 @@ func (h *MenuHandler) UpdateStatus(c *gin.Context) {
 	}
 
 	var req struct {
-		Status int `json:"status" binding:"min=0,max=1"`
+		Status models.MenuStatus `json:"status" binding:"min=0,max=1"`
 	}
 	if !h.bindAndValidate(c, &req) {
 		return
