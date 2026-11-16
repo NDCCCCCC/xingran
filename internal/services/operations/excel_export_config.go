@@ -374,8 +374,8 @@ func GetExportConfig(entityType string) (ExcelExportConfig, bool) {
 			},
 			Columns: []ExcelExportField{
 				{Field: "name", Header: "信息点名称", DBField: "name"},
-				{Field: "infoPointType", Header: "信息点类型", DBField: "info_point_type",
-					Options: map[interface{}]string{"network": "网络信息点", "power": "电源信息点", "other": "其他"}},
+				{Field: "infoPointType", Header: "信息点类型", DBField: "info_point_type", DictType: "ops_info_point_type",
+					Options: map[interface{}]string{"network": "网络信息点", "phone": "电话信息点"}},
 				{Field: "workstationId", Header: "所属工位ID", DBField: "workstation_id"},
 				{Field: "workstationName", Header: "所属工位",
 					Join: &JoinConfig{Table: "sys_workstation", LeftField: "workstation_id",
