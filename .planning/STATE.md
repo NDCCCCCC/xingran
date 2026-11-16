@@ -323,9 +323,9 @@ See: `.planning/PROJECT.md`（updated 2026-11-08 after v1.53 SHIPPED & ARCHIVED�
 
 ## Session
 
-**Last session:** 2026-11-12T18:22:00+08:00
-**Stopped at:** v1.56 候选（进行中 / 未正式立项）：`CHANGELOG.md` [Unreleased] 已登记备份恢复 / 设置页收敛，候选草案 `v156-MILESTONE-DRAFT.md` 尚未跑 `/gsd-new-milestone`；79 条人工验证已排期、0 勾选 / 0 已完成（本环境无生产 PG 写授权、无真机，只能排期不能执行）。下一步按 `notes/SHIPPED-DEFINITION.md` 补齐真实环境验收证据后正式立项。
-**Resume file:** 无（当前状态见本文件 frontmatter / 上方 v1.56 候选段；人工验证跟踪见 `.planning/notes/261108-human-verification-tracker.md`，排期见 `.planning/notes/UAT-EXECUTION-PLAN.md`）
+**Last session:** 2026-11-16T14:05:00+08:00（代码债清偿会话）
+**Stopped at:** 用户裁定「清偿代码债」后，按权威交接件 `notes/261113-hardcode-audit-handoff.md` §2 的 **R4~R15 全部清偿**并以 9 个 PR 合并（#96 CaptchaBg 极性归一+migration 251、#97 根包 rpa.go 删除、#98 operations 双份定义收敛、#99 Excel 死常量+专线标签漂移、#100 信息点值域对齐、#101 裸 int 状态类型化、#102 筛选请求类型化、#103 MACHistory 销账+3D 配色字典化、#104 文档去重），交接件 §0 已更新清偿记录。全部 PR 走「功能分支→PR→CI 全绿→squash 合并」，每 PR 本地预检 GOV-03 diff coverage。**仍开放：R1（v1.56 正式立项，需用户裁定跑 /gsd-new-milestone）、R2（79 条人工验证 0 勾选，需真机与生产 PG 授权）、R3（SHIPPED 门槛，依赖 R2 证据）。**
+**Resume file:** `.planning/notes/261113-hardcode-audit-handoff.md`（§0 已登记清偿记录；历史口径：v1.56 候选未正式立项，`v156-MILESTONE-DRAFT.md` 尚未跑 `/gsd-new-milestone`；人工验证跟踪见 `.planning/notes/261108-human-verification-tracker.md`）
 
 ## Deferred Items
 
