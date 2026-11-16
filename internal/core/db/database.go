@@ -1252,9 +1252,6 @@ func (d *Database) AutoMigrate() error {
 		// 241/242/243 菜单收敛：系统设置页合并 / 漂移告警并入 / 低密度页 Tab 化。
 		// PG 与 sqlite 两分支共用同一组注册，详见 runMenuConsolidationMigrations。
 		d.runMenuConsolidationMigrations()
-		// 251：验证码背景图 status 极性归一（存量翻转 + 列 DEFAULT 归一）。
-		// PG 与 sqlite 两分支共用同一注册（sqlite 侧 ALTER DEFAULT 由 model tag 兜底）。
-		d.runCaptchaBgPolarityMigration()
 	} else {
 		// sqlite 分支: Phase 84 PMODEL-04 迁移记录表 —— 必须先于所有 runAndRecord 执行。
 		if err := d.runAndRecord(225, "schema_migrations_table", migrations.Migrate225SchemaMigrationsTable); err != nil {
@@ -1425,8 +1422,6 @@ func (d *Database) AutoMigrate() error {
 		// 241/242/243 菜单收敛（与上方 PG 分支对称）：系统设置页合并 / 漂移告警并入 /
 		// 低密度页 Tab 化。PG 与 sqlite 两分支共用同一组注册。
 		d.runMenuConsolidationMigrations()
-		// 251：验证码背景图 status 极性归一（与上方 PG 分支对称）。
-		d.runCaptchaBgPolarityMigration()
 		if err := d.runAndRecord(231, "port_write_audit_operator_index", migrations.Migrate231PortWriteAuditOperatorIndex); err != nil {
 			applogger.Errorf("端口写审计 operator 索引迁移失败 (非阻断,留待下次启动): %v", err)
 		}
@@ -1486,6 +1481,10 @@ func (d *Database) runMenuConsolidationMigrations() {
 	if err := d.runAndRecord(250, "workorder_periodic_action_perm_seed", migrations.Migrate250WorkOrderPeriodicActionPermSeed); err != nil {
 		applogger.Errorf("周期工单动作权限码播种迁移失败 (非阻断,留待下次启动): %v", err)
 	}
+	// 251：验证码背景图 status 极性归一（见 runCaptchaBgPolarityMigration）。
+	// 与 241~250 同组注册（PG 与 sqlite 两分支共用本方法）：既保持注册点单一，
+	// 也让 GOV-03 diff gate 的行覆盖由本包测试直接驱动。
+	d.runCaptchaBgPolarityMigration()
 }
 
 // runCaptchaBgPolarityMigration 注册 251：验证码背景图 status 极性归一。
@@ -1496,8 +1495,8 @@ func (d *Database) runMenuConsolidationMigrations() {
 // （default:1 → default:0）。代码侧同步：models/captcha_background.go 常量反转、
 // handler/core 用常量自动跟随、前端 settings/captcha-background.tsx 的 status===0 判断。
 //
-// 独立成方法（而非并入 runMenuConsolidationMigrations）：便于 GOV-03 diff gate
-// 的行覆盖由本包测试直接驱动（见 captcha_bg_polarity_migration_test.go）。
+// 独立成方法（而非直接内联在本方法里）：便于 GOV-03 diff gate 的行覆盖由
+// 本包测试直接驱动其 error body（见 captcha_bg_polarity_migration_test.go）。
 func (d *Database) runCaptchaBgPolarityMigration() {
 	if err := d.runAndRecord(251, "captcha_bg_status_polarity", migrations.Migrate251CaptchaBgStatusPolarity); err != nil {
 		applogger.Errorf("验证码背景图状态极性归一迁移失败 (非阻断,留待下次启动): %v", err)
