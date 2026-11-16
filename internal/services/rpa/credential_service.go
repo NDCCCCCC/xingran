@@ -6,11 +6,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/xingran-next/xingran-go-backend/internal/models"
 	rpamodels "github.com/xingran-next/xingran-go-backend/internal/models/rpa"
 	"github.com/xingran-next/xingran-go-backend/internal/services/addomain"
-	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"github.com/xingran-next/xingran-go-backend/pkg/cache"
+	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"gorm.io/gorm"
 )
 
@@ -89,7 +88,7 @@ func (s *credentialServiceImpl) CreateCredential(ctx context.Context, req *rpamo
 		ExtraDataEncrypted: encrypted.ExtraData,
 		UserID:             userID,
 		IsShared:           req.IsShared,
-		Status:             models.RPACredentialStatusNormal, // 默认正常
+		Status:             rpamodels.CredentialStatusNormal, // 默认正常
 	}
 
 	if err := s.db.WithContext(ctx).Create(cred).Error; err != nil {
@@ -225,14 +224,14 @@ func (s *credentialServiceImpl) GetCredentialForExecution(ctx context.Context, t
 
 	// 优先使用自己的有效凭证
 	err := s.db.WithContext(ctx).
-		Where("target_system = ? AND user_id = ? AND status = ?", targetSystem, userID, models.RPACredentialStatusNormal).
+		Where("target_system = ? AND user_id = ? AND status = ?", targetSystem, userID, rpamodels.CredentialStatusNormal).
 		Order("last_used_at DESC NULLS LAST, created_at DESC").
 		First(&cred).Error
 
 	if err == gorm.ErrRecordNotFound {
 		// 尝试获取部门共享的凭证
 		err = s.db.WithContext(ctx).
-			Where("target_system = ? AND is_shared = true AND dept_id = ? AND status = ?", targetSystem, deptID, models.RPACredentialStatusNormal).
+			Where("target_system = ? AND is_shared = true AND dept_id = ? AND status = ?", targetSystem, deptID, rpamodels.CredentialStatusNormal).
 			Order("last_used_at DESC NULLS LAST, created_at DESC").
 			First(&cred).Error
 	}

@@ -316,3 +316,11 @@ func TestStringArray_Value_SingleElement(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, `["only"]`, string(v.([]byte)))
 }
+
+// ─── CredentialStatus（2026-11-16 自根包 rpa.go 迁入，见 handoff R5） ───────
+
+func TestCredentialStatus_String(t *testing.T) {
+	assert.Equal(t, "正常", CredentialStatusNormal.String())
+	assert.Equal(t, "停用", CredentialStatusStopped.String())
+	assert.Equal(t, "未知", CredentialStatus(99).String(), "未知状态应兜底为\"未知\"")
+}

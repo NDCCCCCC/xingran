@@ -475,12 +475,10 @@ func TestMhk8003_TableNames_Batch(t *testing.T) {
 		{SysDataReconciliation{}, "sys_data_reconciliation"},
 		{SysReconciliationException{}, "sys_reconciliation_exception"},
 		{SysReconciliationFixSuggestion{}, "sys_reconciliation_fix_suggestion"},
-		{RPATask{}, "sys_rpa_tasks"},
-		{RPAWorker{}, "sys_rpa_workers"},
-		{RPAExecution{}, "sys_rpa_executions"},
-		{RPASchedule{}, "sys_rpa_schedules"},
-		{RPAVariable{}, "sys_rpa_variables"},
-		{RPATemplate{}, "sys_rpa_templates"},
+		// 注：原根包遗留模型 RPATask / RPAWorker / RPAExecution / RPASchedule /
+		// RPAVariable / RPATemplate 的 TableName 断言已于 2026-11-16 迁至子包
+		// internal/models/rpa/rpa_table_name_test.go（根包 internal/models/rpa.go
+		// 整体删除，见 .planning/notes/261113-hardcode-audit-handoff.md R5）。
 		{SysDeptLocationAlias{}, "sys_dept_location_alias"},
 		{UserColumnConfig{}, "sys_user_column_config"},
 		{UserPreference{}, "sys_user_preference"},

@@ -872,8 +872,10 @@ func (d *Database) AutoMigrate() error {
 		// PG 不注册的原因同上:避免 GORM 对存量表按 model tag 发起漂移 ALTER;
 		// PG 新部署由 scripts/dbprovision 建表(已含 MACOUIVendor)。
 		// 单一事实源:rpamodels.Worker/Execution(internal/models/rpa/,
-		// services/rpa 实际使用;internal/models/rpa.go 的 RPAWorker/RPAExecution
-		// 为无引用遗留定义,不注册)、models.MACOUIVendor。
+		// services/rpa 实际使用)、models.MACOUIVendor。
+		// 根包 internal/models/rpa.go 的遗留 RPA 模型已于 2026-11-16 整体删除
+		// (见 .planning/notes/261113-hardcode-audit-handoff.md R5),不再需要
+		// 「无引用遗留定义,不注册」的说明。
 		// 三个模型 tag 均无 PG-only DDL 片段(无函数式默认值/数组类型),
 		// 无需经过 sanitizeSQLiteModelDefaults 净化。
 		migrateList = append(migrateList,
