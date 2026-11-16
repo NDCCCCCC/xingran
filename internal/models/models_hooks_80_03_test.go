@@ -467,9 +467,10 @@ func TestMhk8003_TableNames_Batch(t *testing.T) {
 		{EmailConfig{}, "sys_email_config"},
 		{APINotificationConfig{}, "sys_api_notification_config"},
 		{NotificationChannel{}, "sys_notification_channel"},
-		{Floor{}, "ops_floors"},
-		{ServerRoom{}, "ops_server_rooms"},
-		{RoomDevice{}, "ops_room_devices"},
+		// 注：Floor / ServerRoom / RoomDevice 的 TableName 断言已于 2026-11-16 迁至
+		// 子包 internal/models/operations（根包 operations.go 整体删除，见
+		// .planning/notes/261113-hardcode-audit-handoff.md R6；断言落在
+		// operations 包的 operations_table_name_test.go，覆盖全部 13 个模型）。
 		{PortWriteAudit{}, "sys_port_write_audit"},
 		{SysDataReconciliation{}, "sys_data_reconciliation"},
 		{SysReconciliationException{}, "sys_reconciliation_exception"},

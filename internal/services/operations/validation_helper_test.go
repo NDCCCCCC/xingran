@@ -7,10 +7,9 @@ import (
 	"context"
 	"testing"
 
-	"github.com/xingran-next/xingran-go-backend/internal/models"
+	"github.com/glebarez/sqlite"
 	operationsmodels "github.com/xingran-next/xingran-go-backend/internal/models/operations"
 	apperrors "github.com/xingran-next/xingran-go-backend/pkg/errors"
-	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 )
@@ -28,7 +27,7 @@ func setupValidatorTestDB(t *testing.T) *gorm.DB {
 	}
 
 	// 自动迁移测试表
-	if err := db.AutoMigrate(&models.Floor{}, &operationsmodels.Wall{}, &operationsmodels.Door{}); err != nil {
+	if err := db.AutoMigrate(&operationsmodels.OpsFloor{}, &operationsmodels.Wall{}, &operationsmodels.Door{}); err != nil {
 		t.Fatalf("failed to migrate test database: %v", err)
 	}
 
@@ -42,7 +41,7 @@ func TestValidator_ValidateFloor(t *testing.T) {
 
 	// 创建测试楼层
 	name := "Test Floor"
-	floor := &models.Floor{Name: name, FloorNo: "1", BuildingID: "test-building-1"}
+	floor := &operationsmodels.OpsFloor{Name: name, FloorNo: "1", BuildingID: "test-building-1"}
 	if err := db.Create(floor).Error; err != nil {
 		t.Fatalf("failed to create test floor: %v", err)
 	}
@@ -81,7 +80,7 @@ func TestValidator_ValidateWall(t *testing.T) {
 	ctx := context.Background()
 
 	// 创建测试楼层和墙体
-	floor := &models.Floor{Name: "Test Floor", FloorNo: "1", BuildingID: "test-building-1"}
+	floor := &operationsmodels.OpsFloor{Name: "Test Floor", FloorNo: "1", BuildingID: "test-building-1"}
 	if err := db.Create(floor).Error; err != nil {
 		t.Fatalf("failed to create test floor: %v", err)
 	}
@@ -132,7 +131,7 @@ func TestValidator_ValidateDoor(t *testing.T) {
 	ctx := context.Background()
 
 	// 创建测试楼层和门
-	floor := &models.Floor{Name: "Test Floor", FloorNo: "1", BuildingID: "test-building-1"}
+	floor := &operationsmodels.OpsFloor{Name: "Test Floor", FloorNo: "1", BuildingID: "test-building-1"}
 	if err := db.Create(floor).Error; err != nil {
 		t.Fatalf("failed to create test floor: %v", err)
 	}
