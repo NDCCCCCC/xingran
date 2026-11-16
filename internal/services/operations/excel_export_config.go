@@ -325,8 +325,11 @@ func GetExportConfig(entityType string) (ExcelExportConfig, bool) {
 			},
 			Columns: []ExcelExportField{
 				{Field: "name", Header: "专线名称", DBField: "name"},
-				{Field: "lineType", Header: "专线类型", DBField: "line_type",
-					Options: map[interface{}]string{"internet": "互联网专线", "intranet": "内网专线", "cloud_desktop": "云桌面专线", "mpls": "MPLS专线", "fiber": "光纤专线", "leased_line": "租用线路"}},
+				{Field: "lineType", Header: "专线类型", DBField: "line_type", DictType: "ops_dedicated_line_type",
+					// 静态 Options 是模板快照；mpls/leased_line 曾漂移为 "MPLS专线"/"租用线路"，
+					// 2026-11-16（handoff R8）对齐 migration_208_dict_seed 字典文案并加 DictType
+					// 走字典兜底（lookupExportDictLabel），未命中时按字典反查，消除双侧漂移。
+					Options: map[interface{}]string{"internet": "互联网专线", "intranet": "内网专线", "cloud_desktop": "云桌面专线", "mpls": "MPLS VPN", "fiber": "光纤专线", "leased_line": "租用专线"}},
 				{Field: "bandwidth", Header: "带宽", DBField: "bandwidth"},
 				{Field: "isp", Header: "运营商", DBField: "isp"},
 				{Field: "sourceRoomId", Header: "源机房ID", DBField: "source_room_id"},
