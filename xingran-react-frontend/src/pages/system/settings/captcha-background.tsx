@@ -32,8 +32,8 @@ const DIFFICULTY_LEVEL_OPTIONS = [
 
 // 启停状态枚举（形态分类器产物：children <Option> → options）
 const STATUS_ENUM_OPTIONS = [
-  { value: 1, label: "启用" },
-  { value: 0, label: "禁用" },
+  { value: 0, label: "启用" },
+  { value: 1, label: "禁用" },
 ];
 
 // 拼图形状映射
@@ -59,9 +59,10 @@ const SHAPE_OPTIONS = [
   { label: "心形", value: "heart" },
 ];
 
-// ★ status 语义反转（后端契约例外，70-RESEARCH Pitfall 1）：
-//   captcha 背景图 1 = 启用 / 0 = 禁用 —— 与全局「0=启用」惯例相反，显示层按此取数，勿「纠正」。
-//   统计卡「启用数量」与卡脚「启用」徽标均按 status === 1 取值；启停按钮文案 = 当前 status 取反动作。
+// ★ status 语义（2026-11-16 归一）：
+//   captcha 背景图 0 = 启用 / 1 = 禁用 —— 已与全局「0=启用/正常」惯例对齐。
+//   历史为反转族「1=启用 / 0=禁用」，由后端 migration 251 翻转存量数据并归一列 DEFAULT。
+//   统计卡「启用数量」与卡脚「启用」徽标均按 status === 0 取值；启停按钮文案 = 当前 status 取反动作。
 
 // 空状态卡（跨整行白卡：icon + 标题 + 正文 + CTA）
 const EMPTY_CARD_STYLE: CSSProperties = {
@@ -367,8 +368,8 @@ const CaptchaBackgroundSettingsPage: FC = () => {
               }}
               showSearch={false}
               options={[
-                { value: 1, label: "启用" },
-                { value: 0, label: "禁用" },
+                { value: 0, label: "启用" },
+                { value: 1, label: "禁用" },
               ]}
               style={{ width: 100 }}
             />
@@ -428,7 +429,7 @@ const CaptchaBackgroundSettingsPage: FC = () => {
                   preview={{ src: record.previewUrl }}
                   style={{ objectFit: "cover" }}
                 />
-                {/* 卡脚行 1：文件名（mono ellipsis）+ 状态徽标（1=启用 反转语义）。
+                {/* 卡脚行 1：文件名（mono ellipsis）+ 状态徽标（0=启用）。
                     形状/难度/尺寸/大小/使用次数信息不丢 — 以 title 提示承载（planner 裁量，
                     铜金 xr-tag-gold 每屏 ≤2 处预算不允许逐卡渲染难度 Tag） */}
                 <div
@@ -436,8 +437,8 @@ const CaptchaBackgroundSettingsPage: FC = () => {
                   title={`${record.fileName} · 形状 ${PIECE_SHAPE_MAP[record.pieceShape]} · 难度 ${DIFFICULTY_MAP[record.difficultyLevel]} · ${record.fileWidth}x${record.fileHeight} · ${(record.fileSize / 1024).toFixed(1)} KB · 使用 ${record.useCount} 次${record.remark ? ` · ${record.remark}` : ""}`}
                 >
                   <span className="xr-captcha-card-name">{record.fileName}</span>
-                  <span className={`xr-tag ${record.status === 1 ? "xr-tag-green" : ""}`}>
-                    {record.status === 1 ? "启用" : "禁用"}
+                  <span className={`xr-tag ${record.status === 0 ? "xr-tag-green" : ""}`}>
+                    {record.status === 0 ? "启用" : "禁用"}
                   </span>
                 </div>
                 {/* 卡脚行 2：文字链接操作（启停文案 = 当前 status 取反） */}
@@ -449,7 +450,7 @@ const CaptchaBackgroundSettingsPage: FC = () => {
                       disabled={permCbEdit.disabled}
                       onClick={() => handleToggle(record.id)}
                     >
-                      {record.status === 1 ? "禁用" : "启用"}
+                      {record.status === 0 ? "禁用" : "启用"}
                     </Button>
                   )}
                   {permCbEdit.visible && (

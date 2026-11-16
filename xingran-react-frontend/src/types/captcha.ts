@@ -56,7 +56,7 @@ export type PieceShape = "circle" | "square" | "star" | "heart";
 export type DifficultyLevel = 1 | 2 | 3; // 1:简单 2:中等 3:困难
 
 // 背景图状态
-export type CaptchaBackgroundStatus = 0 | 1; // 0:禁用 1:启用
+export type CaptchaBackgroundStatus = 0 | 1; // 0:启用 1:禁用（2026-11-16 归一，migration 251 同步存量）
 
 // 验证码背景图
 export interface CaptchaBackground {

@@ -1481,6 +1481,26 @@ func (d *Database) runMenuConsolidationMigrations() {
 	if err := d.runAndRecord(250, "workorder_periodic_action_perm_seed", migrations.Migrate250WorkOrderPeriodicActionPermSeed); err != nil {
 		applogger.Errorf("周期工单动作权限码播种迁移失败 (非阻断,留待下次启动): %v", err)
 	}
+	// 251：验证码背景图 status 极性归一（见 runCaptchaBgPolarityMigration）。
+	// 与 241~250 同组注册（PG 与 sqlite 两分支共用本方法）：既保持注册点单一，
+	// 也让 GOV-03 diff gate 的行覆盖由本包测试直接驱动。
+	d.runCaptchaBgPolarityMigration()
+}
+
+// runCaptchaBgPolarityMigration 注册 251：验证码背景图 status 极性归一。
+//
+// 背景：sys_captcha_background.status 历史上是反转族「1=启用 / 0=禁用」，与全局
+// 「0=正常/启用、1=停用」相反。只改常量会静默反转线上所有背景图的启停状态，
+// 故由本迁移承担存量翻转（status = 1 - status）+ 列 DEFAULT 归一
+// （default:1 → default:0）。代码侧同步：models/captcha_background.go 常量反转、
+// handler/core 用常量自动跟随、前端 settings/captcha-background.tsx 的 status===0 判断。
+//
+// 独立成方法（而非直接内联在本方法里）：便于 GOV-03 diff gate 的行覆盖由
+// 本包测试直接驱动其 error body（见 captcha_bg_polarity_migration_test.go）。
+func (d *Database) runCaptchaBgPolarityMigration() {
+	if err := d.runAndRecord(251, "captcha_bg_status_polarity", migrations.Migrate251CaptchaBgStatusPolarity); err != nil {
+		applogger.Errorf("验证码背景图状态极性归一迁移失败 (非阻断,留待下次启动): %v", err)
+	}
 }
 
 // ensureSQLiteJoinTableColumns many2many join 表的列级对齐兜底（task-23）。

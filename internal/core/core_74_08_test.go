@@ -470,9 +470,11 @@ func TestCaptchaBackgroundService_GetRandomEnabled(t *testing.T) {
 	assert.NotContains(t, err.Error(), "syntax error")
 
 	// 精确命中正路径(确保 guard 不影响主查询)
+	// status 用 models.CaptchaBgEnabled 常量(2026-11-16 归一后 0=启用),禁裸字面量
 	require.NoError(t, db.Exec(`INSERT INTO sys_captcha_background
 		(id, file_name, file_path, piece_shape, difficulty_level, status, use_count, allowed_shapes)
-		VALUES ('bg-1', 'a.png', 'uploads/a.png', 'circle', 1, 1, 0, '["circle"]')`).Error)
+		VALUES ('bg-1', 'a.png', 'uploads/a.png', 'circle', 1, ?, 0, '["circle"]')`,
+		int(models.CaptchaBgEnabled)).Error)
 
 	bg, err := svc.GetRandomEnabled(ctx, models.PieceShapeCircle, 1)
 	require.NoError(t, err)
