@@ -291,7 +291,7 @@ func (s *userCacheService) BatchDelete(ctx context.Context, ids []string) error 
 }
 
 // UpdateStatus 更新用户状态（带缓存失效）
-func (s *userCacheService) UpdateStatus(ctx context.Context, id string, status int) error {
+func (s *userCacheService) UpdateStatus(ctx context.Context, id string, status models.UserStatus) error {
 	if err := s.userService.UpdateStatus(ctx, id, status); err != nil {
 		return err
 	}

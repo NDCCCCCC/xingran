@@ -43,7 +43,7 @@ type mockJobService struct {
 	DeleteFunc       func(ctx context.Context, id string) error
 	GetByIDFunc      func(ctx context.Context, id string) (*models.Job, error)
 	ListFunc         func(ctx context.Context, params *schedulerServices.JobListParams) (*common.PageResult, error)
-	UpdateStatusFunc func(ctx context.Context, id string, status int) error
+	UpdateStatusFunc func(ctx context.Context, id string, status models.JobStatus) error
 	ExecuteFunc      func(ctx context.Context, id string) error
 }
 
@@ -77,7 +77,7 @@ func (m *mockJobService) List(ctx context.Context, params *schedulerServices.Job
 	}
 	return nil, nil
 }
-func (m *mockJobService) UpdateStatus(ctx context.Context, id string, status int) error {
+func (m *mockJobService) UpdateStatus(ctx context.Context, id string, status models.JobStatus) error {
 	if m.UpdateStatusFunc != nil {
 		return m.UpdateStatusFunc(ctx, id, status)
 	}
@@ -238,11 +238,11 @@ func TestJobHandler_List_WithFilters(t *testing.T) {
 	}
 	h := setupHandler(jobSvc, &mockJobLogService{})
 	c, w := newTestCtx("POST", "/", map[string]interface{}{
-		"current":   2.0,
-		"pageSize":  20.0,
-		"jobName":   "test",
-		"jobGroup":  "DEFAULT",
-		"status":    0.0,
+		"current":  2.0,
+		"pageSize": 20.0,
+		"jobName":  "test",
+		"jobGroup": "DEFAULT",
+		"status":   0.0,
 	})
 	h.List(c)
 	assert.Equal(t, http.StatusOK, w.Code)
@@ -419,7 +419,7 @@ func TestJobHandler_UpdateStatus_Pause(t *testing.T) {
 // TC20: UpdateStatus - service error
 func TestJobHandler_UpdateStatus_ServiceError(t *testing.T) {
 	jobSvc := &mockJobService{
-		UpdateStatusFunc: func(ctx context.Context, id string, status int) error {
+		UpdateStatusFunc: func(ctx context.Context, id string, status models.JobStatus) error {
 			return errors.New("status fail")
 		},
 	}

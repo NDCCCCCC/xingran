@@ -19,7 +19,7 @@ type MenuService interface {
 	GetTree(ctx context.Context) ([]models.Menu, error)
 	List(ctx context.Context, params requests.MenuListParams) ([]models.Menu, error)
 	BatchDelete(ctx context.Context, ids []string, cascade bool) error
-	UpdateStatus(ctx context.Context, id string, status int) error
+	UpdateStatus(ctx context.Context, id string, status models.MenuStatus) error
 	GetUserMenus(ctx context.Context, userID string) ([]models.Menu, error)
 	GetAllUserMenus(ctx context.Context, userID string) ([]models.Menu, error)
 	GetUserPermissions(ctx context.Context, userID string) ([]string, error)
@@ -242,7 +242,7 @@ func (s *menuService) BatchDelete(ctx context.Context, ids []string, cascade boo
 }
 
 // UpdateStatus 更新菜单状态
-func (s *menuService) UpdateStatus(ctx context.Context, id string, status int) error {
+func (s *menuService) UpdateStatus(ctx context.Context, id string, status models.MenuStatus) error {
 	// 检查菜单是否存在
 	var menu models.Menu
 	if err := s.db.WithContext(ctx).First(&menu, "id = ?", id).Error; err != nil {
@@ -547,8 +547,8 @@ func (s *menuService) GetUserPermissions(ctx context.Context, userID string) ([]
 	if err := s.db.WithContext(ctx).
 		Model(&models.Menu{}).
 		// 【PMODEL-02】停用菜单（status=1）的权限码不进入前端权限集；
-	// 对齐后端判定路径（pkg/permission/service.go）语义：只过滤 status，不过滤 visible。
-	Where("id IN ? AND perms IS NOT NULL AND perms != '' AND status = ?", menuIDs, models.MenuStatusNormal).
+		// 对齐后端判定路径（pkg/permission/service.go）语义：只过滤 status，不过滤 visible。
+		Where("id IN ? AND perms IS NOT NULL AND perms != '' AND status = ?", menuIDs, models.MenuStatusNormal).
 		Pluck("perms", &perms).Error; err != nil {
 		return nil, fmt.Errorf("查询权限列表失败: %w", err)
 	}

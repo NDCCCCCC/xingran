@@ -294,7 +294,7 @@ func (h *UserHandler) UpdateStatus(c *gin.Context) {
 	}
 
 	var req struct {
-		Status int `json:"status" binding:"min=0,max=1"`
+		Status models.UserStatus `json:"status" binding:"min=0,max=1"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.Error(c, apperrors.Wrap(err, apperrors.CodeParamError, "请求参数错误"))

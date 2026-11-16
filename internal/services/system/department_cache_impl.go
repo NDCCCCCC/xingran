@@ -129,7 +129,7 @@ func (s *departmentCacheService) BatchDelete(ctx context.Context, ids []string) 
 	return s.InvalidateDeptCache(ctx)
 }
 
-func (s *departmentCacheService) UpdateStatus(ctx context.Context, id string, status int) error {
+func (s *departmentCacheService) UpdateStatus(ctx context.Context, id string, status models.DeptStatus) error {
 	if err := s.departmentService.UpdateStatus(ctx, id, status); err != nil {
 		return err
 	}

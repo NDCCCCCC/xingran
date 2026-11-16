@@ -971,7 +971,7 @@ func TestPhase57_UserService_UpdateStatus_Disable_EnqueuesDisable(t *testing.T) 
 	userID := seedUserRow(t, db, "phase57-gap01-status", 0) // status = 0 启用
 	svc := newTestUserService(t, db)
 
-	require.NoError(t, svc.UpdateStatus(context.Background(), userID, int(models.UserStatusDisabled)))
+	require.NoError(t, svc.UpdateStatus(context.Background(), userID, models.UserStatusDisabled))
 
 	require.Equal(t, int64(1), countRowsByAction(t, db, userID, models.ADPushActionDisable),
 		"UpdateStatus 停用必须同事务入队 disable（列表页 Switch 是最高频停用入口）")
@@ -996,7 +996,7 @@ func TestPhase57_UserService_UpdateStatus_Disable_RollsBackWhenQueueInsertFails(
 	svc := newTestUserService(t, db)
 	require.NoError(t, db.Exec("DROP TABLE ad_push_queue").Error)
 
-	err := svc.UpdateStatus(context.Background(), userID, int(models.UserStatusDisabled))
+	err := svc.UpdateStatus(context.Background(), userID, models.UserStatusDisabled)
 	require.Error(t, err, "队列表不可写时停用必须整体失败")
 
 	var status int
@@ -1017,13 +1017,13 @@ func TestPhase57_UserService_UpdateStatus_NoTransition_NoDisable(t *testing.T) {
 
 	// 1) 启用用户重复启用（0→0）
 	enabled := seedUserRow(t, db, "phase57-gap01-stay-enabled", 0)
-	require.NoError(t, svc.UpdateStatus(context.Background(), enabled, int(models.UserStatusEnabled)))
+	require.NoError(t, svc.UpdateStatus(context.Background(), enabled, models.UserStatusEnabled))
 	assert.Equal(t, int64(0), countRowsByAction(t, db, enabled, models.ADPushActionDisable), "0→0 无跃迁不得入队")
 	assert.Equal(t, int64(0), countRowsByAction(t, db, enabled, models.ADPushActionEnable), "0→0 无跃迁不得入队 enable")
 
 	// 2) 已停用用户重复停用（1→1）
 	disabled := seedUserRow(t, db, "phase57-gap01-stay-disabled", 1)
-	require.NoError(t, svc.UpdateStatus(context.Background(), disabled, int(models.UserStatusDisabled)))
+	require.NoError(t, svc.UpdateStatus(context.Background(), disabled, models.UserStatusDisabled))
 	assert.Equal(t, int64(0), countRowsByAction(t, db, disabled, models.ADPushActionDisable), "1→1 无跃迁不得入队")
 	assert.Equal(t, int64(0), countRowsByAction(t, db, disabled, models.ADPushActionEnable), "1→1 无跃迁不得入队 enable")
 }
@@ -1037,7 +1037,7 @@ func TestPhase57_UserService_UpdateStatus_Disable_NoADConfig_NoEnqueue(t *testin
 	userID := seedUserRow(t, db, "phase57-gap01-status-nocfg", 0)
 	svc := newTestUserService(t, db)
 
-	require.NoError(t, svc.UpdateStatus(context.Background(), userID, int(models.UserStatusDisabled)),
+	require.NoError(t, svc.UpdateStatus(context.Background(), userID, models.UserStatusDisabled),
 		"无启用配置时状态变更必须放行")
 	assert.Equal(t, int64(0), countQueueRows(t, db, userID), "无启用配置时不应入队")
 

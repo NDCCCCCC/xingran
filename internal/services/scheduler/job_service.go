@@ -45,7 +45,7 @@ type JobService interface {
 	List(ctx context.Context, params *JobListParams) (*common.PageResult, error)
 
 	// UpdateStatus 更新任务状态
-	UpdateStatus(ctx context.Context, id string, status int) error
+	UpdateStatus(ctx context.Context, id string, status models.JobStatus) error
 
 	// Execute 执行任务
 	Execute(ctx context.Context, id string) error
@@ -75,10 +75,10 @@ type JobListParams struct {
 
 // jobAllowedSortFields 定时任务可排序字段白名单(对应 sys_job 表列名)。
 var jobAllowedSortFields = map[string]string{
-	"jobName":    "job_name",
-	"jobGroup":   "job_group",
-	"status":     "status",
-	"createdAt":  "created_at",
+	"jobName":   "job_name",
+	"jobGroup":  "job_group",
+	"status":    "status",
+	"createdAt": "created_at",
 }
 
 // JobCreateRequest 创建任务请求
@@ -314,7 +314,7 @@ func (s *jobServiceImpl) List(ctx context.Context, params *JobListParams) (*comm
 }
 
 // UpdateStatus 更新任务状态
-func (s *jobServiceImpl) UpdateStatus(ctx context.Context, id string, status int) error {
+func (s *jobServiceImpl) UpdateStatus(ctx context.Context, id string, status models.JobStatus) error {
 	job, err := s.GetByID(ctx, id)
 	if err != nil {
 		return err
@@ -329,7 +329,7 @@ func (s *jobServiceImpl) UpdateStatus(ctx context.Context, id string, status int
 
 	// 根据状态启动或停止任务
 	if s.scheduler != nil {
-		if status == int(models.JobStatusNormal) { // 启用
+		if status == models.JobStatusNormal { // 启用
 			if err := s.scheduler.StartJob(id); err != nil {
 				return fmt.Errorf("启动任务失败: %w", err)
 			}
