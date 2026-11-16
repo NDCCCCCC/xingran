@@ -457,39 +457,16 @@ func TestMdl8003_MapFields_ScanEdgeCases(t *testing.T) {
 }
 
 // =====================================================================
-// ScriptAction(rpa.go:108/120) — RPA ScriptAction JSON 列
-// ===================================================================
-
-func TestMdl8003_ScriptAction_RoundTrip(t *testing.T) {
-	a := ScriptAction{
-		Type:     ScriptActionClick,
-		Selector: "#submit-btn",
-		Params:   map[string]any{"text": "提交"},
-		Timeout:  500,
-		Retry:    3,
-	}
-	val, err := a.Value()
-	require.NoError(t, err)
-	var got ScriptAction
-	require.NoError(t, got.Scan(val))
-	assert.Equal(t, a, got)
-}
-
-func TestMdl8003_ScriptAction_ScanEdgeCases(t *testing.T) {
-	t.Run("nil_不报错", func(t *testing.T) {
-		var a ScriptAction
-		require.NoError(t, a.Scan(nil))
-	})
-	t.Run("非法类型_静默忽略", func(t *testing.T) {
-		// QUIRK-80-03-J(就地锁定):ScriptAction.Scan 只接 []byte 类型,其他类型静默 return nil
-		var a ScriptAction
-		assert.NoError(t, a.Scan(42), "ScriptAction.Scan 对非 []byte 类型静默忽略")
-	})
-	t.Run("坏JSON_报错", func(t *testing.T) {
-		var a ScriptAction
-		assert.Error(t, a.Scan([]byte(`{garbage`)))
-	})
-}
+// ScriptAction —— 原根包 internal/models/rpa.go 的 JSON 列类型（ScriptAction），
+// 已于 2026-11-16 随该文件整体删除而移除（见
+// .planning/notes/261113-hardcode-audit-handoff.md R5）。
+//
+// 该类型是「无引用遗留定义」：生产代码从未使用（database.go 明确不注册根包
+// RPA 模型），其 JSON 列能力在事实源子包 internal/models/rpa 中由
+// Task.SetActions / Task.GetActions 承担，等价覆盖见
+// internal/models/rpa/rpa_model_methods_test.go 的 TestTask_ActionsJSON 与
+// TestTask_GetActions_InvalidJSON（含坏 JSON 报错分支）。
+// =====================================================================
 
 // 触发 time 引用,确保编译期间导入被使用(models 时间字段广泛引用,本文件随任务 5/6 继续用)。
 var _ = time.Second

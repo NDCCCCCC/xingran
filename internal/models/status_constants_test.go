@@ -32,16 +32,21 @@ package models
 //     JobLogStatus — 0=成功, 1=失败 (NOT enable/disable).
 //
 // REGISTRATION MECHANISM (mandatory for later Phase 69 batches):
-// every NEW status-constant family added to internal/models or
-// internal/models/operations MUST, in the same change:
+// every NEW status-constant family added to internal/models,
+// internal/models/operations or internal/models/rpa MUST, in the same change:
 //   1. have its family prefix added to watchedStatusPrefixes below, and
 //   2. have every constant of the family enumerated in expectedStatusValues.
 // The bidirectional assertion catches constants forgotten on side 2 (an
 // unregistered VALUE under a watched prefix fails the test), but a family
 // prefix forgotten on side 1 leaves a SILENT HOLE in coverage — reviewers must
 // check both. Phase 69 later batches (69-03/69-04/69-05) will add families
-// such as ADAccountStatus* / RPACredentialStatus* / DutyHoliday etc. —
+// such as ADAccountStatus* / CredentialStatus* / DutyHoliday etc. —
 // register them here when created.
+//
+// SCAN SCOPE (2026-11-16): internal/models/rpa 子包已纳入 AST 扫描范围。
+// 根包 internal/models/rpa.go（遗留 RPA 模型与枚举）已整体删除，子包成为
+// 唯一事实源，必须同受防漂移守护；见
+// .planning/notes/261113-hardcode-audit-handoff.md R5。
 
 import (
 	"fmt"
@@ -82,14 +87,21 @@ var watchedStatusPrefixes = []string{
 	// Phase 69 batch 2 additions (untyped int, int-typed struct fields)
 	"WorkstationDeviceStatus", "AssetStatus", "AssetNBFStatus",
 	// Phase 69 batch 3 additions (untyped int; AD pool state machine + RPA credential)
-	"ADAccountStatus", "RPACredentialStatus",
-	// 2026-11-13 补登记：以下族定义在 internal/models 根包但前缀漏登记，
-	// 导致 TestStatusConstantsStability / TestNoStatusLiteralUsage 出现静默覆盖空洞。
-	// 注意 RPA 根包族是「遗留定义」：生产代码统一用 internal/models/rpa 子包
-	// （服务层全部走 rpamodels.*），根包模型仅被 models 包内单测引用；此处登记
-	// 是为冻结取值防漂移，而非宣称它们是生产事实源。详见 rpa.go / database.go 注释。
-	"CaptchaBg", "TaskStatus", "TaskPriority", "RPAExecutionStatus",
-	"WorkerStatus", "ScheduleStatus", "Difficulty",
+	"ADAccountStatus",
+	// 2026-11-16：RPA 凭证启停常量事实源迁至 internal/models/rpa 子包
+	// （根包 internal/models/rpa.go 已整体删除，见
+	// .planning/notes/261113-hardcode-audit-handoff.md R5）。
+	// 前缀由 RPACredentialStatus 改为 CredentialStatus（子包命名）。
+	"CredentialStatus",
+	// 2026-11-16：internal/models/rpa 子包纳入 AST 扫描范围后新增的族。
+	// 子包的 RPAExecutionStatus / WorkerStatus 是 string 枚举（AST 只收 int
+	// 字面量，天然跳过）；TaskStatus / TaskPriority / CredentialStatus 是 int 族。
+	// 注：根包同名族 TaskStatus / TaskPriority 已随 rpa.go 删除而消失，
+	// 此处登记的是子包取值（与根包旧取值不同，见下方注释）。
+	"TaskStatus", "TaskPriority",
+	// captcha_background.go：验证码背景图状态族（2026-11-16 已归一为 0=启用/1=禁用）
+	// 与 DifficultyLevel 难度族（1/2/3）。
+	"CaptchaBg", "Difficulty",
 }
 
 // expectedStatusValues pins the documented (name -> value) mapping of every
@@ -207,9 +219,6 @@ var expectedStatusValues = map[string]int{
 	"ADAccountStatusAvailable": 0, // 可用
 	"ADAccountStatusDisabled":  1, // 管理员手动停用
 	"ADAccountStatusBreaker":   2, // 熔断中
-	// rpa.go（Phase 69 批 3 新增，簇 A 凭证启停，对齐 credentials.go check IN (0,1)）
-	"RPACredentialStatusNormal":  0, // 正常
-	"RPACredentialStatusStopped": 1, // 停用
 	// Phase 102 Plan 04 additions
 	"WorkOrderStatusPending":    0, // 待处理
 	"WorkOrderStatusProcessing": 1, // 处理中
@@ -225,28 +234,20 @@ var expectedStatusValues = map[string]int{
 	"DifficultyEasy":    1, // 简单
 	"DifficultyMedium":  2, // 中等
 	"DifficultyHard":    3, // 困难
-	// 2026-11-13 补登记（rpa.go 根包遗留枚举）——现状冻结：
-	// 与 internal/models/rpa 子包同名族取值不同（如 TaskStatus / TaskPriority），
-	// 但根包模型无生产引用（database.go 明确「无引用遗留定义」）。此处登记是防漂移，
-	// 真正的事实源是子包；未来若要删除根包整族，须同步迁移 models 包内单测。
-	"TaskStatusDraft":             0, // 草稿
-	"TaskStatusEnabled":           1, // 启用
-	"TaskStatusDisabled":          2, // 停用
-	"TaskPriorityLow":             0, // 低
-	"TaskPriorityMedium":          1, // 中
-	"TaskPriorityHigh":            2, // 高
-	"RPAExecutionStatusPending":   0, // 待执行
-	"RPAExecutionStatusRunning":   1, // 执行中
-	"RPAExecutionStatusCompleted": 2, // 已完成
-	"RPAExecutionStatusFailed":    3, // 执行失败
-	"RPAExecutionStatusCancelled": 4, // 已取消
-	"WorkerStatusOffline":         0, // 离线
-	"WorkerStatusOnline":          1, // 在线
-	"WorkerStatusBusy":            2, // 忙碌
-	"WorkerStatusError":           3, // 错误
-	"ScheduleStatusActive":        0, // 激活
-	"ScheduleStatusInactive":      1, // 未激活
-	"ScheduleStatusPaused":        2, // 暂停
+	// internal/models/rpa 子包（2026-11-16：根包 rpa.go 删除后，子包成为唯一事实源，
+	// 并被纳入本守卫的 AST 扫描范围）：
+	//   - CredentialStatus：簇 A 凭证启停，对齐 credentials.go check IN (0,1)
+	//   - TaskStatus：任务启停（子包取值 0=启用/1=停用；根包旧族为 0=草稿/1=启用/2=停用，
+	//     已随 rpa.go 删除而消失，此处登记的是子包新事实源）
+	//   - TaskPriority：0=低/1=中/2=高/3=紧急（根包旧族为 0/1/2，已随 rpa.go 删除）
+	"CredentialStatusNormal":  0, // 正常
+	"CredentialStatusStopped": 1, // 停用
+	"TaskStatusEnabled":       0, // 启用
+	"TaskStatusDisabled":      1, // 停用
+	"TaskPriorityLow":         0, // 低
+	"TaskPriorityMedium":      1, // 中
+	"TaskPriorityHigh":        2, // 高
+	"TaskPriorityUrgent":      3, // 紧急
 }
 
 // TestStatusConstantsStability asserts each watched constant is pinned to its
@@ -338,7 +339,14 @@ type statusConstSite struct {
 // package operations); duplicates with CONFLICTING values return an error.
 func readStatusConsts() (map[string]statusConstSite, error) {
 	out := make(map[string]statusConstSite)
-	patterns := []string{"*.go", filepath.Join("operations", "*.go")}
+	// 扫描范围：根包 + operations 子包 + rpa 子包。
+	// rpa 子包自 2026-11-16 起纳入（根包 internal/models/rpa.go 整体删除后，
+	// 子包成为 RPA 状态常量的唯一事实源，必须同受防漂移守护）。
+	patterns := []string{
+		"*.go",
+		filepath.Join("operations", "*.go"),
+		filepath.Join("rpa", "*.go"),
+	}
 	for _, pattern := range patterns {
 		files, err := filepath.Glob(pattern)
 		if err != nil {

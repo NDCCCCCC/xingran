@@ -6,6 +6,30 @@ import (
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 )
 
+// CredentialStatus RPA 凭证启停状态（簇 A：0=正常，1=停用）。
+//
+// 常量事实源在本子包：原定义在根包 internal/models/rpa.go（遗留），随该文件
+// 于 2026-11-16 整体删除后迁到这里（见 .planning/notes/261113-hardcode-audit-handoff.md R5）。
+// 取值与数据库 CHECK 约束 `status IN (0,1)` 对齐。
+type CredentialStatus int
+
+const (
+	CredentialStatusNormal  CredentialStatus = 0 // 正常
+	CredentialStatusStopped CredentialStatus = 1 // 停用
+)
+
+// String 实现 Stringer 接口
+func (s CredentialStatus) String() string {
+	switch s {
+	case CredentialStatusNormal:
+		return "正常"
+	case CredentialStatusStopped:
+		return "停用"
+	default:
+		return "未知"
+	}
+}
+
 // RPACredential RPA 登录凭证
 type RPACredential struct {
 	models.BaseModel
@@ -31,11 +55,11 @@ type RPACredential struct {
 	IsShared bool   `json:"isShared" gorm:"default:false;index:idx_rpa_cred_shared,priority:3"`
 
 	// 状态和元数据
-	Status            int        `json:"status" gorm:"default:0;check:status IN (0,1)"`
-	LastUsedAt        *time.Time `json:"lastUsedAt"`
-	LastLoginAt       *time.Time `json:"lastLoginAt"`
-	LoginSuccessCount int        `json:"loginSuccessCount" gorm:"default:0"`
-	LoginFailCount    int        `json:"loginFailCount" gorm:"default:0"`
+	Status            CredentialStatus `json:"status" gorm:"default:0;check:status IN (0,1)"`
+	LastUsedAt        *time.Time       `json:"lastUsedAt"`
+	LastLoginAt       *time.Time       `json:"lastLoginAt"`
+	LoginSuccessCount int              `json:"loginSuccessCount" gorm:"default:0"`
+	LoginFailCount    int              `json:"loginFailCount" gorm:"default:0"`
 }
 
 func (RPACredential) TableName() string {
@@ -107,7 +131,7 @@ type CredentialUpdateRequest struct {
 	Username  string                 `json:"username"`
 	Password  string                 `json:"password"`
 	ExtraData map[string]interface{} `json:"extraData"`
-	Status    *int                   `json:"status"`
+	Status    *CredentialStatus      `json:"status"`
 	IsShared  *bool                  `json:"isShared"`
 }
 
@@ -126,12 +150,12 @@ type SessionCreateRequest struct {
 
 // CredentialListParams 凭证列表查询参数
 type CredentialListParams struct {
-	Current      int    `json:"current" form:"current"`
-	PageSize     int    `json:"pageSize" form:"pageSize"`
-	TargetSystem string `json:"targetSystem,omitempty" form:"targetSystem"`
-	Status       *int   `json:"status,omitempty" form:"status"`
-	IsShared     *bool  `json:"isShared,omitempty" form:"isShared"`
-	MyCredOnly   bool   `json:"myCredOnly,omitempty" form:"myCredOnly"` // 仅查看我的凭证
+	Current      int               `json:"current" form:"current"`
+	PageSize     int               `json:"pageSize" form:"pageSize"`
+	TargetSystem string            `json:"targetSystem,omitempty" form:"targetSystem"`
+	Status       *CredentialStatus `json:"status,omitempty" form:"status"`
+	IsShared     *bool             `json:"isShared,omitempty" form:"isShared"`
+	MyCredOnly   bool              `json:"myCredOnly,omitempty" form:"myCredOnly"` // 仅查看我的凭证
 }
 
 // SessionListParams 会话列表查询参数

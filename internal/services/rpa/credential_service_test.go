@@ -131,7 +131,7 @@ func TestCredentialService_UpdateCredential(t *testing.T) {
 	require.NoError(t, err)
 
 	shared := true
-	status := 1
+	status := rpamodels.CredentialStatusStopped
 	require.NoError(t, svc.UpdateCredential(context.Background(), cred.ID, &rpamodels.CredentialUpdateRequest{
 		Name:     "new",
 		IsShared: &shared,
@@ -187,7 +187,7 @@ func TestCredentialService_ListCredentials(t *testing.T) {
 	assert.Equal(t, "c3", list[0].ID)
 
 	// 状态过滤
-	status := 1
+	status := rpamodels.CredentialStatusStopped
 	_, total, err = svc.ListCredentials(ctx, &rpamodels.CredentialListParams{Current: 1, PageSize: 10, Status: &status}, "u1", "d1")
 	require.NoError(t, err)
 	assert.Equal(t, int64(1), total)
