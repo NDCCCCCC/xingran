@@ -12,7 +12,7 @@ import (
 //
 // sys_rpa_workers 新增 token / token_expires_at / last_token_rotation 三列，
 // 支撑 Provisioning Token 换发 Worker Token 的认证方案
-// （docs/RPA-Worker-API认证方案-待办.md，Phase 35 起搁置、v1.51 DEBT-03 落地）。
+// （docs/modules/rpa/RPA-Worker-API认证方案-待办.md，Phase 35 起搁置、v1.51 DEBT-03 落地）。
 //
 // 实现方式：AutoMigrate(Worker)（加列安全，不动既有行）+ HasColumn 幂等兜底。
 // 老 Worker 无 token（宽限期模式）→ 三列全空，不影响既有部署。
