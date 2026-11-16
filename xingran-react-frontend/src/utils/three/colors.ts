@@ -75,6 +75,21 @@ export const WORKSTATION_TYPE_LABELS: Record<string, string> = {
 };
 
 /**
+ * 字典 listClass → 3D 配色映射（handoff R13）。
+ * 管理员经字典新增工位类型（type=3+，静态表未命中）时，按该类型在
+ * ops_workstation_type 字典上的 listClass 取色；语义对齐 antd Tag 色系。
+ * 未登记 listClass 或未传字典时回落 0 号色（既有行为）。
+ */
+const LIST_CLASS_3D_COLORS: Record<string, { main: string; bg: string; border: string }> = {
+  primary: { main: legacyBrandColors.primary, bg: "#e6f7ff", border: "#91d5ff" },
+  success: { main: legacyBrandColors.success, bg: "#f6ffed", border: "#b7eb8f" },
+  warning: { main: legacyBrandColors.warning, bg: "#fffbe6", border: "#ffe58f" },
+  error: { main: legacyBrandColors.error, bg: "#fff1f0", border: "#ffccc7" },
+  processing: { main: legacyBrandColors.info, bg: "#e6fffb", border: "#87e8de" },
+  default: { main: legacyBrandColors.secondary, bg: "#f9f0ff", border: "#d3adf7" },
+};
+
+/**
  * 地图标记颜色
  */
 export const MAP_MARKER_COLORS = {
@@ -133,16 +148,28 @@ export function resolveWorkstationTypeLabel(
 }
 
 /**
- * 获取工位类型颜色。
- * 颜色按数字静态取色（口径：颜色仍可静态）；仅 label 在传入字典时被覆盖。
+ * 获取工位类型颜色（handoff R13：新增类型按字典 listClass 配色）。
+ * 取色优先级：
+ * 1) 静态表命中（type=0/1/2）→ 原静态色（视觉零变化）；
+ * 2) 静态表未命中且传入字典 → 按该类型 dictItem.listClass 从
+ *    LIST_CLASS_3D_COLORS 取色（管理员新增类型不再千篇一律回落 0 号蓝）；
+ * 3) 皆未命中 → 回落 0 号色（既有行为）。
+ * label 逻辑不变：传入字典时由 resolveWorkstationTypeLabel 覆盖。
  * 不传 dictItems 时返回 WORKSTATION_TYPE_COLORS 原对象（保持既有引用相等语义）。
  * @param type 类型值
  * @param dictItems 可选字典项数组
  */
 export function getWorkstationTypeColor(type: number, dictItems?: ReadonlyArray<DictItem>) {
+  const staticHit = WORKSTATION_TYPE_COLORS[type as keyof typeof WORKSTATION_TYPE_COLORS];
+  if (!staticHit && dictItems) {
+    const item = dictItems.find((d) => d.dictValue === String(type));
+    const palette = item?.listClass ? LIST_CLASS_3D_COLORS[item.listClass] : undefined;
+    if (palette) {
+      return { ...palette, label: resolveWorkstationTypeLabel(type, dictItems) };
+    }
+  }
   const color =
-    WORKSTATION_TYPE_COLORS[type as keyof typeof WORKSTATION_TYPE_COLORS] ||
-    WORKSTATION_TYPE_COLORS[0];
+    staticHit || WORKSTATION_TYPE_COLORS[0];
   if (!dictItems) return color;
   return { ...color, label: resolveWorkstationTypeLabel(type, dictItems) };
 }

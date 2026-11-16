@@ -13,10 +13,13 @@
  * 默认时间范围:近 7d(D-07)
  * 颜色与图标:与 macEventMeta.ts 单一事实源对齐(D-10)
  *
- * 已知 TODO(由后续 plan 接管):
- * - 14-04:工具栏新增 2 个互斥导出按钮
- * - 14-05:替换内联 Alert/Empty 为 EmptyStateWithAction / ErrorAlertWithRetry
- * - 14-05b:移动端卡片视图最终样式收口
+ * 已知 TODO(2026-11-16 复核，handoff R12)：
+ * - 14-04:工具栏新增 2 个互斥导出按钮 —— 需求原文不可考（全库无 14-04 plan 归档），
+ *   盲做等于编造需求；待产品确认「导出范围/格式/互斥语义」后再实施。
+ * - 14-05:已落地 —— 空态/错误态分别使用 EmptyStateWithAction(本文件 :468/:488)
+ *   与 ErrorAlertWithRetry(:739)，本条仅销账。
+ * - 14-05b:移动端卡片视图最终样式收口 —— 无验收标准且需真机目验，留待带
+ *   移动端 UAT 条件的里程碑。
  */
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
@@ -733,7 +736,7 @@ const MACHistoryPage: React.FC = () => {
         </Form>
       </Card>
 
-      {/* 错误兜底(14-05b:替换为 ErrorAlertWithRetry — D-20 错误码 1006/1007/500 分级文案) */}
+      {/* 错误兜底(14-05 已落地:ErrorAlertWithRetry — D-20 错误码 1006/1007/500 分级文案) */}
       {error && (
         <div style={{ marginBottom: 16 }}>
           <ErrorAlertWithRetry error={error} onRetry={() => refetch()} />

@@ -41,6 +41,34 @@ describe("getWorkstationTypeColor", () => {
     expect(getWorkstationTypeColor(1)).toBe(WORKSTATION_TYPE_COLORS[1]);
     expect(getWorkstationTypeColor(99)).toBe(WORKSTATION_TYPE_COLORS[0]);
   });
+
+  // handoff R13：静态表未命中的新增类型按字典 listClass 配色
+  const dictItems = [
+    { id: "1", dictLabel: "固定", dictValue: "0", listClass: "primary" },
+    { id: "2", dictLabel: "灵活", dictValue: "1", listClass: "success" },
+    { id: "3", dictLabel: "管理", dictValue: "2", listClass: "processing" },
+    { id: "4", dictLabel: "虚拟", dictValue: "3", listClass: "warning" },
+    { id: "5", dictLabel: "无色类", dictValue: "4" },
+  ] as const;
+
+  it("新增类型(type=3)按字典 listClass=warning 取色，label 走字典", () => {
+    const color = getWorkstationTypeColor(3, dictItems);
+    expect(color.main).not.toBe(WORKSTATION_TYPE_COLORS[0].main); // 不再回落 0 号蓝
+    expect(color.label).toBe("虚拟");
+    expect(color.bg).toBeDefined();
+    expect(color.border).toBeDefined();
+  });
+
+  it("新增类型无 listClass → 仍回落 0 号色（既有行为）", () => {
+    const color = getWorkstationTypeColor(4, dictItems);
+    expect(color.main).toBe(WORKSTATION_TYPE_COLORS[0].main);
+    expect(color.label).toBe("无色类");
+  });
+
+  it("静态表命中(type=0/1/2)行为不变（引用相等语义保留）", () => {
+    expect(getWorkstationTypeColor(0)).toBe(WORKSTATION_TYPE_COLORS[0]);
+    expect(getWorkstationTypeColor(2)).toBe(WORKSTATION_TYPE_COLORS[2]);
+  });
 });
 
 describe("getMapMarkerColor", () => {
