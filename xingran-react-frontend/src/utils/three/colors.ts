@@ -168,8 +168,7 @@ export function getWorkstationTypeColor(type: number, dictItems?: ReadonlyArray<
       return { ...palette, label: resolveWorkstationTypeLabel(type, dictItems) };
     }
   }
-  const color =
-    staticHit || WORKSTATION_TYPE_COLORS[0];
+  const color = staticHit || WORKSTATION_TYPE_COLORS[0];
   if (!dictItems) return color;
   return { ...color, label: resolveWorkstationTypeLabel(type, dictItems) };
 }
