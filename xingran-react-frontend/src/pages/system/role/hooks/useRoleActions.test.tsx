@@ -4,6 +4,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import { App, ConfigProvider, Modal } from "antd";
+import type { FormInstance } from "antd";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 vi.mock("@/lib/api", async () => {
@@ -103,6 +104,23 @@ describe("useRoleActions", () => {
       await result.current.handleBatchDelete([]);
     });
     expect(postSpy).not.toHaveBeenCalled();
+  });
+
+  it("handleDataScopeChange 同步 currentDataScope（选自定义数据出现部门树的前提）", () => {
+    const params = baseParams();
+    const { result } = renderHook(() => useRoleActions(params), { wrapper: wrap });
+    const formMock = { setFieldsValue: vi.fn() } as unknown as FormInstance<unknown>;
+    act(() => {
+      result.current.handleDataScopeChange(2, formMock);
+    });
+    expect(params.setCurrentDataScope).toHaveBeenCalledWith(2);
+    // 非 2：清空 deptIds 与勾选状态
+    act(() => {
+      result.current.handleDataScopeChange(1, formMock);
+    });
+    expect(params.setCurrentDataScope).toHaveBeenCalledWith(1);
+    expect(formMock.setFieldsValue).toHaveBeenCalledWith({ deptIds: [] });
+    expect(params.setCheckedDeptKeys).toHaveBeenCalledWith([]);
   });
 
   it("handleBatchDelete 非空调 post + 清 selectedRowKeys", async () => {
