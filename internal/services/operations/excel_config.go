@@ -5,18 +5,13 @@ import (
 	"github.com/xingran-next/xingran-go-backend/internal/models/operations"
 )
 
-const (
-	StatusNormal               = "正常"
-	StatusStopped              = "停用"
-	StatusFault                = "故障"
-	StatusDisabled             = "停用"
-	WorkstationTypeFixed       = "固定工位"
-	WorkstationTypeHotDesk     = "灵活工位"
-	WorkstationTypeManager     = "管理工位"
-	WorkstationStatusAvailable = "空闲"
-	WorkstationStatusOccupied  = "占用"
-	WorkstationStatusMaintain  = "维护"
-)
+// 说明：本文件不再定义状态/类型文案常量。
+// 2026-11-16（handoff R10）删除了顶部 10 个无引用死常量
+// （StatusNormal/StatusStopped/StatusFault/StatusDisabled、
+// WorkstationTypeFixed/HotDesk/Manager、WorkstationStatusAvailable/
+// Occupied/Maintain）——它们与 internal/models/workstation.go 同名常量
+// 同名不同值（string vs int），且全部 Options 实际引用的是
+// models.* / operations.* 的类型化常量。
 
 type ExcelColumn struct {
 	Field     string
@@ -294,7 +289,7 @@ var ExcelConfigs = map[string]ExcelConfig{
 		StartRow:   2,
 		Columns: []ExcelColumn{
 			{Field: "name", Header: "专线名称", Required: true, MaxLength: 100},
-			{Field: "lineType", Header: "专线类型", Required: true, Options: map[interface{}]string{"internet": "互联网专线", "intranet": "内网专线", "cloud_desktop": "云桌面专线", "mpls": "MPLS VPN", "fiber": "光纤专线", "leased_line": "租用专线"}, DBField: "line_type"},
+			{Field: "lineType", Header: "专线类型", Required: true, DictType: "ops_dedicated_line_type", Options: map[interface{}]string{"internet": "互联网专线", "intranet": "内网专线", "cloud_desktop": "云桌面专线", "mpls": "MPLS VPN", "fiber": "光纤专线", "leased_line": "租用专线"}, DBField: "line_type"},
 			{Field: "bandwidth", Header: "带宽", MaxLength: 50, DBField: "bandwidth"},
 			{Field: "isp", Header: "运营商", Required: true, MaxLength: 100, DBField: "isp"},
 			{Field: "sourceRoomName", Header: "源机房", MaxLength: 100, DBField: "source_room_name"},
