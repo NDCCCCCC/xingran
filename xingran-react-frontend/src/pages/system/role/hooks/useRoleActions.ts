@@ -214,12 +214,18 @@ export function useRoleActions(params: UseRoleActionsParams): UseRoleActionsRetu
   );
 
   // 数据范围变更
-  const handleDataScopeChange = useCallback((value: number, editForm: FormInstance<unknown>) => {
-    // 如果不是自定义数据权限，清空部门权限选择
-    if (value !== 2) {
-      editForm.setFieldsValue({ deptIds: [] });
-    }
-  }, []);
+  const handleDataScopeChange = useCallback(
+    (value: number, editForm: FormInstance<unknown>) => {
+      // 同步 currentDataScope 状态，驱动 index.tsx 中"部门权限"树的条件渲染
+      setCurrentDataScope(value);
+      // 如果不是自定义数据权限，清空部门权限选择
+      if (value !== 2) {
+        editForm.setFieldsValue({ deptIds: [] });
+        setCheckedDeptKeys([]);
+      }
+    },
+    [setCurrentDataScope, setCheckedDeptKeys]
+  );
 
   // Modal 打开后的回调 - 使用 ref 读取，避免 React 批处理延迟问题
   const handleModalOpenChange = useCallback(
