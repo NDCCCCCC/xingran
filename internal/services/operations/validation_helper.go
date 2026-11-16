@@ -3,7 +3,6 @@ package operations
 import (
 	"context"
 
-	"github.com/xingran-next/xingran-go-backend/internal/models"
 	operationsmodels "github.com/xingran-next/xingran-go-backend/internal/models/operations"
 	apperrors "github.com/xingran-next/xingran-go-backend/pkg/errors"
 	"gorm.io/gorm"
@@ -26,7 +25,9 @@ func NewValidator(db *gorm.DB) Validator {
 }
 
 func (v *validator) ValidateFloor(ctx context.Context, floorID string) error {
-	return v.validateExists(ctx, &models.Floor{}, floorID, apperrors.FloorNotFound())
+	// 2026-11-16：根包 models.Floor 已随 operations.go 收敛删除（handoff R6），
+	// ops_floors 表的唯一 GORM 映射为子包 OpsFloor。
+	return v.validateExists(ctx, &operationsmodels.OpsFloor{}, floorID, apperrors.FloorNotFound())
 }
 
 func (v *validator) ValidateWall(ctx context.Context, wallID string) error {

@@ -13,10 +13,11 @@ package models
 //     would silently corrupt the status semantics of every existing DB row and
 //     every unreplaced literal. Removing a constant is a breaking change.
 //   - Cross-package duplicate definitions are checked for value conflicts:
-//     FloorStatus / RoomStatus / RoomDeviceStatus exist BOTH here (package
-//     models, operations.go) and in internal/models/operations (package
-//     operations). Identical values are tolerated (known double definition);
-//     divergent values for the same name fail the parse.
+//     FloorStatus / RoomStatus / RoomDeviceStatus previously existed BOTH here
+//     (package models, operations.go) and in internal/models/operations
+//     (package operations). 2026-11-16 (handoff R6): the root-package copy was
+//     deleted, the operations subpackage is the single source; the AST scan
+//     covers operations/, so these families remain guarded.
 //
 // Highest-risk semantics that must NEVER be "normalized" (see Phase 69
 // RESEARCH cluster table A2):
@@ -177,18 +178,19 @@ var expectedStatusValues = map[string]int{
 	// dashboard.go
 	"DashboardStatusNormal":  0,
 	"DashboardStatusStopped": 1,
-	// operations.go（package models 旧版）
-	"FloorStatusNormal":      0,
-	"FloorStatusStopped":     1,
-	"RoomStatusNormal":       0,
-	"RoomStatusStopped":      1,
-	"RoomDeviceStatusNormal": 0,
-	"RoomDeviceStatusFault":  1,
-	"RoomDeviceStatusScrap":  2,
+	// operations 枚举（2026-11-16：根包 operations.go 已收敛删除（handoff R6），
+	// 以下常量的唯一定义在 internal/models/operations 子包；FloorStatus /
+	// RoomStatus / RoomDeviceStatus 的同名族由子包承接，AST 扫描范围含 operations/）
+	"FloorStatusNormal":      0, // 正常
+	"FloorStatusStopped":     1, // 停用
+	"RoomStatusNormal":       0, // 正常
+	"RoomStatusStopped":      1, // 停用
+	"RoomDeviceStatusNormal": 0, // 正常
+	"RoomDeviceStatusFault":  1, // 故障
 	// operations 子包（package operations）
 	"BuildingStatusNormal":     0, // 正常
 	"BuildingStatusStopped":    1, // 停用
-	"RoomDeviceStatusScrapped": 2, // 报废（子包命名，与 models 版 Scrap 同值）
+	"RoomDeviceStatusScrapped": 2, // 报废（子包命名；根包旧名 Scrap 已随 operations.go 删除）
 	"LineStatusNormal":         0, // 正常
 	"LineStatusFault":          1, // 故障
 	"LineStatusDisabled":       2, // 停用

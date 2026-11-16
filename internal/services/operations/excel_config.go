@@ -282,7 +282,7 @@ var ExcelConfigs = map[string]ExcelConfig{
 			{Field: "purchaseDate", Header: "购买日期", MaxLength: 50, DBField: "purchase_date"},
 			{Field: "warrantyDate", Header: "保修到期", MaxLength: 50, DBField: "warranty_date"},
 			{Field: "powerConsumption", Header: "功耗(W)", DBField: "power_consumption"},
-			{Field: "status", Header: "状态", DBField: "status", Options: map[interface{}]string{int(models.RoomDeviceStatusNormal): "正常", int(models.RoomDeviceStatusFault): "故障", int(models.RoomDeviceStatusScrap): "报废"}},
+			{Field: "status", Header: "状态", DBField: "status", Options: map[interface{}]string{int(operations.RoomDeviceStatusNormal): "正常", int(operations.RoomDeviceStatusFault): "故障", int(operations.RoomDeviceStatusScrapped): "报废"}},
 			{Field: "remark", Header: "备注", Aliases: []string{"说明", "描述"}, MaxLength: 500, DBField: "remark"},
 		},
 	},
