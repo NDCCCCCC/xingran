@@ -362,6 +362,13 @@ export const PERMISSION_CODES = {
     // task-3 G4 整改：备份删除独立码（此前删除按钮复用 export，2026-11-11 拆出）。
     remove: "system:backup:remove",
   },
+  // 条线部门 → 管理归属机构映射（权限数据范围域，后端复用 sys_dept_location_alias
+  // scope='permission' 行）。3 码与后端 /ops/dept-managed-org 路由端点级挂载同源。
+  sysDeptManagedOrg: {
+    list: "sys:dept:managed-org:list",
+    add: "sys:dept:managed-org:add",
+    delete: "sys:dept:managed-org:delete",
+  },
 } as const;
 
 /**

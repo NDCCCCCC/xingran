@@ -9,6 +9,7 @@ import {
   ReloadOutlined,
   ImportOutlined,
   ExportOutlined,
+  ApartmentOutlined,
 } from "@ant-design/icons";
 import { useQueryClient } from "@tanstack/react-query";
 import type { Department } from "@/types";
@@ -25,6 +26,8 @@ import { queryKeys } from "@/lib/queryKeys";
 // Phase 86 W1（RBAC-02）：操作级权限门控 —— 单一真相源 + 三态门控 hook。
 import { PERMISSION_CODES } from "@/constants/permissionCodes";
 import { useActionPermission, StatCards } from "@/components/shared";
+// 条线部门管理归属机构映射 Drawer（权限数据范围域）
+import ManagedOrgDrawer from "@/components/operations/ManagedOrgDrawer";
 
 const DepartmentManagement: FC = () => {
   const { message } = App.useApp();
@@ -43,6 +46,9 @@ const DepartmentManagement: FC = () => {
   const permAdd = permGate.decide(PERMISSION_CODES.systemDept.add);
   const permImport = permGate.decide(PERMISSION_CODES.systemDept.import);
   const permExport = permGate.decide(PERMISSION_CODES.systemDept.export);
+  // 「归属映射」入口可见性：sys:dept:managed-org:list（Drawer 内部再按 add/delete 门控）
+  const permManagedOrg = permGate.decide(PERMISSION_CODES.sysDeptManagedOrg.list);
+  const [managedOrgVisible, setManagedOrgVisible] = useState(false);
 
   const {
     departments,
@@ -288,6 +294,16 @@ const DepartmentManagement: FC = () => {
                 导出
               </Button>
             )}
+            {permManagedOrg.visible && (
+              <Button
+                icon={<ApartmentOutlined />}
+                onClick={() => setManagedOrgVisible(true)}
+                disabled={permManagedOrg.disabled}
+                title={permManagedOrg.hint ?? "条线部门管理归属映射"}
+              >
+                归属映射
+              </Button>
+            )}
           </Space>
         </div>
       </Card>
@@ -343,6 +359,13 @@ const DepartmentManagement: FC = () => {
         exportUrl="/api/v1/system/departments/export"
         visible={exportVisible}
         onClose={() => setExportVisible(false)}
+      />
+
+      {/* 条线部门管理归属机构映射（部门树数据复用本页 useDeptData.departments，含 orgLevel） */}
+      <ManagedOrgDrawer
+        open={managedOrgVisible}
+        onClose={() => setManagedOrgVisible(false)}
+        departments={departments ?? []}
       />
     </div>
   );

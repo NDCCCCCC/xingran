@@ -227,3 +227,43 @@ POST /system/roles/:id/anchor-preview     （需 system:role:view）
 | 2026-11-17 | §九 用例 B 措辞精确化（区分「锚点维度空集」与「合并结果是否 FailClosed」） | verifier 发现原措辞会让"按字面写测试"失败；真值表已由 `anchor_test.go` 的 `TestContractCaseB_*` 锁定 |
 | 2026-11-17 | 新增 §九 第 7 条安全用例 | verifier 报出阻塞漏洞 P-1（低权限者可自助挂载携带锚点的岗位 → 提权至全省）；已补 `anchor_grant_guard.go` + `anchor_grant_test.go` |
 | 2026-11-17 | §五 第 3 条「合法 UUID」裁定为**不强制** | 生产 PG 的 `sys_dept.id` 是原生 uuid 类型，非 UUID 串在 SQL 层即被拒；前端已有 UUID 正则；为 SQLite 夹具加形状校验会误伤全部短 ID 夹具而收益极低。真正的防线是「部门必须存在」 |
+
+---
+
+## 增补（2026-11-18）：条线部门「管理归属机构」映射（C5 豁免 + C8 新增）
+
+> 背景见 `.planning/notes/261118-anchor-scope-design.md`（如未创建则以本节为准）。
+> 触发场景：运营服务本部为独立条线，其下辖部门（如潜江团客共享作业服务中心）的
+> ancestors 链上没有任何中支 → 链上锚点解析永远 miss；且潜江中支管理员的可见集
+> 按子树展开也永远不含这些条线部门。
+
+### C5 豁免条款
+
+> 原文：「子树展开只复用 queryDeptChildIDs，禁止第二套 ancestors LIKE」。
+
+**豁免**：`sys_dept_location_alias` 中 `scope='permission'` 的「条线部门→管理归属
+机构」映射可作为**第二可见集来源**——条线部门集合直接并入可见集、**不做子树展开**，
+全程不引入第二套 ancestors LIKE（实现：`pkg/datascope/anchor.go` 的
+`queryManagedOrgDeptIDs` / `resolveManagedOrgFallback`）。
+
+### C8 新增条款：映射来源语义
+
+| # | 约束 |
+|---|---|
+| C8-① | 映射兜底**只在** ancestors 链解析 miss 后生效（`AnchorModeExternalOrg`/`AnchorModeLevel` 的 miss 分支）。链上命中路径绝不进入映射逻辑——映射只放宽、绝不替换/收窄既有解析结果（与 C2 同构）。`AnchorModeDept`(2) 显式锚点不兜底 |
+| C8-② | 映射指向的机构不存在/已删除 → 该来源 **fail-closed**（`AnchorReasonManagedOrgInvalid`）+ 告警，**绝不回退** ancestors 结果或 dept_id（C3 同源） |
+| C8-③ | `sys_dept_location_alias` 表缺失（极端老库）→ 按"无映射"降级（复用 `isMissingTableError` 先例），存量行为零变化 |
+| C8-④ | 映射查询统一 `CAST(... AS TEXT)`（并入 C7）；映射行 JOIN `sys_dept` 过滤软删，与 `queryDeptChildIDs` 口径对齐 |
+| C8-⑤ | 写入侧：映射 CRUD 走独立端点/权限点 `sys:dept:managed-org:*`，**不得**复用工位位置映射的 `ops:location:alias:*`（授权面解耦——映射参与权限计算，写入准入必须对齐岗位授予级别的管控）；scope 写入恒为 `'permission'`，不接受外部指定 |
+| C8-⑥ | 校验：`dept_id ≠ org_id`；org 必须为机构节点（`org_level ∈ {1,2,3}`）；同一 dept_id 在 scope='permission' 下唯一（partial unique `(dept_id, scope)` 天然保证） |
+
+### 生效点（实现对照）
+
+| 方向 | 语义 | 实现 |
+|---|---|---|
+| ① 条线人员当机构管理员 | 链 miss → 按 dept_id 反查映射 → 锚点=归属机构 | `resolveManagedOrgFallback`（`resolveAnchorByChain` 内核，预览同享） |
+| ② 中支管理员管辖条线人员 | 锚点机构子树展开后 ∪ 挂到该机构的条线部门 | `ResolveAnchorGrants` 内 `queryManagedOrgDeptIDs`，每锚点一次查询 |
+
+数据来源：`sys_dept_location_alias.scope='permission'`（表复用，零迁移）；
+管理入口：部门管理页「归属映射」Drawer；运营服务本部下辖的**本部级**条线部门
+（团客/个客运营服务部→分公司本部）同样适用，须一并配置。

@@ -365,6 +365,11 @@ const (
 	OpsLocationAliasEdit   PermissionCode = "ops:location:alias:edit"
 	OpsLocationAliasDelete PermissionCode = "ops:location:alias:delete"
 
+	// 条线部门管理归属映射（dept-managed-org，权限数据范围域）
+	SysDeptManagedOrgList   PermissionCode = "sys:dept:managed-org:list"
+	SysDeptManagedOrgAdd    PermissionCode = "sys:dept:managed-org:add"
+	SysDeptManagedOrgDelete PermissionCode = "sys:dept:managed-org:delete"
+
 	// CAD 平面图：墙体 / 门 / 平面图文本（texts 写路由统一归平面图编辑码）
 	OpsWallAdd       PermissionCode = "ops:walls:add"
 	OpsWallEdit      PermissionCode = "ops:walls:edit"
@@ -738,6 +743,10 @@ func GetRoutePermissions() []RoutePermission {
 		{"/ops/location-alias", "POST", OpsLocationAliasAdd, "新增位置映射"},
 		{"/ops/location-alias/:id/update", "POST", OpsLocationAliasEdit, "编辑位置映射"},
 		{"/ops/location-alias/:id/delete", "POST", OpsLocationAliasDelete, "删除位置映射"},
+
+		// 条线部门管理归属映射
+		{"/ops/dept-managed-org", "POST", SysDeptManagedOrgAdd, "新增条线部门归属映射"},
+		{"/ops/dept-managed-org/:id/delete", "POST", SysDeptManagedOrgDelete, "删除条线部门归属映射"},
 
 		// CAD 平面图：墙体 / 门 / 平面图文本（batch 为 2 段具体路径，登记在 :id 类之前）
 		{"/ops/walls/batch", "POST", OpsWallDelete, "批量删除墙体"},
