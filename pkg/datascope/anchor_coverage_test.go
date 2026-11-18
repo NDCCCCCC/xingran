@@ -185,7 +185,7 @@ func TestResolveAnchorByDeptBranches(t *testing.T) {
 	assert.Equal(t, AnchorReasonNoDept, reason)
 
 	// 外部机构链上无命中 → ExternalMiss；层级参数非法 → BadParam。
-	_, ok, reason, err = ResolveAnchorByDept(ctx, db, "D-zh", "D-root,D-wh", models.AnchorModeExternalOrg, "")
+	_, ok, _, err = ResolveAnchorByDept(ctx, db, "D-zh", "D-root,D-wh", models.AnchorModeExternalOrg, "")
 	require.NoError(t, err)
 	assert.True(t, ok, "D-wh 是外部机构，应命中")
 

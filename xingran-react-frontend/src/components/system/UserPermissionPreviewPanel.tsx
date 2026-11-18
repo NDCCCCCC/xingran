@@ -123,7 +123,7 @@ export function UserPermissionPreviewPanel({
 
   return (
     <div style={{ marginTop: 8, padding: "8px 0" }}>
-      <Space direction="vertical" style={{ width: "100%" }} size="small">
+      <Space orientation="vertical" style={{ width: "100%" }} size="small">
         <Button
           icon={<EyeOutlined />}
           onClick={handlePreview}
@@ -138,13 +138,13 @@ export function UserPermissionPreviewPanel({
           岗位模拟解析，保存前即可确认该用户能看到的菜单与机构数据（树中勾选即为将获得的权限）。
         </Text>
 
-        {error && <Alert type="error" showIcon message={error} />}
+        {error && <Alert type="error" showIcon title={error} />}
 
         {result && (
           <Alert
             type={result.all ? "warning" : "success"}
             showIcon
-            message={
+            title={
               result.all
                 ? "角色含「全部数据」，机构授权不参与（全库可见）"
                 : `数据范围：${result.dataScopeLabel}；最终可见 ${result.visibleDeptIds.length} 个部门`
@@ -181,7 +181,7 @@ export function UserPermissionPreviewPanel({
                   <Alert
                     type="info"
                     showIcon
-                    message="该用户为全库可见（数据范围=全部数据），机构授权不参与。"
+                    title="该用户为全库可见（数据范围=全部数据），机构授权不参与。"
                   />
                 ) : result.deptIds.length ? (
                   <Tree
