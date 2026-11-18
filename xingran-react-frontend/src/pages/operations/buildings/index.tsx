@@ -109,7 +109,8 @@ const BuildingManagement: FC = () => {
   // 使用自定义 Hooks
   const geocoding = useBuildingGeocoding();
   // Phase 37 批 2:直接消费 canonical useDeptTree
-  const { data: departments = [], isLoading: departmentLoading } = useDeptTree();
+  // scoped:true（v1.54）——楼宇页部门树按当前登录人数据范围收口。
+  const { data: departments = [], isLoading: departmentLoading } = useDeptTree({ scoped: true });
   const getOrgName = useCallback(
     (orgId?: string): string => {
       if (!orgId) return "-";
@@ -568,6 +569,7 @@ const BuildingManagement: FC = () => {
           onSelect={(selectedKeys) => handleDeptSelect(selectedKeys)}
           selectedKeys={selectedDeptId ? [selectedDeptId] : []}
           externalOnly={true}
+          scoped
         />
       </Sider>
 

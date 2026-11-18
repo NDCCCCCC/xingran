@@ -45,9 +45,11 @@ export function useTargetSelector(): UseTargetSelectorResult {
   const [loadingRoles, setLoadingRoles] = useState(false);
   const [loadingUsers, setLoadingUsers] = useState(false);
 
-  // 部门树:消费 useDeptTree 共享缓存 (queryKey queryKeys.dept.tree())。
+  // 部门树:消费 useDeptTree 共享缓存 (scoped 独立键)。
+  // scoped: true（v1.54）—— 通知目标部门选择是"向部门发起业务动作"，
+  // 机构管理员只能把公告发给本机构子树内的部门（与机构数据边界一致）。
   // 默认 staleTime 5min / gcTime 30min / refetchOnWindowFocus:false。
-  const { data: rawDept = [], isLoading: loadingDepts } = useDeptTree();
+  const { data: rawDept = [], isLoading: loadingDepts } = useDeptTree({ scoped: true });
 
   // 派生 antd Tree 期望的 DataNode 形状 (短名 title + key + children)。
   // 旧实现透传 ...node 是冗余(TargetSelector 只读 title/key/children),此处等价。

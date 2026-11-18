@@ -1487,6 +1487,9 @@ func (d *Database) runMenuConsolidationMigrations() {
 	// 与 241~250 同组注册（PG 与 sqlite 两分支共用本方法）：既保持注册点单一，
 	// 也让 GOV-03 diff gate 的行覆盖由本包测试直接驱动。
 	d.runCaptchaBgPolarityMigration()
+	// 252：机构层级与数据权限锚点维度（见 runAnchorScopeMigration）。
+	// 纯结构改动，新增列一律 default 0/''，存量行零回归。
+	d.runAnchorScopeMigration()
 }
 
 // runCaptchaBgPolarityMigration 注册 251：验证码背景图 status 极性归一。
@@ -1502,6 +1505,19 @@ func (d *Database) runMenuConsolidationMigrations() {
 func (d *Database) runCaptchaBgPolarityMigration() {
 	if err := d.runAndRecord(251, "captcha_bg_status_polarity", migrations.Migrate251CaptchaBgStatusPolarity); err != nil {
 		applogger.Errorf("验证码背景图状态极性归一迁移失败 (非阻断,留待下次启动): %v", err)
+	}
+}
+
+// runAnchorScopeMigration 机构层级与数据权限锚点维度迁移（v1.54）。
+//
+// 只做结构改动（sys_dept.org_level + sys_role/sys_post 的 anchor_mode/anchor_param），
+// 不做任何"根据 ancestors 自动推断机构层级"的数据填充 —— 中支含分公司本部等
+// 特例纯靠深度推导必然判错，必须由人工在部门编辑页标注。
+//
+// 独立成方法（而非内联）：便于测试直接驱动其 error body。
+func (d *Database) runAnchorScopeMigration() {
+	if err := d.runAndRecord(252, "dept_org_level_and_anchor_scope", migrations.Migrate252DeptOrgLevelAndAnchorScope); err != nil {
+		applogger.Errorf("机构层级锚点维度迁移失败 (非阻断,留待下次启动): %v", err)
 	}
 }
 
@@ -1765,6 +1781,22 @@ func (d *Database) BootstrapMissingTables() error {
 	// 非阻断：缺表只让经理同步端点 500，不影响登录 / 入队 / 排水主链路。
 	if err := d.runAndRecord(220, "manager_rule_tables", migrations.Migrate220ManagerRuleTables); err != nil {
 		applogger.Errorf("经理同步规则表创建失败 (非阻断,留待下次启动): %v", err)
+	}
+
+	// 机构层级与数据权限锚点维度（v1.54）：SKIP_AUTOMIGRATE 旁路同样要补列。
+	//
+	// F-03 同款盲区（2026-11-17 实测踩中）：该旁路不跑 AutoMigrate，也不跑
+	// runMenuConsolidationMigrations（迁移 252 的正常注册点在其内部），
+	// models.Department/Role/Post 新增的 org_level / anchor_mode / anchor_param
+	// 列不会被自动补上 —— 缺列会让所有 sys_dept / sys_role / sys_post 查询
+	// （GORM 自动 SELECT 新列）报 42703，部门/角色/岗位管理整体不可用。
+	// 与 migration 219 同档：**失败阻断**。
+	//
+	// 幂等：Migrate252 内部 HasColumn 守卫 + runAndRecord 版本记录，重复执行无副作用；
+	// 旁路执行后，正常路径（AutoMigrate 内 runMenuConsolidationMigrations）再启动
+	// 也不会重复执行。
+	if err := d.runAndRecord(252, "dept_org_level_and_anchor_scope", migrations.Migrate252DeptOrgLevelAndAnchorScope); err != nil {
+		return fmt.Errorf("机构层级锚点维度列补建失败: %w", err)
 	}
 
 	// 2) 索引兜底:model tag 未覆盖的索引面,显式 IF NOT EXISTS 幂等补建

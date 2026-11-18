@@ -28,7 +28,8 @@ export interface UseDeviceDataReturn {
 
 export function useDeviceData(): UseDeviceDataReturn {
   // 部门树数据源统一收敛到 useDeptTree (Phase 37-04)
-  const { data: departments = [] } = useDeptTree();
+  // scoped:true（v1.54）——网络设备页部门树按登录人范围收口。
+  const { data: departments = [] } = useDeptTree({ scoped: true });
   const [credentials, setCredentials] = useState<AuthCredential[]>([]);
   const [statistics, setStatistics] = useState<DeviceStatistics>({
     total: 0,

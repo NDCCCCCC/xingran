@@ -7,7 +7,7 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { FC } from "react";
-import { Button, Form, InputNumber, Alert } from "antd";
+import { Button, Form, InputNumber, Alert, Divider } from "antd";
 import { PlusOutlined, EditOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import type { Key } from "react";
@@ -21,6 +21,16 @@ import { createDeleteAction } from "@/components/shared/ActionButtons";
 import { FormModal } from "@/components/shared/FormModal";
 import { useFormModalForm } from "@/components/shared/hooks/useFormModalForm";
 import { AppInput, AppSelect, AppTextArea } from "@/components/ui";
+import { AnchorScopeFields } from "@/components/system/AnchorScopeFields";
+import { AnchorPreviewPanel } from "@/components/system/AnchorPreviewPanel";
+import {
+  anchorModeLabel,
+  normalizeAnchorMode,
+  normalizeAnchorParam,
+  retargetAnchorParam,
+} from "@/constants/anchor";
+import type { SimpleDept } from "@/lib/dutyApi";
+import type { AnchorMode } from "@/types/system";
 // Phase 86 W1（RBAC-02）：操作级权限门控 —— 单一真相源 + 三态门控 hook。
 import { PERMISSION_CODES } from "@/constants/permissionCodes";
 
@@ -29,6 +39,16 @@ const STATUS_OPTIONS = [
   { label: "停用", value: 1 },
 ];
 
+/** 部门树节点（后端 /system/departments/tree-select 返回形态，兼容两种字段名） */
+interface DeptTreeNode {
+  id?: string;
+  key?: string;
+  deptName?: string;
+  title?: string;
+  value?: string;
+  children?: unknown;
+}
+
 const PostManagement: FC = () => {
   const [statistics, setStatistics] = useState({ total: 0, active: 0, inactive: 0 });
   const [modalOpen, setModalOpen] = useState(false);
@@ -36,6 +56,44 @@ const PostManagement: FC = () => {
   const form = useFormModalForm();
   // PageTable ctx.loadData 提升到提交回调（弹窗 onFinish 成功后刷新列表）
   const reloadRef = useRef<() => void>(() => {});
+
+  // 机构锚点（与 dataScope 无关的独立维度；岗位没有 dataScope，只有锚点）
+  const [anchorMode, setAnchorMode] = useState<AnchorMode>(0);
+  const [anchorParam, setAnchorParam] = useState("");
+  /**
+   * 部门树数据源（仅 mode=2 的部门选择使用）。
+   *
+   * 刻意**不**用 `useDeptTree()` hook：那是 React Query hook，会让本页强依赖
+   * QueryClientProvider（本页既有渲染测试不注入 provider）。改为直连同一后端端点
+   * `/system/departments/tree-select`，失败时静默降级为空树（不影响表单其余部分）。
+   */
+  const [anchorDepartments, setAnchorDepartments] = useState<SimpleDept[]>([]);
+  const [anchorDepartmentsLoading, setAnchorDepartmentsLoading] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    setAnchorDepartmentsLoading(true);
+    void (async () => {
+      try {
+        const res = await post<DeptTreeNode[]>("/system/departments/tree-select", {});
+        if (cancelled) return;
+        const toSimpleDept = (nodes: DeptTreeNode[]): SimpleDept[] =>
+          (nodes ?? []).map((node) => ({
+            id: node.key || node.id || node.value || "",
+            deptName: node.title || node.deptName || "",
+            children: node.children ? toSimpleDept(node.children as DeptTreeNode[]) : undefined,
+          }));
+        setAnchorDepartments(toSimpleDept(Array.isArray(res?.data) ? res.data : []));
+      } catch {
+        /* 部门树拉取失败：锚点部门下拉为空，不影响保存/列表（后端会做 400 校验兜底） */
+      } finally {
+        if (!cancelled) setAnchorDepartmentsLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Phase 86 W1（RBAC-02）：操作级权限门控（三态 ready/loading/error）。
   // ⚠️ 判定必须走 useActionPermission —— 禁止用 permissions.length === 0 判「未就绪」。
@@ -77,23 +135,35 @@ const PostManagement: FC = () => {
   }, []);
 
   useEffect(() => {
-    // 与迁前一致：mount 统计首载（异步 setStatistics 在 promise 回调内，非 effect 同步 setState）
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+    // 与迁前一致：mount 统计首载（setStatistics 发生在 promise 回调内，非 effect 同步 setState）
     loadStatistics();
   }, [loadStatistics]);
 
   const openCreate = () => {
     setEditingPost(null);
+    // 新增：锚点归零（不参与），避免沿用上一条编辑记录的残留值
+    setAnchorMode(0);
+    setAnchorParam("");
     setModalOpen(true);
   };
   const openEdit = (record: Post) => {
     setEditingPost(record);
+    // 编辑回显：后端字段为 anchorMode/anchorParam（缺省视为 0/空）
+    const mode = normalizeAnchorMode(record.anchorMode);
+    setAnchorMode(mode);
+    setAnchorParam(normalizeAnchorParam(mode, record.anchorParam));
     setModalOpen(true);
   };
   const closeModal = () => {
     setModalOpen(false);
     setEditingPost(null);
   };
+
+  // 锚点受控变更（成对抛值；切模式时参数已由 AnchorScopeFields 按形状清空）
+  const handleAnchorChange = useCallback(({ mode, param }: { mode: AnchorMode; param: string }) => {
+    setAnchorMode(mode);
+    setAnchorParam(retargetAnchorParam(mode, param));
+  }, []);
 
   // 行删（经 createDeleteAction→ConfirmDelete；失败 confirmDelete 内 handleApiError 后 rethrow）
   const handleDelete = async (id: string) => {
@@ -104,11 +174,17 @@ const PostManagement: FC = () => {
 
   // FormModal 提交（防重/脏检查/失败保持打开由 FormModal 内建；isFormValidationError 静默分流亦然）
   const handleFinish = async (values: Record<string, unknown>) => {
+    // 机构锚点成对写入（与 dataScope 无关的独立维度；模式 0/3 强制空串参数）
+    const payload = {
+      ...values,
+      anchorMode,
+      anchorParam: retargetAnchorParam(anchorMode, anchorParam),
+    };
     if (editingPost) {
-      await post(`/system/posts/${editingPost.id}/update`, values);
+      await post(`/system/posts/${editingPost.id}/update`, payload);
       handleSuccess("更新");
     } else {
-      await post("/system/posts", values);
+      await post("/system/posts", payload);
       handleSuccess("创建");
     }
     closeModal();
@@ -121,6 +197,20 @@ const PostManagement: FC = () => {
       { title: "岗位编码", dataIndex: "postCode", key: "postCode", width: 150, sorter: true },
       { title: "岗位名称", dataIndex: "postName", key: "postName", width: 150, sorter: true },
       { title: "显示排序", dataIndex: "postSort", key: "postSort", width: 100, sorter: true },
+      {
+        title: "机构授权",
+        dataIndex: "anchorMode",
+        key: "anchorMode",
+        width: 180,
+        // 与「数据范围」无关的独立维度：只展示岗位自身的锚点模式（0=不参与）
+        render: (_: unknown, record: Post) => {
+          const mode = normalizeAnchorMode(record.anchorMode);
+          if (mode === 0) {
+            return <span style={{ color: "var(--theme-text-tertiary)" }}>不参与</span>;
+          }
+          return <span className="xr-tag xr-tag-green">{anchorModeLabel(mode)}</span>;
+        },
+      },
       createStatusColumn("status", { width: 100, sorter: true }),
       { title: "备注", dataIndex: "remark", key: "remark", ellipsis: true, sorter: true },
       createDateTimeColumn("createdAt", { width: 180, sorter: true }),
@@ -236,7 +326,11 @@ const PostManagement: FC = () => {
         onCancel={closeModal}
         form={form}
         width={600}
-        initialValues={editingPost ? { ...editingPost } : { postSort: 0, status: 0 }}
+        initialValues={
+          editingPost
+            ? { ...editingPost, anchorMode: normalizeAnchorMode(editingPost.anchorMode) }
+            : { postSort: 0, status: 0, anchorMode: 0 }
+        }
       >
         <Form.Item
           name="postCode"
@@ -273,6 +367,24 @@ const PostManagement: FC = () => {
         <Form.Item name="remark" label="备注">
           <AppTextArea rows={3} placeholder="请输入备注" />
         </Form.Item>
+
+        {/* 机构授权（可选）：与「数据范围」无关的独立维度，岗位不参与 MAX(data_scope) 排序 */}
+        <Divider titlePlacement="start" plain>
+          机构授权（可选）
+        </Divider>
+        <AnchorScopeFields
+          mode={anchorMode}
+          param={anchorParam}
+          onChange={handleAnchorChange}
+          departments={anchorDepartments}
+          departmentsLoading={anchorDepartmentsLoading}
+        />
+        <AnchorPreviewPanel
+          kind="post"
+          targetId={editingPost?.id}
+          mode={anchorMode}
+          param={anchorParam}
+        />
       </FormModal>
     </div>
   );

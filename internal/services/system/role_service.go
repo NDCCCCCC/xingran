@@ -3,11 +3,14 @@ package system
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strconv"
+	"strings"
 
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/internal/models/system/requests"
 	"github.com/xingran-next/xingran-go-backend/internal/services/base"
+	"github.com/xingran-next/xingran-go-backend/pkg/datascope"
 	apperrors "github.com/xingran-next/xingran-go-backend/pkg/errors"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -30,6 +33,9 @@ type RoleService interface {
 	GetMenusWithCache(ctx context.Context, roleID string) ([]models.Menu, error)
 	GetDeptsWithCache(ctx context.Context, roleID string) ([]models.Department, error)
 	InvalidateRoleCache(ctx context.Context, roleID string) error
+
+	// PreviewAnchor 机构锚点推导预览（契约 §六，只读）。
+	PreviewAnchor(ctx context.Context, roleID string) (*AnchorPreviewResponse, error)
 }
 
 // userService 用户服务实现
@@ -98,6 +104,13 @@ func (s *roleService) Create(ctx context.Context, req *requests.RoleCreateReques
 		return apperrors.RoleKeyExists(req.RoleKey)
 	}
 
+	// 配置期校验（契约 §五 防静默第 1 道防线）：anchor_mode 只允许 0/2/3/5；
+	// mode=2 的 dept 必须存在、mode=3 必须有外部机构、mode=5 的层级必须有节点。
+	// 必须在写库**之前**拒绝 —— 锚点算不出来时运行期只会 fail-closed 空集。
+	if err := validateAnchorForWrite(ctx, s.db, req.AnchorMode, req.AnchorParam); err != nil {
+		return err
+	}
+
 	// 使用事务创建角色及其关联
 	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		newRole := models.Role{
@@ -105,6 +118,8 @@ func (s *roleService) Create(ctx context.Context, req *requests.RoleCreateReques
 			RoleKey:           req.RoleKey,
 			RoleSort:          req.RoleSort,
 			DataScope:         req.DataScope,
+			AnchorMode:        models.AnchorMode(req.AnchorMode),
+			AnchorParam:       sanitizeAnchorParam(req.AnchorMode, req.AnchorParam),
 			MenuCheckStrictly: true,
 			DeptCheckStrictly: true,
 			Status:            req.Status,
@@ -150,6 +165,11 @@ func (s *roleService) Update(ctx context.Context, req *requests.RoleUpdateReques
 		return apperrors.RoleKeyExists(req.RoleKey)
 	}
 
+	// 配置期校验（同 Create）：保存前拒绝非法锚点配置（契约 §五）。
+	if err := validateAnchorForWrite(ctx, s.db, req.AnchorMode, req.AnchorParam); err != nil {
+		return err
+	}
+
 	// 使用事务更新角色及其关联
 	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		// 更新角色基本信息
@@ -157,6 +177,8 @@ func (s *roleService) Update(ctx context.Context, req *requests.RoleUpdateReques
 		role.RoleKey = req.RoleKey
 		role.RoleSort = req.RoleSort
 		role.DataScope = req.DataScope
+		role.AnchorMode = models.AnchorMode(req.AnchorMode)
+		role.AnchorParam = sanitizeAnchorParam(req.AnchorMode, req.AnchorParam)
 		role.Status = req.Status
 		role.Remark = toStringPtr(req.Remark)
 
@@ -509,6 +531,228 @@ func (s *roleService) GetDeptsWithCache(ctx context.Context, roleID string) ([]m
 // InvalidateRoleCache 失效角色缓存（无缓存版本，空操作）
 func (s *roleService) InvalidateRoleCache(ctx context.Context, roleID string) error {
 	return nil
+}
+
+// ---------------------------------------------------------------------------
+// 机构锚点配置期校验与归一化（角色/岗位共用，见契约 §五）
+// ---------------------------------------------------------------------------
+
+// validateAnchorForWrite 写库前的锚点配置校验（防静默第 1 道防线）。
+//
+// 内部委托 pkg/datascope.ValidateAnchor（契约要求的唯一校验实现），失败一律转
+// 400 拒绝保存：mode=1/4（弃用编号）、mode=2 参数空/部门不存在、mode=3 参数非空/
+// 库里没有外部机构、mode=5 层级非法/库里没有该层级节点。
+//
+// 说明：ValidateAnchor 在统计计数时若底层 SQL 失败也会返回 error，这里同样落
+// 400。这是刻意选择 —— 锚点配置是**管理员在配置面**的操作，任何"配置存不下去"
+// 的必须让用户在保存处立刻看到原文，而不是静默存进去、运行期再 fail-closed。
+func validateAnchorForWrite(ctx context.Context, db *gorm.DB, mode int, param string) error {
+	if err := datascope.ValidateAnchor(ctx, db, mode, param); err != nil {
+		// 契约 §八：校验失败 handler 必须 400 拒绝保存。
+		return apperrors.BadRequest(err.Error())
+	}
+	return nil
+}
+
+// sanitizeAnchorParam 归一化入库的锚点参数。
+//
+// mode=0（不参与）与 mode=3（外部机构，走 ancestors 动态定位）**恒为空串**：
+// 否则用户从「指定部门/指定层级」切到「外部机构」时，上一次的 param 会残留在
+// sys_role/sys_post 上，运维排查时看到「模式=外部机构但参数还有值」的脏数据。
+func sanitizeAnchorParam(mode int, param string) string {
+	switch models.AnchorMode(mode) {
+	case models.AnchorModeNone, models.AnchorModeExternalOrg:
+		return ""
+	default:
+		return strings.TrimSpace(param)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// 机构锚点推导预览（契约 §六，防静默第 2 道防线）
+// ---------------------------------------------------------------------------
+
+// AnchorPreviewResponse 锚点推导预览的对外响应结构（契约 §六）。
+//
+// 字段口径说明：
+//   - 契约原文举例用 `unresolved[]`，而 pkg/datascope.AnchorPreviewResult 用
+//     `items[]`（每项带 resolved 布尔）。两者**都保留**：`items` 是全量逐人结果，
+//     `unresolved` 只含未命中的项（等价于 items 中 resolved=false 的子集）。
+//   - resolvedCount / unresolvedCount / totalCount / mode / param 恒在 JSON 中，
+//     前端不依赖 items 自己数。
+//   - warnings 可选（omitempty）：目前用于提示「同一个目标机构下有多个任职人」，
+//     这类配置通常意味着岗位模板被重复授予，值得人工看一眼。
+type AnchorPreviewResponse struct {
+	Mode            int                           `json:"mode"`
+	Param           string                        `json:"param"`
+	ResolvedCount   int                           `json:"resolvedCount"`
+	UnresolvedCount int                           `json:"unresolvedCount"`
+	TotalCount      int                           `json:"totalCount"`
+	Items           []datascope.AnchorPreviewItem `json:"items"`
+	Unresolved      []datascope.AnchorPreviewItem `json:"unresolved"`
+	Warnings        []string                      `json:"warnings,omitempty"`
+}
+
+// anchorReasonNotConfigured mode=0（不参与机构授权）时的逐人说明。
+//
+// datascope.ResolveAnchor 对 AnchorModeNone 返回空 reason（那是"正常未命中"），
+// 预览页若原样展示会被误读成"解析失败"；这里改成明确文案。
+const anchorReasonNotConfigured = "该角色/岗位未配置机构锚点（anchorMode=0），不产生机构范围授权"
+
+// PreviewAnchor 计算「角色当前锚点配置对全部任职人是否命中」（角色详情页预览）。
+func (s *roleService) PreviewAnchor(ctx context.Context, roleID string) (*AnchorPreviewResponse, error) {
+	// 直接查库而非 GetByID：缓存版 GetByID 有 30min TTL，刚保存锚点后预览会
+	// 显示旧配置，与"保存后立刻预览"的使用方式冲突。
+	var role models.Role
+	if err := s.db.WithContext(ctx).First(&role, "id = ?", roleID).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, apperrors.RoleNotFound()
+		}
+		return nil, fmt.Errorf("查询角色失败: %w", err)
+	}
+
+	ids, err := listRoleAssigneeIDs(ctx, s.db, roleID)
+	if err != nil {
+		return nil, err
+	}
+
+	return buildAnchorPreview(ctx, s.db, role.AnchorMode, role.AnchorParam, ids)
+}
+
+// listRoleAssigneeIDs 取角色**全部**任职人（契约 §六：不看 status）。
+//
+// 停用用户也可能被重新启用，且预览是"配置面体检"而非"当前生效面"，
+// 故与 ResolveAnchorGrants（仅启用角色/岗位）口径不同，这里不筛 status。
+func listRoleAssigneeIDs(ctx context.Context, db *gorm.DB, roleID string) ([]string, error) {
+	var rows []struct{ UserID string }
+	if err := db.WithContext(ctx).Raw(
+		`SELECT CAST(user_id AS TEXT) AS user_id
+		   FROM sys_user_role
+		  WHERE CAST(role_id AS TEXT) = ?`,
+		roleID,
+	).Scan(&rows).Error; err != nil {
+		return nil, fmt.Errorf("查询角色任职人失败: %w", err)
+	}
+	return normalizeUserIDs(rows), nil
+}
+
+// buildAnchorPreview 组装契约 §六 的响应（角色/岗位共用）。
+func buildAnchorPreview(
+	ctx context.Context,
+	db *gorm.DB,
+	mode models.AnchorMode,
+	param string,
+	userIDs []string,
+) (*AnchorPreviewResponse, error) {
+
+	usernames, nicknames, err := queryAssigneeNames(ctx, db, userIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	preview, err := datascope.PreviewAnchor(ctx, db, mode, param, userIDs, usernames, nicknames)
+	if err != nil {
+		return nil, fmt.Errorf("解析机构锚点失败: %w", err)
+	}
+
+	// mode=0：把空 reason 换成明确文案，避免前端显示成"解析失败"。
+	if mode == models.AnchorModeNone {
+		for i := range preview.Items {
+			if !preview.Items[i].Resolved {
+				preview.Items[i].Reason = anchorReasonNotConfigured
+			}
+		}
+	}
+
+	resp := &AnchorPreviewResponse{
+		Mode:            preview.Mode,
+		Param:           preview.Param,
+		ResolvedCount:   preview.ResolvedCount,
+		UnresolvedCount: preview.UnresolvedCount,
+		TotalCount:      preview.TotalCount,
+		Items:           preview.Items,
+		Unresolved:      make([]datascope.AnchorPreviewItem, 0, preview.UnresolvedCount),
+	}
+
+	for _, item := range preview.Items {
+		if !item.Resolved {
+			resp.Unresolved = append(resp.Unresolved, item)
+		}
+	}
+
+	// warnings：动态锚点（3/5）下多个任职人落到**同一个**目标机构 —— 通常意味着
+	// 岗位模板被重复授予（例如同一中支的两个人共持"中支管理员"）。模式 2 是显式
+	// 同一部门，属预期，故不告警。
+	if mode != models.AnchorModeDept {
+		byAnchor := make(map[string]int, len(preview.Items))
+		for _, item := range preview.Items {
+			if item.Resolved && item.AnchorDeptID != "" {
+				byAnchor[item.AnchorDeptID]++
+			}
+		}
+		for _, item := range preview.Items {
+			if item.Resolved && byAnchor[item.AnchorDeptID] > 1 {
+				resp.Warnings = append(resp.Warnings, fmt.Sprintf(
+					"锚点部门 %s 下有 %d 名任职人共用同一机构范围，请确认是否为有意配置",
+					item.AnchorDeptID, byAnchor[item.AnchorDeptID]))
+				delete(byAnchor, item.AnchorDeptID) // 每个锚点只告警一次
+			}
+		}
+	}
+
+	return resp, nil
+}
+
+// queryAssigneeNames 批量取任职人的 username / nickname 映射（PreviewAnchor 入参）。
+//
+// CAST(... AS TEXT) 保证 PG(uuid) 与 SQLite 行为一致（契约 C7）。
+func queryAssigneeNames(ctx context.Context, db *gorm.DB, userIDs []string) (map[string]string, map[string]string, error) {
+	usernames := make(map[string]string, len(userIDs))
+	nicknames := make(map[string]string, len(userIDs))
+	if len(userIDs) == 0 {
+		return usernames, nicknames, nil
+	}
+
+	var rows []struct {
+		ID       string
+		Username string
+		Nickname string
+	}
+	if err := db.WithContext(ctx).Raw(
+		`SELECT CAST(id AS TEXT) AS id, username, COALESCE(nickname, '') AS nickname
+		   FROM sys_user
+		  WHERE CAST(id AS TEXT) IN ?`,
+		userIDs,
+	).Scan(&rows).Error; err != nil {
+		return nil, nil, fmt.Errorf("查询任职人身份信息失败: %w", err)
+	}
+	for _, r := range rows {
+		usernames[r.ID] = r.Username
+		nicknames[r.ID] = r.Nickname
+	}
+	return usernames, nicknames, nil
+}
+
+// normalizeUserIDs 把 Scan 出来的行转成去重排序的 ID 切片。
+func normalizeUserIDs(rows []struct{ UserID string }) []string {
+	if len(rows) == 0 {
+		return nil
+	}
+	seen := make(map[string]struct{}, len(rows))
+	out := make([]string, 0, len(rows))
+	for _, r := range rows {
+		id := strings.TrimSpace(r.UserID)
+		if id == "" {
+			continue
+		}
+		if _, dup := seen[id]; dup {
+			continue
+		}
+		seen[id] = struct{}{}
+		out = append(out, id)
+	}
+	sort.Strings(out)
+	return out
 }
 
 // toStringPtr 函数已在 user_service.go 中定义

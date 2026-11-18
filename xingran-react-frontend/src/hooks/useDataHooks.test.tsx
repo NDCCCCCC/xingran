@@ -25,12 +25,20 @@ const mocks = vi.hoisted(() => ({
   },
   getDeptTree: vi.fn(),
   apiPost: vi.fn(),
+  // v1.54：useDeptTree 按当前登录人隔离缓存，测试需可控切换 userID
+  currentUserID: "user-a" as string | null,
   getBatchWidgetData: vi.fn(),
   buildWebSocketUrl: vi.fn(() => "ws://test/ws/notices"),
 }));
 
 vi.mock("@/lib/adDomainApi", () => ({
   getADConfigList: mocks.getADConfigList,
+}));
+
+// v1.54：useDeptTree 从 authStore 读当前用户 ID 作为 queryKey 维度。
+vi.mock("@/store/authStore", () => ({
+  useAuthStore: (selector: (s: { user: { id: string } | null }) => unknown) =>
+    selector({ user: mocks.currentUserID ? { id: mocks.currentUserID } : null }),
 }));
 
 vi.mock("@/lib/opsApi", () => ({
@@ -257,11 +265,13 @@ describe("useDashboard", () => {
 
 describe("useDeptTree", () => {
   beforeEach(() => {
-    mocks.getDeptTree.mockReset();
+    // v1.54 起 useDeptTree 直接走 @/lib/api 的 post（scoped 收口参数由 hook 内部
+    // 组装），不再经 dutyApi.getDeptTree —— mock 点从 getDeptTree 换成 apiPost。
+    mocks.apiPost.mockReset();
   });
 
   it("拉取部门树并解包 data 字段", async () => {
-    mocks.getDeptTree.mockResolvedValue({
+    mocks.apiPost.mockResolvedValue({
       code: 0,
       data: [{ deptId: "1", deptName: "总部", children: [] }],
     });
@@ -270,15 +280,62 @@ describe("useDeptTree", () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.data).toEqual([{ deptId: "1", deptName: "总部", children: [] }]);
+    // 非 scoped 调用（默认）不带收口参数
+    expect(mocks.apiPost).toHaveBeenCalledWith("/system/departments/tree", {});
   });
 
   it("响应缺 data 时回退空数组", async () => {
-    mocks.getDeptTree.mockResolvedValue({ code: 0 });
+    mocks.apiPost.mockResolvedValue({ code: 0 });
     const { wrapper } = createQueryWrapper();
     const { result } = renderHook(() => useDeptTree(), { wrapper });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.data).toEqual([]);
+  });
+
+  it("scoped: true 时请求体携带收口参数且走独立缓存键", async () => {
+    mocks.apiPost.mockResolvedValue({
+      code: 0,
+      data: [{ deptId: "2", deptName: "本机构", children: [] }],
+    });
+    const { wrapper } = createQueryWrapper();
+    const { result } = renderHook(() => useDeptTree({ scoped: true }), { wrapper });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data).toEqual([{ deptId: "2", deptName: "本机构", children: [] }]);
+    expect(mocks.apiPost).toHaveBeenCalledWith("/system/departments/tree", { scoped: true });
+  });
+
+  it("切换登录用户后 scoped 部门树缓存隔离（不复用上一账号的全量树）", async () => {
+    // 场景：超管(user-a)先看全量树 → 退出换机构管理员(user-b)登录。
+    // queryKey 必须带 userID，否则 user-b 命中 user-a 的缓存条目看到全量。
+    mocks.currentUserID = "user-a";
+    mocks.apiPost.mockResolvedValue({
+      code: 0,
+      data: [{ deptId: "1", deptName: "总部（全量）", children: [] }],
+    });
+    const { wrapper, queryClient } = createQueryWrapper();
+    const first = renderHook(() => useDeptTree({ scoped: true }), { wrapper });
+    await waitFor(() => expect(first.result.current.isSuccess).toBe(true));
+    expect(first.result.current.data?.[0].deptName).toBe("总部（全量）");
+
+    // 切换用户 + 换返回值（模拟服务端按新用户收口）
+    mocks.currentUserID = "user-b";
+    mocks.apiPost.mockResolvedValue({
+      code: 0,
+      data: [{ deptId: "2", deptName: "武汉中支（收口）", children: [] }],
+    });
+    const second = renderHook(() => useDeptTree({ scoped: true }), { wrapper });
+    await waitFor(() => expect(second.result.current.data?.[0]?.deptName).toBe("武汉中支（收口）"));
+
+    // 两个账号的缓存条目并存，互不覆盖
+    const keys = queryClient
+      .getQueryCache()
+      .getAll()
+      .map((q) => JSON.stringify(q.queryKey));
+    expect(keys.some((k) => k.includes("user-a"))).toBe(true);
+    expect(keys.some((k) => k.includes("user-b"))).toBe(true);
+    mocks.currentUserID = "user-a";
   });
 
   it("useInvalidateDept 失效 dept 前缀查询", async () => {

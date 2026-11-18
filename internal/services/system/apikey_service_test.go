@@ -149,6 +149,8 @@ func setupTestDB(t *testing.T) *gorm.DB {
 			role_key TEXT NOT NULL UNIQUE,
 			role_sort INTEGER DEFAULT 0,
 			data_scope INTEGER DEFAULT 1,
+			anchor_mode INTEGER DEFAULT 0,
+			anchor_param TEXT DEFAULT '',
 			menu_check_strictly BOOLEAN DEFAULT 1,
 			dept_check_strictly BOOLEAN DEFAULT 1,
 			status INTEGER DEFAULT 0,

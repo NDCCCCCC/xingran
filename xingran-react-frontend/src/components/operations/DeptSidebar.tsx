@@ -29,6 +29,12 @@ interface DeptSidebarProps {
    * 以后端返回为准，前端不硬编码任何过滤规则；不传时完整渲染后端 tree 结果。
    */
   visibleDeptIds?: string[];
+  /**
+   * 是否按当前登录人数据范围收口部门树（v1.54）。
+   * DeptSidebar 唯一用途就是运维页左侧部门筛选，默认 **true**——机构管理员
+   * 只应在本机构子树内筛选。配置场景（角色数据范围勾选等）不用本组件。
+   */
+  scoped?: boolean;
   /** 自定义样式 */
   style?: React.CSSProperties;
 }
@@ -43,6 +49,7 @@ export const DeptSidebar: FC<DeptSidebarProps> = ({
   width = 250,
   externalOnly = true,
   visibleDeptIds,
+  scoped = true,
   style,
 }) => {
   return (
@@ -56,6 +63,7 @@ export const DeptSidebar: FC<DeptSidebarProps> = ({
         selectedKeys={selectedDeptId ? [selectedDeptId] : []}
         externalOnly={externalOnly}
         visibleDeptIds={visibleDeptIds}
+        scoped={scoped}
       />
     </Sider>
   );

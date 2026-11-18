@@ -72,6 +72,8 @@ func TestFindDeptByOUDN(t *testing.T) {
 		phone TEXT,
 		email TEXT,
 		is_external_org INTEGER DEFAULT 0,
+		org_level INTEGER DEFAULT 0,
+
 		status INTEGER DEFAULT 0,
 		remark TEXT,
 		created_at DATETIME,

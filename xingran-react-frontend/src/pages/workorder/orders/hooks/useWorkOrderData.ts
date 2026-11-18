@@ -85,8 +85,10 @@ export function useWorkOrderData(options: UseWorkOrderDataOptions): UseWorkOrder
   });
 
   const { data: users = [] } = useUserOptions();
-  // 部门树数据 — 全项目共享 ['dept','tree'] 缓存条目 (D-LOCKED: 单一数据源 useDeptTree)
-  const { data: depts = [] } = useDeptTree();
+  // 部门树数据 — scoped 独立缓存条目 (D-LOCKED: 单一数据源 useDeptTree)
+  // scoped: true（v1.54）—— 工单派单目标部门是"向部门发起业务动作"，机构管理员
+  // 只能派单到本机构子树内的部门，跨机构协作工单由总部账号处理。
+  const { data: depts = [] } = useDeptTree({ scoped: true });
   const [categories, setCategories] = useState<WorkOrderCategory[]>([]);
 
   // 获取统计数据（专用端点 COUNT 聚合，全局计数，不受分页/筛选影响）。

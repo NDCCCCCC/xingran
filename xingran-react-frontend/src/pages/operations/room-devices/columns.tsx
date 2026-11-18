@@ -5,9 +5,11 @@ import type { RoomDevice } from "@/types";
 import { createDateTimeColumn } from "@/utils/tableHelpers";
 import { createDeleteAction } from "@/components/shared/ActionButtons";
 import { PERMISSION_CODES } from "@/constants/permissionCodes";
-import { getStatusText, getDeviceTypeText } from "./constants";
+import { getStatusText, getDeviceTypeText, type DeviceTypeOption } from "./constants";
 
-export const getRoomDeviceColumns = (): ColumnsType<RoomDevice> => [
+export const getRoomDeviceColumns = (
+  deviceTypeOptions: DeviceTypeOption[] = []
+): ColumnsType<RoomDevice> => [
   {
     title: "设备名称",
     dataIndex: "name",
@@ -35,7 +37,7 @@ export const getRoomDeviceColumns = (): ColumnsType<RoomDevice> => [
     key: "deviceType",
     width: 120,
     sorter: true,
-    render: (type: string) => getDeviceTypeText(type),
+    render: (type: string) => getDeviceTypeText(type, deviceTypeOptions),
   },
   {
     title: "厂商",

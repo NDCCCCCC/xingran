@@ -4,7 +4,12 @@ import { EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import type { RoomDevice } from "@/types";
 import { useActionPermission } from "@/components/shared";
 import { confirmDelete } from "@/components/shared/confirmDelete";
-import { cardActionStyle, getStatusText, getDeviceTypeText } from "../constants";
+import {
+  cardActionStyle,
+  getStatusText,
+  getDeviceTypeText,
+  type DeviceTypeOption,
+} from "../constants";
 
 type ActionDecision = ReturnType<ReturnType<typeof useActionPermission>["decide"]>;
 
@@ -14,6 +19,7 @@ export interface RoomDeviceCardViewProps {
   permDelete: ActionDecision;
   openModal: (record?: RoomDevice) => void;
   handleDelete: (id: string) => Promise<void>;
+  deviceTypeOptions?: DeviceTypeOption[];
 }
 
 export const RoomDeviceCardView: FC<RoomDeviceCardViewProps> = ({
@@ -22,6 +28,7 @@ export const RoomDeviceCardView: FC<RoomDeviceCardViewProps> = ({
   permDelete,
   openModal,
   handleDelete,
+  deviceTypeOptions = [],
 }) => {
   if (devices.length === 0) {
     return (
@@ -105,7 +112,7 @@ export const RoomDeviceCardView: FC<RoomDeviceCardViewProps> = ({
                   </div>
                   <div>
                     <strong>类型：</strong>
-                    {getDeviceTypeText(device.deviceType)}
+                    {getDeviceTypeText(device.deviceType, deviceTypeOptions)}
                   </div>
                   {device.vendor && (
                     <div>

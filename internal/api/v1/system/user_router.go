@@ -43,8 +43,11 @@ func SetupUserRouter(r *gin.RouterGroup, core *core.Core) {
 	handler := newUserHandler(core)
 
 	// 读路由
+	// ⚠️ /permission-preview 必须注册在 /:id 之前：gin 路由树中静态段优先于参数段，
+	// 但显式顺序更稳妥（避免该路径被当作 id="permission-preview" 捕获）。
 	r.POST("/list", handler.List)
 	r.POST("/statistics", handler.Statistics)
+	r.POST("/permission-preview", handler.PreviewUserPermission)
 	r.POST("/:id", handler.GetByID)
 }
 

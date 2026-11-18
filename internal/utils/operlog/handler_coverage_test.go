@@ -147,6 +147,8 @@ var classifiedHandlers = []classifiedHandler{
 		[]string{"ListComputerLoginHistory"}},
 	{"system/ad_reconciliation_handler.go", "readonly", "只读端点，源码注释明示「不调用 Record / RecordWithBody」",
 		[]string{"ListDeptOUMismatch"}},
+	{"system/user_permission_preview_handler.go", "readonly", "v1.54 编辑用户权限预览：POST /system/users/permission-preview 纯读（按表单当前值模拟解析菜单权限+数据范围），无写端点",
+		[]string{"PreviewUserPermission"}},
 
 	// ---- (b) 共用编排写端点（证据：port_write_handler.go:337/:456）----
 	// 只保留 physical：它确实委托 execSinglePort（本文件 :62），审计链可静态证明。

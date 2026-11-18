@@ -41,7 +41,12 @@ export function useDeptData(): UseDeptDataReturn {
   const loadDepartments = useCallback(async (searchParams?: Record<string, unknown>) => {
     setLoading(true);
     try {
-      const result = (await post("/system/departments/tree", searchParams || {})) as {
+      // scoped: true —— 部门管理页按登录人数据范围/机构锚点收口（v1.54）。
+      // 与数据范围搜索条件共存：搜索仍可用（范围内部门 + 祖先路径由后端保留）。
+      const result = (await post("/system/departments/tree", {
+        scoped: true,
+        ...searchParams,
+      })) as {
         data: Department[];
       };
       const deptData = result.data || [];

@@ -13,7 +13,7 @@ import {
   DeleteOutlined,
 } from "@ant-design/icons";
 import type { Department } from "@/types";
-import { renderStatusTag, renderExternalOrgTag } from "./constants";
+import { renderStatusTag, renderExternalOrgTag, renderOrgLevelTag } from "./constants";
 import { confirmDelete } from "@/components/shared/confirmDelete";
 import { formatDateTime } from "@/utils/datetime";
 import ActionButtons from "@/components/shared/ActionButtons";
@@ -94,6 +94,13 @@ export function getDeptColumns(params: DeptColumnsParams): ColumnsType<Departmen
       dataIndex: "isExternalOrg",
       key: "isExternalOrg",
       render: (isExternalOrg: number) => renderExternalOrgTag(isExternalOrg),
+    },
+    {
+      // 机构层级（契约 §2.1）：仅用于数据权限锚点定位，未设置的存量数据兜底 0=非机构
+      title: "机构层级",
+      dataIndex: "orgLevel",
+      key: "orgLevel",
+      render: (orgLevel: number) => renderOrgLevelTag(orgLevel),
     },
     {
       title: "状态",

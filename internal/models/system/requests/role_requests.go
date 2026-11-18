@@ -48,10 +48,14 @@ func (p *RoleListParams) GetOffset() int {
 
 // RoleCreateRequest 创建角色请求
 type RoleCreateRequest struct {
-	RoleName          string            `json:"roleName" binding:"required"`
-	RoleKey           string            `json:"roleKey" binding:"required"`
-	RoleSort          int               `json:"roleSort"`
-	DataScope         models.DataScope  `json:"dataScope"`
+	RoleName  string           `json:"roleName" binding:"required"`
+	RoleKey   string           `json:"roleKey" binding:"required"`
+	RoleSort  int              `json:"roleSort"`
+	DataScope models.DataScope `json:"dataScope"`
+	// AnchorMode / AnchorParam 机构锚点维度（与 DataScope 正交，见契约 §二 2.2）。
+	// 只接受 0/2/3/5，1/4 会被 datascope.ValidateAnchor 拒绝（保存期 400）。
+	AnchorMode        int               `json:"anchorMode"`
+	AnchorParam       string            `json:"anchorParam"`
 	MenuCheckStrictly *bool             `json:"menuCheckStrictly"`
 	DeptCheckStrictly *bool             `json:"deptCheckStrictly"`
 	Status            models.RoleStatus `json:"status"`
@@ -67,6 +71,8 @@ type RoleUpdateRequest struct {
 	RoleKey           string            `json:"roleKey" binding:"required"`
 	RoleSort          int               `json:"roleSort"`
 	DataScope         models.DataScope  `json:"dataScope"`
+	AnchorMode        int               `json:"anchorMode"`
+	AnchorParam       string            `json:"anchorParam"`
 	MenuCheckStrictly *bool             `json:"menuCheckStrictly"`
 	DeptCheckStrictly *bool             `json:"deptCheckStrictly"`
 	Status            models.RoleStatus `json:"status"`

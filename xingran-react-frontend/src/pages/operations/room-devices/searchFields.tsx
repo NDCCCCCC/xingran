@@ -2,16 +2,18 @@ import React from "react";
 import { Form } from "antd";
 import type { SearchField } from "@/components/shared";
 import { AppSelect } from "@/components/ui";
-import { DEVICE_TYPE_OPTIONS, ROOM_DEVICE_STATUS_OPTIONS } from "./constants";
+import { ROOM_DEVICE_STATUS_OPTIONS, type DeviceTypeOption } from "./constants";
 
 export interface SearchFieldsOptions {
   selectedDeptId: string | null;
   roomSelectOptions: Array<{ label: string; value: string }>;
+  deviceTypeOptions?: DeviceTypeOption[];
 }
 
 export const getRoomDeviceSearchFields = ({
   selectedDeptId,
   roomSelectOptions,
+  deviceTypeOptions = [],
 }: SearchFieldsOptions): SearchField[] => [
   {
     type: "custom",
@@ -41,7 +43,7 @@ export const getRoomDeviceSearchFields = ({
     name: "deviceType",
     label: "设备类型",
     placeholder: "请选择类型",
-    options: DEVICE_TYPE_OPTIONS,
+    options: deviceTypeOptions,
   },
   {
     type: "select",

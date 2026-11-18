@@ -1,21 +1,31 @@
 package requests
 
 import (
-	"github.com/xingran-next/xingran-go-backend/pkg/constants"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/internal/services/base"
+	"github.com/xingran-next/xingran-go-backend/pkg/constants"
 )
+
+// UserPermissionPreviewRequest 编辑用户时"权限预览"请求（表单当前值，尚未保存）。
+//
+// 传递表单里的 deptId/roleIds/postIds，服务端模拟解析：菜单权限 + 数据范围
+// （含机构锚点命中明细 + 可见部门），供保存前所见即所得。
+type UserPermissionPreviewRequest struct {
+	DeptID  string   `json:"deptId"`
+	RoleIDs []string `json:"roleIds"`
+	PostIDs []string `json:"postIds"`
+}
 
 // UserListParams 用户列表查询参数
 // 嵌入 base.BaseListRequest 使 json 顶层自动获得 current/pageSize/orderByColumn/isAsc 字段。
 // promoted field 保证 p.Current / p.PageSize 访问仍能 work,GetPagination/GetOffset 方法无需改动。
 type UserListParams struct {
 	base.BaseListRequest
-	Username        *string `json:"username"`
-	Nickname        *string `json:"nickname"`
-	Phone           *string `json:"phone"`
-	Status          *int    `json:"status"`
-	DeptID          *string `json:"deptId"`
+	Username *string `json:"username"`
+	Nickname *string `json:"nickname"`
+	Phone    *string `json:"phone"`
+	Status   *int    `json:"status"`
+	DeptID   *string `json:"deptId"`
 	// RecursiveDeptID 非空时,把查询扩展为该部门及所有子部门的用户。
 	// 与 DeptID 并列存在:DeptID 保持单部门等值语义,RecursiveDeptID 用于
 	// 工位管理"所属部门"下拉需要"当前部门+子部门"递归查询的场景。

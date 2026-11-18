@@ -69,6 +69,13 @@ func (h *UserHandler) Create(c *gin.Context) {
 		return
 	}
 
+	// 机构锚点岗位准入校验（v1.54 安全补丁）：携带 anchor_mode 的岗位 = 授予数据范围，
+	// 必须与角色授权同等严格，否则持 system:user:edit 的人可把自己挂到"分公司管理员"
+	// 岗位从而一次提权到全省。详见 internal/api/v1/system/anchor_grant_guard.go。
+	if !h.guardPostGrants(c, req.PostIds, "(新建用户)") {
+		return // 响应已由 guardPostGrants 写出
+	}
+
 	if err := h.service.Create(c.Request.Context(), &req); err != nil {
 		response.Error(c, err)
 		return
@@ -203,6 +210,10 @@ func (h *UserHandler) Update(c *gin.Context) {
 	}
 
 	req.ID = id
+	// 机构锚点岗位准入校验（v1.54 安全补丁）：见 anchor_grant_guard.go。
+	if !h.guardPostGrants(c, req.PostIds, id) {
+		return // 响应已由 guardPostGrants 写出
+	}
 	if err := h.service.Update(c.Request.Context(), &req); err != nil {
 		response.Error(c, err)
 		return

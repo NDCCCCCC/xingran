@@ -10,6 +10,7 @@ import (
 	systemServices "github.com/xingran-next/xingran-go-backend/internal/services/system"
 	"github.com/xingran-next/xingran-go-backend/internal/utils/operlog"
 	apperrors "github.com/xingran-next/xingran-go-backend/pkg/errors"
+	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"github.com/xingran-next/xingran-go-backend/pkg/response"
 	"gorm.io/gorm"
 )
@@ -59,6 +60,12 @@ func (h *DepartmentHandler) GetTree(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		req = requests.DepartmentListParams{}
 	}
+
+	// 诊断日志（v1.54）：确认 scoped 参数是否真的从 body 绑定成功。
+	applogger.WithFields(map[string]interface{}{
+		"scoped": req.Scoped,
+		"path":   c.Request.URL.Path,
+	}).Info("[部门树] GetTree 请求诊断")
 
 	tree, err := h.service.GetTreeWithFilter(c.Request.Context(), true, req)
 	if err != nil {

@@ -72,6 +72,8 @@ func setupTestDB(t *testing.T) *gorm.DB {
 		phone TEXT,
 		email TEXT,
 		is_external_org INTEGER DEFAULT 0,
+		org_level INTEGER DEFAULT 0,
+
 		status INTEGER DEFAULT 0,
 		remark TEXT DEFAULT '',
 		created_at DATETIME,

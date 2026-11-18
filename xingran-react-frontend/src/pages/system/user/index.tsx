@@ -27,6 +27,7 @@ import { downloadFilePost } from "@/lib/download";
 import type { PageResponse } from "@/types";
 import { previewManagers, type ManagerPreviewItem } from "@/lib/managerApi";
 import DeptTree from "@/components/DeptTree";
+import { UserPermissionPreviewPanel } from "@/components/system/UserPermissionPreviewPanel";
 import { useTableManager } from "@/hooks/useTableManager";
 import { usePagination } from "@/hooks/usePagination";
 import { useDict, type DictItem } from "@/hooks/useDict";
@@ -68,6 +69,8 @@ interface UserTableColumnsProps {
   genderDict: DictItem[];
   /** 经理预览映射（key=用户 id；纯计算不落库，规则变更后由后端缓存失效保证准实时） */
   managerMap: Record<string, ManagerPreviewItem>;
+  /** 岗位 ID → 岗位名称映射（用于「岗位」列在 posts 未回填时兜底展示） */
+  postNameMap: Record<string, string>;
   /**
    * v1.24 #16（PERM-02/03）：操作列门控决策。
    * 三态语义：visible=false → 不渲染；disabled=true → 渲染但禁用（hint 作提示）。
@@ -86,6 +89,7 @@ function getUserTableColumns(props: UserTableColumnsProps): ColumnsType<User> {
     getColumnSortOrder,
     genderDict,
     managerMap,
+    postNameMap,
     permEdit,
     permResetPwd,
     permRemove,
@@ -240,6 +244,43 @@ function getUserTableColumns(props: UserTableColumnsProps): ColumnsType<User> {
                   className={`xr-tag ${isSuperAdmin ? "xr-tag-gold" : "xr-tag-green"}`}
                 >
                   {roleName}
+                </span>
+              );
+            })}
+          </Space>
+        );
+      },
+    },
+    {
+      title: "岗位",
+      dataIndex: "posts",
+      key: "posts",
+      width: 160,
+      minWidth: 120,
+      // 后端 models.User.Posts 为 many2many sys_user_post；列表接口是否回填取决于
+      // 后端实现（未回填时退化为 postIds + 岗位名称映射查表，仍展示「—」为最终兜底）。
+      render: (
+        posts: string[] | Array<{ id?: string; postName?: string; postCode?: string }> | undefined,
+        record
+      ) => {
+        const list: Array<string | { id?: string; postName?: string; postCode?: string }> =
+          posts ?? record.postIds ?? [];
+        if (!list || list.length === 0) {
+          return <span style={{ color: "var(--theme-text-tertiary)" }}>—</span>;
+        }
+        return (
+          <Space size="small" wrap>
+            {list.map((post, index) => {
+              const rawId = typeof post === "string" ? post : post.id;
+              const postName =
+                typeof post === "string"
+                  ? rawId
+                    ? (postNameMap[rawId] ?? rawId)
+                    : "—"
+                  : post.postName || post.postCode || "-";
+              return (
+                <span key={rawId ?? index} className="xr-tag xr-tag-green">
+                  {postName}
                 </span>
               );
             })}
@@ -485,31 +526,69 @@ const UserManagement: FC = () => {
     };
   }, [userIdsKey]);
 
-  // ==================== 职位下拉（数据源：岗位管理 sys_post） ====================
+  // ==================== 职位/岗位下拉（数据源：岗位管理 sys_post） ====================
 
   // 职位下拉选项 = 启用中的岗位名称。title 列本身是自由文本（AD 同步会写入
   // AD 侧 title 原文），值不在岗位列表时 Select 直接显示原文本，不丢数据。
   const [postTitleOptions, setPostTitleOptions] = useState<{ value: string }[]>([]);
 
+  // 岗位多选选项（sys_user_post 关联）：id + 名称，供「岗位」多选使用。
+  // 数据源与职位下拉同源（/system/posts/enabled），一次请求两处复用。
+  const [postOptions, setPostOptions] = useState<{ id: string; postName: string }[]>([]);
+
   useEffect(() => {
     let cancelled = false;
-    post<{ list: { postName: string }[]; total: number }>("/system/posts/list", {
-      current: 1,
-      pageSize: 200,
-      status: 0,
-    })
-      .then((res) => {
+    // 职位下拉 + 岗位多选共用一次加载：
+    // ① /system/posts/list（启用岗位）→ 职位自由文本下拉的候选项（AD 同步的 title 原文）
+    // ② /system/posts/enabled（专用端点，后端已做启用过滤 + 缓存）→ 岗位多选 postIds
+    // 两处都用 try/catch 降级：任一请求失败只影响自己的选项列表，绝不阻塞表单/页面。
+    void (async () => {
+      try {
+        const res = await post<{ list: { postName: string }[]; total: number }>(
+          "/system/posts/list",
+          { current: 1, pageSize: 200, status: 0 }
+        );
         if (cancelled) return;
-        const names = Array.from(new Set((res.data?.list ?? []).map((p) => p.postName)));
+        const list = Array.isArray(res?.data?.list) ? res.data.list : [];
+        const names = Array.from(new Set(list.map((p) => p.postName).filter(Boolean)));
         setPostTitleOptions(names.map((n) => ({ value: n })));
-      })
-      .catch(() => {
+      } catch {
         /* 拉取失败降级为无选项的可输入下拉，不阻塞表单 */
-      });
+      }
+
+      try {
+        const res = await post<{ id: string; postName: string; postCode?: string }[]>(
+          "/system/posts/enabled",
+          {}
+        );
+        if (cancelled) return;
+        const list = Array.isArray(res?.data) ? res.data : [];
+        setPostOptions(
+          list
+            .filter((p) => typeof p?.id === "string" && p.id !== "")
+            .map((p) => ({ id: p.id, postName: p.postName || p.postCode || p.id }))
+        );
+      } catch {
+        /* 降级：岗位多选无选项，不阻塞表单；编辑回显仍保留已选 ID */
+      }
+    })();
     return () => {
       cancelled = true;
     };
   }, []);
+
+  // 岗位 ID → 名称（列表「岗位」列在 posts 未回填时用 postIds + 本映射兜底）
+  const postNameMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const p of postOptions) map[p.id] = p.postName;
+    return map;
+  }, [postOptions]);
+
+  // 岗位多选选项（LabelInValue 不需要，直接用 options）
+  const postSelectOptions = useMemo(
+    () => postOptions.map((p) => ({ value: p.id, label: p.postName })),
+    [postOptions]
+  );
 
   // ==================== 初始化 ====================
 
@@ -546,6 +625,8 @@ const UserManagement: FC = () => {
     const defaultValues: Record<string, unknown> = {
       gender: defaultGender,
       status: 0,
+      // 岗位多选默认空数组：保证新增时提交的 postIds 是确定的 []（不传则后端按"未提供"处理）
+      postIds: [],
     };
     if (departments.length > 0) {
       defaultValues.deptId = departments[0].id;
@@ -583,6 +664,20 @@ const UserManagement: FC = () => {
           }
         }
         editForm.setFieldsValue(editingUser);
+        // 岗位多选回显：兼容后端三种形态（postIds / posts[{id,present}] / posts[string]）。
+        // 必须在 setFieldsValue(editingUser) 之后单独覆盖，因为 editingUser 未必带 postIds。
+        const editingPostIds = (() => {
+          const raw = editingUser.postIds;
+          if (Array.isArray(raw) && raw.length > 0) return raw as string[];
+          const postsRaw = editingUser.posts as unknown;
+          if (Array.isArray(postsRaw) && postsRaw.length > 0) {
+            return (postsRaw as unknown[])
+              .map((p) => (typeof p === "string" ? p : (p as { id?: string })?.id))
+              .filter((id): id is string => typeof id === "string" && id !== "");
+          }
+          return [];
+        })();
+        editForm.setFieldsValue({ postIds: editingPostIds });
       }
     },
     [editingUser, editForm, loadRoles, ensureRoles]
@@ -699,6 +794,7 @@ const UserManagement: FC = () => {
     getColumnSortOrder,
     genderDict,
     managerMap,
+    postNameMap,
     permEdit,
     permResetPwd,
     permRemove,
@@ -786,7 +882,9 @@ const UserManagement: FC = () => {
           className="dept-list-sider xr-dept-panel"
           style={{ background: "transparent", padding: "0 14px 16px 0" }}
         >
-          <DeptTree onSelect={handleDeptSelect} selectedKeys={deptTreeSelectedKeys} />
+          {/* scoped: 系统用户页是管理视图，部门树按登录人数据范围/机构锚点收口
+              （v1.54）——机构管理员只见所在机构子树，不再全库可见。 */}
+          <DeptTree onSelect={handleDeptSelect} selectedKeys={deptTreeSelectedKeys} scoped />
         </Sider>
 
         {/* 右侧内容区 */}
@@ -1034,6 +1132,37 @@ const UserManagement: FC = () => {
                 onSearch={() => {}}
                 options={roles.map((role) => ({ value: role.id, label: role.roleName }))}
               />
+            </Form.Item>
+            {/* 岗位（sys_user_post 关联）：与上方「职位」title 是**两个不同概念** ——
+                title 是 AD 同步过来的自由文本职位名，postIds 是系统内岗位字典的多选关联，
+                后者是机构层级数据权限 L2 层（岗位锚点）生效的前提。 */}
+            <Form.Item
+              name="postIds"
+              label="岗位"
+              tooltip="岗位关联决定该用户可获得哪些岗位级机构授权（与「职位」不是同一概念）。"
+            >
+              {/* 形态分类器③：多选带 label → options 形态；多选需要搜索，显式 showSearch */}
+              <AppSelect
+                mode="multiple"
+                placeholder="请选择岗位"
+                allowClear
+                optionFilterProp="label"
+                showSearch
+                className="user-form-input"
+                onSearch={() => {}}
+                options={postSelectOptions}
+              />
+            </Form.Item>
+            {/* 权限预览（v1.54）：按上方当前部门/角色/岗位模拟解析，展示菜单权限 +
+                数据范围（含机构锚点命中明细）。Form.Item shouldUpdate 拿实时表单值。 */}
+            <Form.Item shouldUpdate noStyle>
+              {(form) => (
+                <UserPermissionPreviewPanel
+                  deptId={form.getFieldValue("deptId")}
+                  roleIds={form.getFieldValue("roleIds")}
+                  postIds={form.getFieldValue("postIds")}
+                />
+              )}
             </Form.Item>
             <Form.Item name="status" label="状态" initialValue={0}>
               <AppSelect

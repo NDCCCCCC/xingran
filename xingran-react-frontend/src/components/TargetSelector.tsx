@@ -36,7 +36,8 @@ const TargetSelector: FC<TargetSelectorProps> = ({
   const { message } = App.useApp();
   // 部门树:消费 canonical useDeptTree (Phase 37 收敛),不再本地 GET fetch。
   // 共享 ['dept','tree'] 缓存 (5min stale / 30min gc / refetchOnWindowFocus:false)。
-  const { data: rawDept = [], isLoading: loadingDeptTree } = useDeptTree();
+  // scoped:true（v1.54）——通知目标部门树按登录人范围收口（未来启用本组件时也保持边界）。
+  const { data: rawDept = [], isLoading: loadingDeptTree } = useDeptTree({ scoped: true });
   // 派生 antd <Tree> 期望的 DataNode 形状 (短名 title + key + children)。
   // 旧实现的 GET fetch 直接把后端返回的 SimpleDept[] (字段 id/deptName/children) 喂给
   // <Tree fieldNames={{ title:"title", key:"key", children:"children" }}>,

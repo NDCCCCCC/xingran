@@ -534,6 +534,22 @@ func DataScopePermission(core *core.Core) gin.HandlerFunc {
 				userID, int(dataScope), resolveErr)
 			scopeResult = datascope.FailClosedScope(userID)
 		}
+
+		// 机构锚点维度（v1.54）：与角色维度**正交**、独立解析后取并集。
+		//
+		// 为什么不能并入 dataScope：getUserMaxDataScope 用 MAX(data_scope) 取数值
+		// 最大（最窄）档，新增更高数值枚举会把 All(1) 用户静默收窄 —— 静默降权事故。
+		// 故此处保持 MAX 与 Resolve 一行不改，只在其后叠加锚点维度（契约 C1/C2）。
+		//
+		// 解析失败按「无锚点」处理：新增维度绝不收窄既有角色维度（C2）。但必须告警，
+		// 否则锚点配置错误会静默失效。
+		anchorDeptIDs, anchorErr := datascope.ResolveAnchorGrants(c.Request.Context(), core.DB.GetDB(), userID)
+		if anchorErr != nil {
+			applogger.Errorf("解析机构锚点范围失败（按无锚点降级，user_id=%s）: %v", userID, anchorErr)
+			anchorDeptIDs = nil
+		}
+		scopeResult = datascope.Merge(scopeResult, anchorDeptIDs)
+
 		injectScopeRequestContext(c, scopeResult)
 
 		c.Next()
@@ -561,4 +577,3 @@ func getUserMaxDataScope(core *core.Core, userID string) (models.DataScope, erro
 // 数据范围一律走 pkg/datascope.ScopeProvider 单一真实源：
 //   - 中间件注入：DataScopePermission / injectScopeRequestContext（见上方）；
 //   - 业务读/写过滤：各域从 datascope.FromContext(ctx) 取 ScopeResult。
-

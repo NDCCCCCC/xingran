@@ -43,7 +43,11 @@ export function useUserData(): UseUserDataReturn {
   // 部门列表:消费 canonical useDeptTree (Phase 37 收敛)。
   // 共享 React Query 缓存 (5min stale / 30min gc, refetchOnWindowFocus:false)。
   // 写操作后由调用方 useInvalidateDept() 主动失效。
-  const { data: departments = [] } = useDeptTree();
+  //
+  // scoped: true（v1.54）—— 用户表单的部门下拉是**分配动作**（把人挂到某部门），
+  // 与左侧导航树同属管理视图：机构管理员只能把人挂到自己机构子树内的部门，
+  // 否则可把下属挂到范围外部门造成数据边界漏洞。独立缓存键与全量树互不污染。
+  const { data: departments = [] } = useDeptTree({ scoped: true });
 
   // 加载统计数据: 调用专用统计端点(COUNT 聚合)。
   // 不再用列表长度充当总数——后端 user list 的 pageSize 上限为 100(MaxPageSize),
