@@ -4,11 +4,11 @@ import (
 	"context"
 	"testing"
 
+	"github.com/glebarez/sqlite"
+	"github.com/stretchr/testify/require"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/internal/models/system/requests"
 	"github.com/xingran-next/xingran-go-backend/internal/services/base"
-	"github.com/stretchr/testify/require"
-	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 )
 
@@ -78,9 +78,9 @@ func TestUserList_RecursiveDeptID(t *testing.T) {
 	svc := &userService{db: db, pwdManager: nil}
 
 	cases := []struct {
-		name       string
-		recursive  string
-		wantNames  []string
+		name      string
+		recursive string
+		wantNames []string
 	}{
 		{
 			name:      "递归根 A → 应返回 A/B/C 三个用户,排除 X",

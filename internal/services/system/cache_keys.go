@@ -90,25 +90,25 @@ const (
 	CacheKeyUserListScopeAll = "all"
 
 	// 角色相关
-	CacheKeyRoleByID      = "role:id"      // 角色详情: role:id:{uuid}
-	CacheKeyRoleList      = "role:list"    // 角色列表: role:list
-	CacheKeyRoleByUserID  = "role:user"    // 用户角色: role:user:{userId}
-	CacheKeyRoleAll       = "role:all"     // 所有角色: role:all
-	CacheKeyRoleEnabled   = "role:enabled" // 启用的角色: role:enabled
-	CacheKeyRoleMenus     = "role:menus"   // 角色菜单: role:menus:{roleId}
-	CacheKeyRoleDepts     = "role:depts"   // 角色部门: role:depts:{roleId}
+	CacheKeyRoleByID     = "role:id"      // 角色详情: role:id:{uuid}
+	CacheKeyRoleList     = "role:list"    // 角色列表: role:list
+	CacheKeyRoleByUserID = "role:user"    // 用户角色: role:user:{userId}
+	CacheKeyRoleAll      = "role:all"     // 所有角色: role:all
+	CacheKeyRoleEnabled  = "role:enabled" // 启用的角色: role:enabled
+	CacheKeyRoleMenus    = "role:menus"   // 角色菜单: role:menus:{roleId}
+	CacheKeyRoleDepts    = "role:depts"   // 角色部门: role:depts:{roleId}
 
 	// 菜单相关
-	CacheKeyMenuByID     = "menu:id"      // 菜单详情: menu:id:{uuid}
-	CacheKeyMenuList     = "menu:list"    // 菜单列表: menu:list
-	CacheKeyMenuByRoleID = "menu:role"    // 角色菜单: menu:role:{roleId}
-	CacheKeyMenuTree     = "menu:tree"    // 菜单树: menu:tree
-	CacheKeyMenuRouter   = "menu:router"  // 菜单路由: menu:router
-	CacheKeyMenuAll      = "menu:all"     // 所有菜单: menu:all
+	CacheKeyMenuByID     = "menu:id"     // 菜单详情: menu:id:{uuid}
+	CacheKeyMenuList     = "menu:list"   // 菜单列表: menu:list
+	CacheKeyMenuByRoleID = "menu:role"   // 角色菜单: menu:role:{roleId}
+	CacheKeyMenuTree     = "menu:tree"   // 菜单树: menu:tree
+	CacheKeyMenuRouter   = "menu:router" // 菜单路由: menu:router
+	CacheKeyMenuAll      = "menu:all"    // 所有菜单: menu:all
 	// user-scoped 菜单缓存（按 userID 隔离，所有者和失效方是 menu 服务，故置于 menu: 命名空间）
-	CacheKeyMenuUserMenus       = "menu:user:menus"  // 用户菜单树: menu:user:menus:{userID}
-	CacheKeyMenuUserAllMenus    = "menu:user:all"    // 用户全部菜单(含隐藏): menu:user:all:{userID}
-	CacheKeyMenuUserPermissions = "menu:user:perms"  // 用户权限标识: menu:user:perms:{userID}
+	CacheKeyMenuUserMenus       = "menu:user:menus" // 用户菜单树: menu:user:menus:{userID}
+	CacheKeyMenuUserAllMenus    = "menu:user:all"   // 用户全部菜单(含隐藏): menu:user:all:{userID}
+	CacheKeyMenuUserPermissions = "menu:user:perms" // 用户权限标识: menu:user:perms:{userID}
 
 	// 部门相关
 	CacheKeyDeptByID     = "dept:id"       // 部门详情: dept:id:{uuid}
@@ -117,10 +117,10 @@ const (
 	CacheKeyDeptChildren = "dept:children" // 子部门: dept:children:{parentId}
 
 	// 岗位相关
-	CacheKeyPostByID     = "post:id"      // 岗位详情: post:id:{uuid}
-	CacheKeyPostList     = "post:list"    // 岗位列表: post:list
-	CacheKeyPostAll      = "post:all"     // 所有岗位: post:all
-	CacheKeyPostEnabled  = "post:enabled" // 启用的岗位: post:enabled
+	CacheKeyPostByID    = "post:id"      // 岗位详情: post:id:{uuid}
+	CacheKeyPostList    = "post:list"    // 岗位列表: post:list
+	CacheKeyPostAll     = "post:all"     // 所有岗位: post:all
+	CacheKeyPostEnabled = "post:enabled" // 启用的岗位: post:enabled
 
 	// 字典相关
 	CacheKeyDictType       = "dict:type"      // 字典类型: dict:type
@@ -157,16 +157,16 @@ const (
 
 // 监控模块缓存键
 const (
-	CacheKeyServerInfo   = "monitor:server"      // 服务器信息: monitor:server:{serverKey}
-	CacheKeyCacheStats   = "monitor:cache:stats" // 缓存统计: monitor:cache:stats
-	CacheKeyOnlineUsers  = "monitor:online"      // 在线用户: monitor:online
+	CacheKeyServerInfo  = "monitor:server"      // 服务器信息: monitor:server:{serverKey}
+	CacheKeyCacheStats  = "monitor:cache:stats" // 缓存统计: monitor:cache:stats
+	CacheKeyOnlineUsers = "monitor:online"      // 在线用户: monitor:online
 )
 
 // 通知模块缓存键（D-102-1）
 const (
 	CacheKeyNoticeMyNotices   = "notice:my_notices"   // 我的通知列表: notice:my_notices:{userID}:page:{page}:size:{size}[:status:{status}]
-	CacheKeyNoticeUnreadCount = "notice:unread_count"  // 未读通知数: notice:unread_count:{userID}
-	CacheKeyNoticeDetail      = "notice:detail"        // 通知详情: notice:detail:{noticeID}
+	CacheKeyNoticeUnreadCount = "notice:unread_count" // 未读通知数: notice:unread_count:{userID}
+	CacheKeyNoticeDetail      = "notice:detail"       // 通知详情: notice:detail:{noticeID}
 )
 
 // 设置模块缓存键（D-102-1）
@@ -176,29 +176,29 @@ const (
 
 // 值班模块缓存键（D-102-1）
 const (
-	CacheKeyDutyToday   = "duty:today"   // 今日值班: duty:today
-	CacheKeyDutyMonthly = "duty:monthly" // 月度排班: duty:monthly:{year}:{month}
+	CacheKeyDutyToday    = "duty:today"    // 今日值班: duty:today
+	CacheKeyDutyMonthly  = "duty:monthly"  // 月度排班: duty:monthly:{year}:{month}
 	CacheKeyDutyHolidays = "duty:holidays" // 节假日: duty:holidays:{year}
 )
 
 // 工单模块缓存键（D-102-1）
 const (
-	CacheKeyWorkorderMyPending   = "workorder:my_pending"   // 我的待办工单: workorder:my_pending:{userID}[:limit:{limit}]
-	CacheKeyWorkorderStatistics  = "workorder:statistics"   // 工单统计: workorder:statistics
-	CacheKeyWorkorderDetail      = "workorder:detail"       // 工单详情: workorder:detail:{workOrderID}
+	CacheKeyWorkorderMyPending  = "workorder:my_pending" // 我的待办工单: workorder:my_pending:{userID}[:limit:{limit}]
+	CacheKeyWorkorderStatistics = "workorder:statistics" // 工单统计: workorder:statistics
+	CacheKeyWorkorderDetail     = "workorder:detail"     // 工单详情: workorder:detail:{workOrderID}
 )
 
 // 知识库模块缓存键（D-102-1）
 const (
-	CacheKeyKbArticle         = "kb:article"         // 知识库文章: kb:article:{articleID}
-	CacheKeyKbCategoryTree    = "kb:category:tree"    // 知识库分类树: kb:category:tree
-	CacheKeyKbCategoryParent  = "kb:category:parent"  // 知识库父分类: kb:category:parent:{parentID}
-	CacheKeyKbTagsAll         = "kb:tags:all"         // 知识库全部标签: kb:tags:all
+	CacheKeyKbArticle        = "kb:article"         // 知识库文章: kb:article:{articleID}
+	CacheKeyKbCategoryTree   = "kb:category:tree"   // 知识库分类树: kb:category:tree
+	CacheKeyKbCategoryParent = "kb:category:parent" // 知识库父分类: kb:category:parent:{parentID}
+	CacheKeyKbTagsAll        = "kb:tags:all"        // 知识库全部标签: kb:tags:all
 )
 
 // 网络设备模块缓存键（D-102-1）
 const (
-	CacheKeyNetworkDeviceStatistics = "network_device:statistics"  // 设备统计: network_device:statistics
+	CacheKeyNetworkDeviceStatistics = "network_device:statistics" // 设备统计: network_device:statistics
 	CacheKeyNetworkDeviceDept       = "network_device:dept"       // 部门设备: network_device:dept:{deptID}
 	CacheKeyNetworkDeviceCredential = "network_device:credential" // 凭证设备: network_device:credential:{credentialID}
 	CacheKeyNetworkDeviceDetail     = "network_device:detail"     // 设备详情: network_device:detail:{deviceID}

@@ -1,13 +1,12 @@
 //go:build archive_skip
 
-
 package migrations
 
 import (
 	"log"
 
-	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
+	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"gorm.io/gorm"
 )
 
@@ -24,10 +23,11 @@ import (
 //   - 紧急熔断: sys_config: asset.reconciliation.fix.enabled (默认 1)
 //
 // 步骤清单:
-//   A. 4 条 sys_config seed
-//   B. 1 个菜单("修复建议" type='C',挂在"资产管理"目录下)
-//      + 5 个按钮权限 type='F'(命名空间 asset:reconciliation:fix:*)
-//   C. 1 条 sys_job seed(reconciliation:generateFixSuggestions @every 5m)
+//
+//	A. 4 条 sys_config seed
+//	B. 1 个菜单("修复建议" type='C',挂在"资产管理"目录下)
+//	   + 5 个按钮权限 type='F'(命名空间 asset:reconciliation:fix:*)
+//	C. 1 条 sys_job seed(reconciliation:generateFixSuggestions @every 5m)
 //
 // 不插入 sys_role_menu(沿用 migration_169 "谁也不给"原则 — 管理员手动授权)
 func Migrate200FixSuggestionConfigSeeds(db *gorm.DB) error {

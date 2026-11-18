@@ -67,9 +67,9 @@ type DriftAlertWebhookSender func(ctx context.Context, db *gorm.DB, configID str
 
 var driftAlertHooks struct {
 	sync.RWMutex
-	wsNotifier       DriftAlertWSNotifier
-	noticePublisher  DriftAlertNoticePublisher
-	webhookSender    DriftAlertWebhookSender
+	wsNotifier      DriftAlertWSNotifier
+	noticePublisher DriftAlertNoticePublisher
+	webhookSender   DriftAlertWebhookSender
 }
 
 // SetDriftAlertWSNotifier 注入 WS 广播器（生产传 scheduler 全局 adapter）。

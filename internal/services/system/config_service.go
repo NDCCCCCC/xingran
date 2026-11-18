@@ -53,10 +53,10 @@ func NewConfigService(db *gorm.DB) ConfigService {
 // configAllowedSortFields 参数配置可排序字段白名单。
 // 值为 DB 列名(纯列名,无 JOIN)。
 var configAllowedSortFields = map[string]string{
-	"configName":  "config_name",
-	"configKey":   "config_key",
-	"configType":  "config_type",
-	"createdAt":   "created_at",
+	"configName": "config_name",
+	"configKey":  "config_key",
+	"configType": "config_type",
+	"createdAt":  "created_at",
 }
 
 // Statistics 统计参数配置(按 config_type 聚合,排除软删除)。

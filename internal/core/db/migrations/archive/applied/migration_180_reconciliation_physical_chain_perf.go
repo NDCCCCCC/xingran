@@ -1,6 +1,5 @@
 //go:build archive_skip
 
-
 package migrations
 
 import (
@@ -18,11 +17,11 @@ import (
 //   - migration_179 把 interface_name 归一化从内联 LOWER(REGEXP_REPLACE) 换成 PL/pgSQL
 //     函数 normalize_iface()(10 个顺序 REGEXP_REPLACE,单次约慢 10x)。逻辑正确。
 //   - 但视图的 ops_info_points JOIN 用了"相关子查询":
-//       ip.port_id::text IN (
-//         SELECT id::text FROM sys_device_port_status
-//          WHERE device_id::text = n.device_id::text
-//            AND normalize_iface(interface_name) = n.mac_norm_iface
-//            AND normalize_iface(interface_name) = n.port_norm_iface)
+//     ip.port_id::text IN (
+//     SELECT id::text FROM sys_device_port_status
+//     WHERE device_id::text = n.device_id::text
+//     AND normalize_iface(interface_name) = n.mac_norm_iface
+//     AND normalize_iface(interface_name) = n.port_norm_iface)
 //     子查询引用外层 norm.n → 每个 norm 行重跑一次,全表扫 port_status 且逐行调
 //     normalize_iface 2 次 → O(norm_rows × port_status_rows × 2) 函数调用。
 //   - 量级估算:N=M=5000 → 5000万次调用 × 10 正则 → 数十分钟级,
@@ -35,21 +34,23 @@ import (
 //   - 直接把 port.id 透传,info_points 改 JOIN port.id,整段相关子查询消失。
 //
 // 修复(纯结构,不动 normalize_iface 函数):
-//   1. latest_mac CTE 预算 normalize_iface(interface_name) AS mac_norm_iface(一次)
-//   2. 新增 port_norm CTE: 对全表 port_status 预算 normalize_iface(一次,O(N))
-//   3. chain CTE: asset→mac→port JOIN 用预算列(norm_iface = mac_norm_iface),
-//      device_id 去掉 ::text(uuid=uuid,索引可用),透传 port.id
-//   4. 外层 ops_info_points JOIN 改 ip.port_id = chain.port_id::text(普通 JOIN,无相关子查询)
-//   5. mac_join 改用已 JOIN 的 a.mac1/a.mac2(消除 2 个相关子查询)
+//  1. latest_mac CTE 预算 normalize_iface(interface_name) AS mac_norm_iface(一次)
+//  2. 新增 port_norm CTE: 对全表 port_status 预算 normalize_iface(一次,O(N))
+//  3. chain CTE: asset→mac→port JOIN 用预算列(norm_iface = mac_norm_iface),
+//     device_id 去掉 ::text(uuid=uuid,索引可用),透传 port.id
+//  4. 外层 ops_info_points JOIN 改 ip.port_id = chain.port_id::text(普通 JOIN,无相关子查询)
+//  5. mac_join 改用已 JOIN 的 a.mac1/a.mac2(消除 2 个相关子查询)
 //
 // 调用量级:O(N+M) ≈ port_status 行数 + mac 行数(各调一次 normalize_iface),
-//          实测 N=M=5000 → ~1万次 × 10 正则 ≈ 亚秒级。
+//
+//	实测 N=M=5000 → ~1万次 × 10 正则 ≈ 亚秒级。
 //
 // 不动 normalize_iface 函数本身:结构修复后函数成本已非主因,改函数有再次引入
 // 42601 类语法 bug 的风险(见 migration_179 v1 教训),保守不改。
 //
 // SQLite: 依赖 sys_device_port_status / sys_device_mac_address / ops_info_points,
-//         均为 PostgreSQL-only,SQLite 跳过。
+//
+//	均为 PostgreSQL-only,SQLite 跳过。
 func Migrate180ReconciliationPhysicalChainPerf(db *gorm.DB) error {
 	log.Println("Running migration 180: reconciliation_physical_chain view O(N²)→O(N+M) perf rewrite")
 

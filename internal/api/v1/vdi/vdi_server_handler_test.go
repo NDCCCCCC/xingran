@@ -24,11 +24,11 @@ var _ vdiServices.VDIServerService = (*mockVDIServerService)(nil)
 type mockVDIServerService struct {
 	vdiServices.VDIServerService
 
-	CreateServerFunc  func(ctx context.Context, req *vdiServices.CreateVDIServerRequest) (*vdiServices.VDIServerDTO, error)
-	GetServerFunc     func(ctx context.Context, id string) (*vdiServices.VDIServerDTO, error)
-	ListServersFunc   func(ctx context.Context, page, pageSize int, orderByColumn string, isAsc *bool) (*vdiServices.VDIServerPageResult, error)
-	UpdateServerFunc  func(ctx context.Context, id string, req *vdiServices.UpdateVDIServerRequest) error
-	DeleteServerFunc  func(ctx context.Context, id string) error
+	CreateServerFunc   func(ctx context.Context, req *vdiServices.CreateVDIServerRequest) (*vdiServices.VDIServerDTO, error)
+	GetServerFunc      func(ctx context.Context, id string) (*vdiServices.VDIServerDTO, error)
+	ListServersFunc    func(ctx context.Context, page, pageSize int, orderByColumn string, isAsc *bool) (*vdiServices.VDIServerPageResult, error)
+	UpdateServerFunc   func(ctx context.Context, id string, req *vdiServices.UpdateVDIServerRequest) error
+	DeleteServerFunc   func(ctx context.Context, id string) error
 	TestConnectionFunc func(ctx context.Context, id string) error
 }
 

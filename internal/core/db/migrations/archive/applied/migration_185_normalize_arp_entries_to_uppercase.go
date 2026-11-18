@@ -1,6 +1,5 @@
 //go:build archive_skip
 
-
 package migrations
 
 import (
@@ -28,8 +27,8 @@ import (
 // 也会因 GORM 缺表报错)。盲目 UPDATE 会再抛 42P01,改成 "HasTable 检查 → 跳过"。
 //
 // 实现: 复用 migration_184 的两步策略
-//   1) UPPER 提大小写
-//   2) length=12 的 12 字符串插冒号
+//  1. UPPER 提大小写
+//  2. length=12 的 12 字符串插冒号
 func Migrate185NormalizeARPEntriesToUppercase(db *gorm.DB) error {
 	log.Println("Running migration 185: 统一 sys_device_arp_entry 大写+冒号")
 

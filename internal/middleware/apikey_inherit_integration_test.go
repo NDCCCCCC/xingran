@@ -10,10 +10,10 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/glebarez/sqlite"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 
 	"github.com/xingran-next/xingran-go-backend/internal/models"
@@ -25,12 +25,12 @@ import (
 // setupInheritPermsTestDB 沿用 setupUsageLoggerTestDB 模式(os.TempDir + 唯一
 // 文件名 + busy_timeout=5000),自动迁移本测试要 INSERT 的所有表:
 //
-//   sys_api_keys        — APIKey 模型(D-10 关联 User 读取)
-//   sys_user            — User 模型(D-10 username/nickname 来源)
-//   sys_role            — Role 模型(关联 sys_menu)
-//   sys_menu            — Menu 模型(perms 字段 = 权限代码)
-//   sys_role_menu       — RoleMenu 模型(join sys_role ↔ sys_menu)
-//   sys_user_role       — UserRole 模型(join sys_user ↔ sys_role)
+//	sys_api_keys        — APIKey 模型(D-10 关联 User 读取)
+//	sys_user            — User 模型(D-10 username/nickname 来源)
+//	sys_role            — Role 模型(关联 sys_menu)
+//	sys_menu            — Menu 模型(perms 字段 = 权限代码)
+//	sys_role_menu       — RoleMenu 模型(join sys_role ↔ sys_menu)
+//	sys_user_role       — UserRole 模型(join sys_user ↔ sys_role)
 //
 // 不复用 setupUsageLoggerTestDB — 该函数只建 sys_api_key_usage_logs 单表,
 // 本测试需要 6 张表的完整 RBAC schema。

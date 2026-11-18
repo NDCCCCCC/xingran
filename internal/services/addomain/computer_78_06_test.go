@@ -38,9 +38,9 @@ import (
 // 列集参照 models.ADComputer gorm tag + syncComputers 写入字段：
 //   - BaseModel 列: id / created_at / updated_at / deleted_at / created_by / updated_by / version
 //   - 业务列: ad_config_id / computer_name / distinguished_name / oudn / status / original_description
-//            / operating_system / os_version / ip_address / mac_address / managed_by / cpu_model /
-//            architecture / memory_capacity / hard_disk_capacity / serial_number / system_info
-//            / last_logon / password_last_set / logon_count / last_online_time
+//     / operating_system / os_version / ip_address / mac_address / managed_by / cpu_model /
+//     architecture / memory_capacity / hard_disk_capacity / serial_number / system_info
+//     / last_logon / password_last_set / logon_count / last_online_time
 //   - 唯一索引 UNIQUE(ad_config_id, computer_name)：对应 batchUpdate ON CONFLICT 子句
 //
 // 记忆教训（xingran-sqlite-missing-table-pattern.md）：被测函数触达的表必须手工建。
@@ -86,14 +86,15 @@ func setupComp78DB(t *testing.T) *gorm.DB {
 // insertComputer78 插入一条 sys_ad_computer 行（raw SQL，规避 GORM default:0 覆盖零值 quirk）。
 //
 // opts 顺序（按需可选）：
-//   [0] original_description  (string)
-//   [1] operating_system      (string)
-//   [2] last_online_time RFC3339 (string,空=NULL)
-//   [3] last_logon RFC3339       (string,空=NULL)
-//   [4] ip_address            (string)
-//   [5] os_version            (string)
-//   [6] managed_by            (string)
-//   [7] serial_number         (string)
+//
+//	[0] original_description  (string)
+//	[1] operating_system      (string)
+//	[2] last_online_time RFC3339 (string,空=NULL)
+//	[3] last_logon RFC3339       (string,空=NULL)
+//	[4] ip_address            (string)
+//	[5] os_version            (string)
+//	[6] managed_by            (string)
+//	[7] serial_number         (string)
 func insertComputer78(t *testing.T, db *gorm.DB, configID, dn, name, ouDn string, status models.ComputerStatus, opts ...string) {
 	t.Helper()
 	id := uuid.NewString()

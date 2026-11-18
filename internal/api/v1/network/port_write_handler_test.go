@@ -10,16 +10,16 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
+	"github.com/glebarez/sqlite"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 	"github.com/xingran-next/xingran-go-backend/internal/core"
 	"github.com/xingran-next/xingran-go-backend/internal/core/db"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/internal/services/portcollection"
 	"github.com/xingran-next/xingran-go-backend/internal/services/portwrite"
 	"github.com/xingran-next/xingran-go-backend/internal/utils/operlog"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
-	"github.com/stretchr/testify/require"
-	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 )
 
@@ -316,7 +316,7 @@ func TestPortWriteHandler_Shutdown_Success(t *testing.T) {
 	assert.NotNil(t, mockOperLog.lastOperParam)
 	assert.Contains(t, *mockOperLog.lastOperParam, audit.ID)
 	assert.Contains(t, *mockOperLog.lastOperParam, "测试设备-001") // device_name
-	assert.Contains(t, *mockOperLog.lastOperParam, "GE0/0/1")    // interface_name
+	assert.Contains(t, *mockOperLog.lastOperParam, "GE0/0/1")  // interface_name
 }
 
 // TestPortWriteHandler_Shutdown_NoOp_AlreadyDown service 返 skipped → 响应 200 + audit 行 status=skipped
@@ -619,11 +619,11 @@ func TestPortWriteHandler_SetAccessVlan_SuccessExtraPopulatesAfterValue(t *testi
 	}
 
 	mockSvc.setAccessVlanOut = &portwrite.PortResult{
-		PortID:     "vlan-p1",
-		Action:     portcollection.ActionSetAccessVLAN,
-		Status:     "succeeded",
+		PortID:      "vlan-p1",
+		Action:      portcollection.ActionSetAccessVLAN,
+		Status:      "succeeded",
 		CommandSent: "system-view | interface GE0/0/10 | port link-type access | port default vlan 100",
-		Extra:      map[string]interface{}{"vlanId": 100},
+		Extra:       map[string]interface{}{"vlanId": 100},
 	}
 
 	w := invokeWithCtx("SetAccessVlan", h.SetAccessVlan, SetAccessVlanRequest{PortID: "vlan-p1", VLANID: 100}, nil)
@@ -800,7 +800,7 @@ func TestBuildBeforeValue_IncludesVlan(t *testing.T) {
 				AdminStatus:   "up",
 				Dot1xEnabled:  false,
 				Description:   "uplink",
-				VLAN:         tt.vlan,
+				VLAN:          tt.vlan,
 			}
 			raw := buildBeforeValue(port)
 			var got map[string]interface{}
@@ -825,7 +825,7 @@ func TestBuildAuditRow_SkippedSetAccessVlan_ContainsVlan(t *testing.T) {
 	port := &models.DevicePortStatus{
 		InterfaceName: "GE0/0/1",
 		AdminStatus:   "up",
-		VLAN:         &vlan100,
+		VLAN:          &vlan100,
 	}
 	beforeValue := buildBeforeValue(port)
 

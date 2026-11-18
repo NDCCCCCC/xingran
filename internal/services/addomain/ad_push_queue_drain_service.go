@@ -49,24 +49,25 @@ const (
 // ⚠ 生产不可达档位（Phase 58 审查 H-03 + goal-verification MISSED-01/02，2026-10-19 决定：
 // **不改退避逻辑**，仅记录事实）：
 //
-//   【业务失败路径】markFailed 在 newAttempts >= maxDrainAttempts(=5) 时直接转 dead，
-//     故本函数只会被以 1/2/3/4 调用 —— 实际重试窗是 60s+2m+4m+8m = **15min**，
-//     而非 D-05 原文声明的 ~61min。后果：D-05「退避窗桥接账号池 30min 熔断周期」
-//     的设计意图在**业务失败**路径上仍不成立。
+//	【业务失败路径】markFailed 在 newAttempts >= maxDrainAttempts(=5) 时直接转 dead，
+//	  故本函数只会被以 1/2/3/4 调用 —— 实际重试窗是 60s+2m+4m+8m = **15min**，
+//	  而非 D-05 原文声明的 ~61min。后果：D-05「退避窗桥接账号池 30min 熔断周期」
+//	  的设计意图在**业务失败**路径上仍不成立。
 //
-//   【池侧故障路径】MISSED-02 修复后 poolExhausted 分支**不自增 attempts**，故本函数
-//     以该行原值调用并保持不变 —— 故障期间退避**不递增**，固定在 attempts=0 时的 60s。
-//     这反而让"任何时长的 AD 断连都不把行推到终态阈值边上"成立（比 D-05 的 ~61min
-//     更强），代价是池侧故障期间退避不随时间拉长（可接受：池全熔断时一次 LDAP 拨号
-//     都不会发生）。
+//	【池侧故障路径】MISSED-02 修复后 poolExhausted 分支**不自增 attempts**，故本函数
+//	  以该行原值调用并保持不变 —— 故障期间退避**不递增**，固定在 attempts=0 时的 60s。
+//	  这反而让"任何时长的 AD 断连都不把行推到终态阈值边上"成立（比 D-05 的 ~61min
+//	  更强），代价是池侧故障期间退避不随时间拉长（可接受：池全熔断时一次 LDAP 拨号
+//	  都不会发生）。
 //
-//   【为何两档不可达是加载承重的】它曾一度变得可达：H-04 修好"池侧故障不判死"后，
-//   池路径仍在自增 attempts，于是能爬到 5+ 并用上 16min/30min；MISSED-02 把那次自增
-//   去掉后，两档重新不可达。**这两处修复是一对**：单独修 H-04 会得到"不判死但持续计数"
-//   的半修状态（见 markFailed 注释）。任何改动必须同时维持两者。
+//	【为何两档不可达是加载承重的】它曾一度变得可达：H-04 修好"池侧故障不判死"后，
+//	池路径仍在自增 attempts，于是能爬到 5+ 并用上 16min/30min；MISSED-02 把那次自增
+//	去掉后，两档重新不可达。**这两处修复是一对**：单独修 H-04 会得到"不判死但持续计数"
+//	的半修状态（见 markFailed 注释）。任何改动必须同时维持两者。
 //
 // ⚠ TestPhase58_BackoffDuration_Curve / _CappedAt30m 直接对纯函数断言 16min 与封顶档，
-//   因此它们**测不出**这个断层（纯函数本身是对的，错的是调用方永不传 5/6+）。
+//
+//	因此它们**测不出**这个断层（纯函数本身是对的，错的是调用方永不传 5/6+）。
 func backoffDuration(attempts int) time.Duration {
 	switch attempts {
 	case 1:
@@ -141,7 +142,9 @@ func NewADPushDrainer(db *gorm.DB, pool AccountPool) *ADPushDrainer {
 
 // DrainOnce 执行一轮排水（D-05）。轮次互斥在本入口内部统一处理（mu.TryLock）。
 // ⚠ 该互斥是**单实例**的：调用方必须复用同一个排水器实例（见 mu 字段注释），
-//   每次调用都 New 一个新实例等于没有互斥。
+//
+//	每次调用都 New 一个新实例等于没有互斥。
+//
 // 返回 error 只表示"本轮基础设施层失败"（如查库失败），行级失败一律写回队列状态、不上抛。
 func (d *ADPushDrainer) DrainOnce(ctx context.Context) error {
 	if !d.mu.TryLock() { // 上一轮未结束，本轮跳过（30s 间隔下单轮可能超 30s）
@@ -540,7 +543,7 @@ func (d *ADPushDrainer) updateShadowManager(ctx context.Context, user *models.Us
 //     无映射 → 不可恢复，dead（Q2：需运营动作「跑部门同步」，重试无意义）
 //  2. 归一化比较：当前 ad_ou_dn 与目标 OU **双侧**过 NormalizeDN 后相等 → 直接返回
 //     （幂等点。对同一 DN 重复 MoveUser 会 code 32，见 ldap_client.go:350-361，
-//      ModifyDN 的 deleteOldRDN=true 会先删掉旧 RDN）
+//     ModifyDN 的 deleteOldRDN=true 会先删掉旧 RDN）
 //  3. 不一致 → MoveUser(*user.AdDn, targetOUDN)；成功后**同时**回写
 //     ad_dn = extractRDNFromDN(*user.AdDn) + "," + targetOUDN 与 ad_ou_dn = targetOUDN
 //     （F-A 阻断级：ModifyDN 后 AD 侧 DN 已变，ad_dn 不回写会让 D-02 下一轮按陈旧 DN

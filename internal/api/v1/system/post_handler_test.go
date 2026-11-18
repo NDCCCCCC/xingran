@@ -168,8 +168,8 @@ func TestPostHandler_GetByID_Success(t *testing.T) {
 	w := doJSON(t, h.GetByID, "POST", "/system/posts/"+id, nil, map[string]string{"id": id})
 	assert.Equal(t, http.StatusOK, w.Code)
 	var resp struct {
-		Code int           `json:"code"`
-		Data models.Post   `json:"data"`
+		Code int         `json:"code"`
+		Data models.Post `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
 	assert.Equal(t, 0, resp.Code)

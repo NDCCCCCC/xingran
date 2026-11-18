@@ -78,7 +78,7 @@ func TestFloorWorkstationStats_BasicAggregation(t *testing.T) {
 }
 
 // TestFloorWorkstationStats_SoftDeleteExcluded 软删工位不计入统计
-//（Model(&models.Workstation{}) 自动附加 deleted_at IS NULL）。
+// （Model(&models.Workstation{}) 自动附加 deleted_at IS NULL）。
 func TestFloorWorkstationStats_SoftDeleteExcluded(t *testing.T) {
 	db := newFloor91TestDB(t)
 	svc := NewFloorService(db)

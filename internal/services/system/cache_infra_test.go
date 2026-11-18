@@ -299,9 +299,9 @@ func TestCacheAdapter_AllMethods(t *testing.T) {
 	var dst int
 	base.SetValue(&dst, 42)
 	assert.Equal(t, 42, dst)
-	base.SetValue(nil, 1)      // nil dest no-panic
+	base.SetValue(nil, 1) // nil dest no-panic
 	var notPtr int
-	base.SetValue(notPtr, 1)   // 非指针 no-panic
+	base.SetValue(notPtr, 1) // 非指针 no-panic
 	var typeMismatch string
 	base.SetValue(&typeMismatch, 1) // 类型不匹配 no-panic
 	_ = notPtr

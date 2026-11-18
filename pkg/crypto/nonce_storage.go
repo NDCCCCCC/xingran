@@ -19,7 +19,7 @@ type shard struct {
 // shardedNonceStorage 分段锁的 nonce 存储
 // 通过 hash 将 nonce 分散到不同的分片中，减少锁竞争
 type shardedNonceStorage struct {
-	shards         [shardCount]*shard
+	shards          [shardCount]*shard
 	replayWindowSec int
 }
 

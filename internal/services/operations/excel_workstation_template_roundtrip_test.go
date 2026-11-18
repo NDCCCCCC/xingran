@@ -38,10 +38,11 @@ func xlsxToFileHeader(t *testing.T, f *excelize.File, filename string) *multipar
 // 用户下载工位模板 → 在其中填写数据（含主设备序列号）→ 上传，导入却报「所属楼宇不存在」。
 //
 // 该测试按真实模板逐场景验证：
-//   场景 A：模板原样上传（示例行未删）
-//   场景 B：示例行被用户数据覆盖（只填数据不删行）
-//   场景 C：示例行保留 + 用户数据追加在下一行
-//   场景 D：删除示例行，只保留用户数据（含主设备序列号）
+//
+//	场景 A：模板原样上传（示例行未删）
+//	场景 B：示例行被用户数据覆盖（只填数据不删行）
+//	场景 C：示例行保留 + 用户数据追加在下一行
+//	场景 D：删除示例行，只保留用户数据（含主设备序列号）
 func TestWorkstationImport_TemplateRoundTrip(t *testing.T) {
 	db := setupImportRest77DB(t)
 	require.NoError(t, db.Exec(`INSERT INTO ops_buildings (id, name, org_id, level) VALUES ('b1', '真实大楼', 'D1', 2)`).Error)
@@ -76,9 +77,9 @@ func TestWorkstationImport_TemplateRoundTrip(t *testing.T) {
 	// 用户填的真实数据行
 	userRow := make([]string, len(rows[0]))
 	copy(userRow, rows[0])
-	userRow[0] = "W-001"          // 工位名称
-	userRow[1] = "真实大楼"        // 所属楼宇
-	userRow[2] = "1楼"            // 所属楼层名称
+	userRow[0] = "W-001"              // 工位名称
+	userRow[1] = "真实大楼"               // 所属楼宇
+	userRow[2] = "1楼"                 // 所属楼层名称
 	userRow[serialCol] = "SN-ABC-001" // 主设备序列号
 
 	t.Run("场景A_模板原样上传_示例行未删", func(t *testing.T) {

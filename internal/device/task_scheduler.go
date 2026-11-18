@@ -13,7 +13,7 @@ import (
 // 调度器默认配置
 const (
 	defaultTaskTimeout = 5 * time.Minute // 默认任务超时
-	defaultQueueSize   = 100              // 每个设备的任务队列大小
+	defaultQueueSize   = 100             // 每个设备的任务队列大小
 )
 
 // DeviceTask 设备任务

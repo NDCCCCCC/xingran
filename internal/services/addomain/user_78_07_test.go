@@ -24,8 +24,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/glebarez/sqlite"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
@@ -169,8 +169,8 @@ func TestUsr78_GetList_FilterMatrix(t *testing.T) {
 	ouDN := "OU=Users,DC=example,DC=com"
 	_, _, err = svc.GetList(ctx, &UserListRequest{
 		BaseListRequest: base.BaseListRequest{Current: 1, PageSize: 100},
-		ConfigID:      configID,
-		OUDN:          &ouDN,
+		ConfigID:        configID,
+		OUDN:            &ouDN,
 	})
 	require.NoError(t, err)
 	assert.GreaterOrEqual(t, len(users), 2, "OUDN filter should include sub-OU users")

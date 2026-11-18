@@ -50,10 +50,10 @@ func TestB3_OIDMatchPriority(t *testing.T) {
 	withPhysicalEntry(t, vendor, b3Entry())
 
 	cases := []struct {
-		name       string
-		model      string
-		oid        string
-		wantCmd    string
+		name        string
+		model       string
+		oid         string
+		wantCmd     string
 		wantMatched MatchedBy
 	}{
 		{"OID 精确优先于 Model 子串", "S8700-other", "1.3.6.1.4.1.2011.2.23", "exact", MatchedByOIDExact},

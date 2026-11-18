@@ -15,8 +15,9 @@ import (
 // (因为 1247 行 port_status.device_id 仍指向"错但存在"的设备)
 //
 // 加 FK 用 NOT VALID 跳过存量校验 → VALIDATE CONSTRAINT 后台异步验证:
-//   优势: 加 FK 不会锁表(毫秒级完成)
-//   异步: VALIDATE 在后台跑,只对正在修改的行加 SHARE UPDATE EXCLUSIVE 锁
+//
+//	优势: 加 FK 不会锁表(毫秒级完成)
+//	异步: VALIDATE 在后台跑,只对正在修改的行加 SHARE UPDATE EXCLUSIVE 锁
 //
 // FK 约束的局限:
 //   - 只能防止"device_id 指向不存在的设备"(orphan)
@@ -24,7 +25,8 @@ import (
 //   - 业务规则违反(port_status 指向错的物理设备)需靠 Phase 4 定时对账任务捕获
 //
 // ON DELETE RESTRICT: 不允许删除被 port_status 引用的 sys_network_device,
-//   避免误删设备导致 port_status.dangling device_id
+//
+//	避免误删设备导致 port_status.dangling device_id
 func Migrate183AddPortStatusDeviceFK(db *gorm.DB) error {
 	log.Println("Running migration 183: 加 sys_device_port_status.device_id FK 约束")
 

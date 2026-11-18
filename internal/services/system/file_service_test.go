@@ -77,10 +77,10 @@ func (memFile) Close() error { return nil }
 // failReader 注入读错误,覆盖 calculateFileHash 失败分支。
 type failReader struct{}
 
-func (failReader) Read([]byte) (int, error)       { return 0, assert.AnError }
+func (failReader) Read([]byte) (int, error)          { return 0, assert.AnError }
 func (failReader) ReadAt([]byte, int64) (int, error) { return 0, assert.AnError }
-func (failReader) Seek(int64, int) (int64, error) { return 0, nil }
-func (failReader) Close() error                   { return nil }
+func (failReader) Seek(int64, int) (int64, error)    { return 0, nil }
+func (failReader) Close() error                      { return nil }
 
 func TestFileService_ConfigsAndPureHelpers(t *testing.T) {
 	// 分类配置:命中 / 未知回退 image 默认

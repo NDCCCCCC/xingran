@@ -24,16 +24,16 @@ func NewAuditService(db *gorm.DB) *AuditService {
 // RecordOperation 记录 VM 操作审计日志
 func (s *AuditService) RecordOperation(ctx context.Context, req *AuditRequest) error {
 	auditLog := &rpa.AuditLog{
-		ResourceType:  rpa.ResourceType("vdi"),
-		ResourceID:    req.VMID,
-		Action:        rpa.AuditAction(req.Operation),
-		OldValue:      req.OldValue,
-		NewValue:      req.NewValue,
-		OperatorID:    req.OperatorID,
-		OperatorName:  req.OperatorName,
-		IPAddress:     req.OperatorIP,
-		Result:        rpa.AuditResult(req.Status),
-		ErrorMessage:  req.ErrorMsg,
+		ResourceType: rpa.ResourceType("vdi"),
+		ResourceID:   req.VMID,
+		Action:       rpa.AuditAction(req.Operation),
+		OldValue:     req.OldValue,
+		NewValue:     req.NewValue,
+		OperatorID:   req.OperatorID,
+		OperatorName: req.OperatorName,
+		IPAddress:    req.OperatorIP,
+		Result:       rpa.AuditResult(req.Status),
+		ErrorMessage: req.ErrorMsg,
 	}
 
 	if err := s.db.WithContext(ctx).Create(auditLog).Error; err != nil {
@@ -146,7 +146,7 @@ func (s *AuditService) GetVMOperationsSummary(ctx context.Context, vmID string, 
 	}
 
 	return &VMOpsSummary{
-		VMID:           vmID,
+		VMID:            vmID,
 		TotalOperations: int(result.TotalOperations),
 		SuccessCount:    int(result.SuccessCount),
 		FailureCount:    int(result.FailureCount),

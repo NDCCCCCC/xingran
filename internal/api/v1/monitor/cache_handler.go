@@ -56,10 +56,10 @@ func (h *CacheHandler) setPaginationDefaults(current, pageSize int) (int, int) {
 
 // CacheListRequest 缓存列表请求
 type CacheListRequest struct {
-	Key      string `json:"key,omitempty"`
-	Type     string `json:"type,omitempty"`
-	Level    string `json:"level,omitempty"` // "l1", "l2", "all"
-	Current      int    `json:"current"`
+	Key           string `json:"key,omitempty"`
+	Type          string `json:"type,omitempty"`
+	Level         string `json:"level,omitempty"` // "l1", "l2", "all"
+	Current       int    `json:"current"`
 	PageSize      int    `json:"pageSize"`
 	OrderByColumn string `json:"orderByColumn,omitempty"`
 	IsAsc         bool   `json:"isAsc"`
@@ -559,9 +559,9 @@ func (h *CacheHandler) DebugRawKeys(c *gin.Context) {
 	xingranKeys, _ := h.core.Cache.Keys(ctx, "xingran:*")
 
 	response.Success(c, gin.H{
-		"totalKeys":     len(allKeys),
+		"totalKeys":       len(allKeys),
 		"xingranKeys":     len(xingranKeys),
-		"allKeys":       allKeys,
+		"allKeys":         allKeys,
 		"xingranKeysList": xingranKeys,
 	})
 }

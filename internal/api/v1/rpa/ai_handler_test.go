@@ -267,7 +267,7 @@ func TestAIHandler_AnalyzeFailure_Success(t *testing.T) {
 	h := setupAIHandler(mock)
 	c, w := newTestCtxAI("POST", "/analyze-failure", rpa.AnalyzeFailureRequest{
 		TaskDescription: "login",
-		ErrorMessage:     "timeout",
+		ErrorMessage:    "timeout",
 	})
 	h.AnalyzeFailure(c)
 	assert.Equal(t, http.StatusOK, w.Code)
@@ -290,7 +290,7 @@ func TestAIHandler_AnalyzeFailure_ServiceError(t *testing.T) {
 	h := setupAIHandler(mock)
 	c, w := newTestCtxAI("POST", "/analyze-failure", rpa.AnalyzeFailureRequest{
 		TaskDescription: "x",
-		ErrorMessage:     "e",
+		ErrorMessage:    "e",
 	})
 	h.AnalyzeFailure(c)
 	assert.NotEqual(t, http.StatusOK, w.Code)
@@ -307,7 +307,7 @@ func TestAIHandler_SuggestFix_Success(t *testing.T) {
 	h := setupAIHandler(mock)
 	c, w := newTestCtxAI("POST", "/suggest-fix", rpa.SuggestFixRequest{
 		TaskDescription: "login",
-		ErrorMessage:     "timeout",
+		ErrorMessage:    "timeout",
 	})
 	h.SuggestFix(c)
 	assert.Equal(t, http.StatusOK, w.Code)
@@ -330,7 +330,7 @@ func TestAIHandler_SuggestFix_ServiceError(t *testing.T) {
 	h := setupAIHandler(mock)
 	c, w := newTestCtxAI("POST", "/suggest-fix", rpa.SuggestFixRequest{
 		TaskDescription: "x",
-		ErrorMessage:     "e",
+		ErrorMessage:    "e",
 	})
 	h.SuggestFix(c)
 	assert.NotEqual(t, http.StatusOK, w.Code)

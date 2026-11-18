@@ -199,21 +199,21 @@ func newHuaweiDualClassFixture() *stubSNMPClient {
 	const chassisIdx, modIdx, fanIdx = 1, 10, 11
 	classes := map[int]int{chassisIdx: 3, modIdx: 5, fanIdx: 9}
 	attrs := map[string]interface{}{
-		buildAttrKey(device.OidEntPhysicalClass, chassisIdx):            int64(3),
-		buildAttrKey(device.OidEntPhysicalClass, modIdx):                int64(5),
-		buildAttrKey(device.OidEntPhysicalClass, fanIdx):                int64(9),
-		buildAttrKey(device.OidEntPhysicalName, chassisIdx):             "chassis",
-		buildAttrKey(device.OidEntPhysicalName, modIdx):                 "LSG7SRUEX1C0 5",
-		buildAttrKey(device.OidEntPhysicalName, fanIdx):                 "LSG7SRUEX1C0 5 (Master)",
-		buildAttrKey(device.OidEntPhysicalSerialNum, chassisIdx):        "210235936910HC000001",
-		buildAttrKey(device.OidEntPhysicalSerialNum, modIdx):            "", // empty placeholder
-		buildAttrKey(device.OidEntPhysicalSerialNum, fanIdx):            "102599806030",
-		buildAttrKey(device.OidEntPhysicalModelName, chassisIdx):        "S8700-6",
-		buildAttrKey(device.OidEntPhysicalModelName, modIdx):            "LSG7SRUEX1C0",
-		buildAttrKey(device.OidEntPhysicalModelName, fanIdx):            "LSG7SRUEX1C0",
-		buildAttrKey(device.OidEntPhysicalContainedIn, chassisIdx):      int64(0),
-		buildAttrKey(device.OidEntPhysicalContainedIn, modIdx):          int64(1),
-		buildAttrKey(device.OidEntPhysicalContainedIn, fanIdx):          int64(1),
+		buildAttrKey(device.OidEntPhysicalClass, chassisIdx):       int64(3),
+		buildAttrKey(device.OidEntPhysicalClass, modIdx):           int64(5),
+		buildAttrKey(device.OidEntPhysicalClass, fanIdx):           int64(9),
+		buildAttrKey(device.OidEntPhysicalName, chassisIdx):        "chassis",
+		buildAttrKey(device.OidEntPhysicalName, modIdx):            "LSG7SRUEX1C0 5",
+		buildAttrKey(device.OidEntPhysicalName, fanIdx):            "LSG7SRUEX1C0 5 (Master)",
+		buildAttrKey(device.OidEntPhysicalSerialNum, chassisIdx):   "210235936910HC000001",
+		buildAttrKey(device.OidEntPhysicalSerialNum, modIdx):       "", // empty placeholder
+		buildAttrKey(device.OidEntPhysicalSerialNum, fanIdx):       "102599806030",
+		buildAttrKey(device.OidEntPhysicalModelName, chassisIdx):   "S8700-6",
+		buildAttrKey(device.OidEntPhysicalModelName, modIdx):       "LSG7SRUEX1C0",
+		buildAttrKey(device.OidEntPhysicalModelName, fanIdx):       "LSG7SRUEX1C0",
+		buildAttrKey(device.OidEntPhysicalContainedIn, chassisIdx): int64(0),
+		buildAttrKey(device.OidEntPhysicalContainedIn, modIdx):     int64(1),
+		buildAttrKey(device.OidEntPhysicalContainedIn, fanIdx):     int64(1),
 	}
 	return &stubSNMPClient{classes: classes, attrs: attrs}
 }

@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/glebarez/sqlite"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 )
 
@@ -189,7 +189,7 @@ func TestDepartmentQueryBuilder_DepthConflict_MultipleRoots(t *testing.T) {
 		"xg":        "孝感中心支公司",
 		"sz":        "随州中心支公司",
 		"hg":        "黄冈中心支公司",
-		"tc-extra":  "通城支公司",  // 11 号部门的额外父级
+		"tc-extra":  "通城支公司",   // 11 号部门的额外父级
 		"tc-parent": "咸宁中心支公司", // 通城支公司挂在咸宁下
 	}
 	for id, name := range zhouBranches {

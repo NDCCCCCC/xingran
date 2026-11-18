@@ -1,4 +1,5 @@
 //go:build ignore
+
 package main
 
 import (
@@ -16,12 +17,16 @@ import (
 // loadEnvWhitelist 加载 .env 白名单 key(避免密码含括号/特殊字符时 `source` 失败)
 func loadEnvWhitelist(path string, keys []string) {
 	f, err := os.Open(path)
-	if err != nil { return }
+	if err != nil {
+		return
+	}
 	defer f.Close()
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
-		if line == "" || strings.HasPrefix(line, "#") { continue }
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
 		for _, k := range keys {
 			prefix := k + "="
 			if strings.HasPrefix(line, prefix) {
@@ -52,7 +57,9 @@ func main() {
 	loadEnvWhitelist(".env", []string{"DB_HOST", "DB_PORT", "DB_USER", "DB_PASSWORD", "DB_NAME", "DB_SSLMODE"})
 	cfg := config.Load()
 	d, err := db.NewDatabase(&cfg.Database)
-	if err != nil { log.Fatal(err) }
+	if err != nil {
+		log.Fatal(err)
+	}
 	defer d.Close()
 
 	// [DEBUG] 用 GORM 自己的 Migrator 读 column 类型,看 GORM 认为它是什么
@@ -83,7 +90,10 @@ func main() {
 			  AND column_name IN ('%s')
 		`, table, strings.Join(cols, "','"))
 		rows, err := d.DB.Raw(query).Rows()
-		if err != nil { log.Println(err); continue }
+		if err != nil {
+			log.Println(err)
+			continue
+		}
 		for rows.Next() {
 			var col, dt string
 			var charLen, numPrec, numScale *int

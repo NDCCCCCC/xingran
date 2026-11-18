@@ -5,11 +5,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/xingran-next/xingran-go-backend/internal/models"
-	"github.com/xingran-next/xingran-go-backend/internal/models/system/requests"
+	"github.com/glebarez/sqlite"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/glebarez/sqlite"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
+	"github.com/xingran-next/xingran-go-backend/internal/models/system/requests"
 	"gorm.io/gorm"
 )
 

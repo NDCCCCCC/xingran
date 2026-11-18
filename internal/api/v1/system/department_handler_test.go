@@ -138,7 +138,7 @@ func TestDepartmentHandler_GetTree_Success(t *testing.T) {
 	w := doJSON(t, h.GetTree, "POST", "/system/departments/tree", map[string]interface{}{}, nil)
 	assert.Equal(t, http.StatusOK, w.Code)
 	var resp struct {
-		Code int                 `json:"code"`
+		Code int                  `json:"code"`
 		Data []*models.Department `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
@@ -175,8 +175,8 @@ func TestDepartmentHandler_List_Empty(t *testing.T) {
 	w := doJSON(t, h.List, "POST", "/system/departments/list", map[string]interface{}{}, nil)
 	assert.Equal(t, http.StatusOK, w.Code)
 	var resp struct {
-		Code int                   `json:"code"`
-		Data []models.Department   `json:"data"`
+		Code int                 `json:"code"`
+		Data []models.Department `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
 	assert.Equal(t, 0, resp.Code)
@@ -239,12 +239,12 @@ func TestDepartmentHandler_Create_RootLevel(t *testing.T) {
 	h, db := setupDeptHandler(t)
 	leader := "leader-uuid"
 	body := requests.DepartmentCreateRequest{
-		DeptName:      "新总部",
-		DeptCode:      "HQ-NEW",
-		ParentID:      nil,
-		OrderNum:      1,
-		Leader:        &leader,
-		Status:        models.DeptStatusNormal,
+		DeptName: "新总部",
+		DeptCode: "HQ-NEW",
+		ParentID: nil,
+		OrderNum: 1,
+		Leader:   &leader,
+		Status:   models.DeptStatusNormal,
 	}
 	_ = doJSON(t, h.Create, "POST", "/system/departments", body, nil)
 
@@ -503,7 +503,7 @@ func TestDepartmentHandler_GetUsers_Empty(t *testing.T) {
 	w := doJSON(t, h.GetUsers, "POST", "/system/departments/"+deptID+"/users", nil, map[string]string{"id": deptID})
 	assert.Equal(t, http.StatusOK, w.Code)
 	var resp struct {
-		Code int `json:"code"`
+		Code int           `json:"code"`
 		Data []interface{} `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))

@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/xingran-next/xingran-go-backend/internal/models"
-	"github.com/xingran-next/xingran-go-backend/pkg/normalize"
 	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
+	"github.com/xingran-next/xingran-go-backend/pkg/normalize"
 	"gorm.io/gorm"
 )
 
@@ -493,7 +493,7 @@ func (s *macHistoryServiceImpl) CleanupAllDevicesFlapping(ctx context.Context) (
 //     - 首条记录 → 始终保留(初始位置)
 //     - disappeared 事件 → 视为"在当前位置签名上离开",不更新当前位置签名
 //     - 其他事件 → 若 (interface_name, vlan_id) 与当前位置签名不同,保留并更新;
-//       若相同(纯 flapping),删除
+//     若相同(纯 flapping),删除
 //
 // 与现有工具的对比:
 //   - MergeFlappingRecords (2h 窗口):按时间窗口合并,本工具按位置签名
@@ -608,8 +608,9 @@ func (s *macHistoryServiceImpl) mergeTransitionsForDevice(ctx context.Context, d
 // 备份表:sys_device_mac_history_purge_backup_YYYYMMDD_HHMMSS
 //
 // 回滚:
-//   INSERT INTO sys_device_mac_history SELECT * FROM <backup_table>;
-//   注意:备份表不含分区(普通表),需手工处理 first_seen 落对应分区。
+//
+//	INSERT INTO sys_device_mac_history SELECT * FROM <backup_table>;
+//	注意:备份表不含分区(普通表),需手工处理 first_seen 落对应分区。
 //
 // 性能:基于现有 idx_device_first_seen + DISTINCT ON,<100 万行 ~12s(见 scripts/mac/purge_meaningless 实测)。
 //

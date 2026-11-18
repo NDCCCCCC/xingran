@@ -70,8 +70,8 @@ func TestMigrate176_FastPathSchemaVersionCheck(t *testing.T) {
 
 	wants := []string{
 		"information_schema.columns", // 2.4 MV schema 版本校验
-		"backfillOpsAssetPhysical",  // 双路径回填函数名
-		"applogger Warnf",           // Type E 审计可见性(stripGoComments 把 applogger.Warnf 拆成两个 Ident)
+		"backfillOpsAssetPhysical",   // 双路径回填函数名
+		"applogger Warnf",            // Type E 审计可见性(stripGoComments 把 applogger.Warnf 拆成两个 Ident)
 	}
 	for _, w := range wants {
 		if !strings.Contains(s, w) {

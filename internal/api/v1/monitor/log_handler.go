@@ -39,7 +39,7 @@ func NewMonitorLogHandler[T any](
 		moduleName:     moduleName,
 		operTypeDelete: operTypeDelete,
 		operTypeBatch:  operTypeBatch,
-		needOperlog:   needOperlog,
+		needOperlog:    needOperlog,
 	}
 }
 

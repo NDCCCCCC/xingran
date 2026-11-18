@@ -12,14 +12,14 @@ import (
 // AgentEndpoints agent 模块端点元数据（1 端点）。
 var AgentEndpoints = []commands.EndpointMeta{
 	{
-		Module: "agent",
+		Module:       "agent",
 		ResourcePath: []string{"register"},
-		Action: "create",
-		Method: "POST", APIPath: "/api/v1/agent/register",
-		Summary: "Agent注册",
+		Action:       "create",
+		Method:       "POST", APIPath: "/api/v1/agent/register",
+		Summary:     "Agent注册",
 		Description: "Agent 自动注册（无需认证）",
-		Tags: "Agent管理",
-		Kind: "",
+		Tags:        "Agent管理",
+		Kind:        "",
 	},
 }
 

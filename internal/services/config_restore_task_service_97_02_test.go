@@ -29,11 +29,11 @@ func TestV130R02_GracePeriodRunningNotConverged(t *testing.T) {
 	require.NoError(t, db.Create(dev).Error)
 
 	bk := &models.ConfigBackup{
-		ID:             "bk-grace-5min",
+		ID:            "bk-grace-5min",
 		DeviceID:      "dev-grace-5min",
 		DeviceName:    "grace-device",
-		ConfigContent:  "sysname Grace\n",
-		ConfigHash:     "gracehash",
+		ConfigContent: "sysname Grace\n",
+		ConfigHash:    "gracehash",
 		StorageType:   models.StorageTypeDatabase,
 		BackupType:    models.BackupTypeManual,
 		Version:       1,
@@ -80,11 +80,11 @@ func TestV130R02_GracePeriodExpiredRunningConverged(t *testing.T) {
 	require.NoError(t, db.Create(dev).Error)
 
 	bk := &models.ConfigBackup{
-		ID:             "bk-expired",
+		ID:            "bk-expired",
 		DeviceID:      "dev-expired",
 		DeviceName:    "expired-device",
-		ConfigContent:  "sysname Expired\n",
-		ConfigHash:     "expiredhash",
+		ConfigContent: "sysname Expired\n",
+		ConfigHash:    "expiredhash",
 		StorageType:   models.StorageTypeDatabase,
 		BackupType:    models.BackupTypeManual,
 		Version:       1,
@@ -132,11 +132,11 @@ func TestV130R02_PendingAlwaysConverged(t *testing.T) {
 	require.NoError(t, db.Create(dev).Error)
 
 	bk := &models.ConfigBackup{
-		ID:             "bk-orphan",
+		ID:            "bk-orphan",
 		DeviceID:      "dev-orphan",
 		DeviceName:    "orphan-device",
-		ConfigContent:  "sysname Orphan\n",
-		ConfigHash:     "orphanhash",
+		ConfigContent: "sysname Orphan\n",
+		ConfigHash:    "orphanhash",
 		StorageType:   models.StorageTypeDatabase,
 		BackupType:    models.BackupTypeManual,
 		Version:       1,

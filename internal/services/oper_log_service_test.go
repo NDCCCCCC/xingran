@@ -26,7 +26,8 @@ func moduleRoot() string {
 // and crashes the process.
 //
 // GREEN after Phase 111 GOR-01: both goroutines wrap with
-//   defer func() { if r := recover(); r != nil { ... log ... } }()
+//
+//	defer func() { if r := recover(); r != nil { ... log ... } }()
 //
 // Approach: source-code pattern check (Option A from plan). Behavioral test
 // requires modifying production code and was rejected by plan-checker.
@@ -44,7 +45,13 @@ func TestOperLog_Async_DoesNotPanicOnDBError(t *testing.T) {
 	//   }()
 	//
 	// We look for the canonical two-level defer/recover pattern.
-	hasRecoverInAsync := strings.Contains(srcStr, "defer func() { if r := recover()")
+	//
+	// 2026-11-18 格式债务清理配套：gofmt 会把紧凑单行 defer/recover 展开成多行，
+	// 故先剥离所有空白字符再匹配——测试意图是"存在 recover 保护"，而非"恰好写在一行"。
+	// 去空白后匹配比单行匹配**更严格**：任何换行/缩进/空格形态都能识别，
+	// 但模式本身（defer func + if r := recover）必须完整存在。
+	compact := strings.Join(strings.Fields(srcStr), "")
+	hasRecoverInAsync := strings.Contains(compact, "deferfunc(){ifr:=recover();")
 
 	assert.True(t, hasRecoverInAsync,
 		"oper_log_service.go async goroutines (line 67, 140) must have "+

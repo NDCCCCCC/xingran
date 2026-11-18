@@ -6,11 +6,11 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	mac_history_query_service "github.com/xingran-next/xingran-go-backend/internal/services"
 	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"github.com/xingran-next/xingran-go-backend/pkg/response"
 	responseHelpers "github.com/xingran-next/xingran-go-backend/pkg/response"
-	"github.com/gin-gonic/gin"
 )
 
 // MACHistoryHandler MAC历史查询处理器

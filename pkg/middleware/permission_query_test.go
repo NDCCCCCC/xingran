@@ -21,8 +21,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/xingran-next/xingran-go-backend/internal/core"
 	"github.com/stretchr/testify/assert"
+	"github.com/xingran-next/xingran-go-backend/internal/core"
 	"gorm.io/gorm"
 )
 

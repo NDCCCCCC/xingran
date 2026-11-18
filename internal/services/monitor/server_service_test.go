@@ -113,12 +113,12 @@ func newServerServiceFixture(db *gorm.DB, provider MetricsProvider) *serverServi
 func seedSystemMetrics(t *testing.T, db *gorm.DB, id, serverID string, cpuUsage float64, ts time.Time) {
 	t.Helper()
 	require.NoError(t, db.Create(&models.SystemMetrics{
-		BaseModel:  models.BaseModel{ID: id},
-		ServerID:   serverID,
-		CPUUsage:   cpuUsage,
+		BaseModel:   models.BaseModel{ID: id},
+		ServerID:    serverID,
+		CPUUsage:    cpuUsage,
 		MemoryUsage: 40.5,
-		DiskUsage:  60.0,
-		Timestamp:  ts,
+		DiskUsage:   60.0,
+		Timestamp:   ts,
 	}).Error)
 }
 
@@ -133,14 +133,14 @@ func TestServerService_GetServerInfo_FromProvider_FullMap(t *testing.T) {
 	provider := &mockMetricsProvider{}
 	svc := newServerServiceFixture(setupTestServerDB(t), provider)
 	provider.On("GetServerInfo", mock.Anything).Return(map[string]interface{}{
-		"hostname":          "srv-01",
-		"os":                "windows",
-		"arch":              "amd64",
-		"cpu_count":         float64(8),
-		"total_memory":      float64(16 << 30),
-		"available_memory":  float64(8 << 30),
-		"disk_total":        float64(512 << 30),
-		"disk_available":    float64(256 << 30),
+		"hostname":         "srv-01",
+		"os":               "windows",
+		"arch":             "amd64",
+		"cpu_count":        float64(8),
+		"total_memory":     float64(16 << 30),
+		"available_memory": float64(8 << 30),
+		"disk_total":       float64(512 << 30),
+		"disk_available":   float64(256 << 30),
 	}, nil)
 
 	servers, total, err := svc.GetServerInfo(context.Background(), ServerInfoParams{Current: 1, PageSize: 10})
@@ -331,7 +331,7 @@ func TestServerService_GetSystemMetricsHistory_ServerIDFilter(t *testing.T) {
 func TestServerService_GetSystemMetricsHistory_TimeRangeFilter(t *testing.T) {
 	db := setupTestServerDB(t)
 	base := time.Date(2026, 8, 20, 10, 0, 0, 0, time.UTC)
-	seedSystemMetrics(t, db, "m-1", "srv-a", 10.0, base)                    // 10:00
+	seedSystemMetrics(t, db, "m-1", "srv-a", 10.0, base)                  // 10:00
 	seedSystemMetrics(t, db, "m-2", "srv-a", 20.0, base.Add(2*time.Hour)) // 12:00
 
 	svc := newServerServiceFixture(db, &mockMetricsProvider{})

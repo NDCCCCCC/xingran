@@ -1,6 +1,5 @@
 //go:build archive_skip
 
-
 package migrations
 
 import (
@@ -18,17 +17,18 @@ import (
 //   - collector 代码已修(全部走 portcollection.NormalizeInterfaceName),但历史数据未清理
 //
 // 本 migration 显式处理 4 类问题:
-//   1. 全称 Gig* → 短名 GE/XGE/TWE/... (sys_device_port_status 与 sys_device_mac_address)
-//   2. 短+全乱码 GEGigabitEthernet5/29 → GE5/29 (显式 CASE WHEN)
-//   3. XGigabitEthernet0/0/1 → XGE0/0/1 (H3C 设备特定)
-//   4. et 短名 (Huawei 25G) → et 大写 ET
+//  1. 全称 Gig* → 短名 GE/XGE/TWE/... (sys_device_port_status 与 sys_device_mac_address)
+//  2. 短+全乱码 GEGigabitEthernet5/29 → GE5/29 (显式 CASE WHEN)
+//  3. XGigabitEthernet0/0/1 → XGE0/0/1 (H3C 设备特定)
+//  4. et 短名 (Huawei 25G) → et 大写 ET
 //
 // 不动:已是大写短名的行(GE/XGE/TWE/...)— 短名本来就合法
 //
 // 唯一键冲突处理(2026-07-01 决策):
-//   sys_device_port_status 有 (device_id, interface_name) 唯一约束(migration_177 reapplied)
-//   若某 device 已有 "GE0/0/1" 而现在要写 "GigabitEthernet0/0/1" -> "GE0/0/1" 会触发冲突
-//   解决: 先按 (device_id, 新名) 找出冲突行,保留 collected_at DESC 较新者(migration_177 同款策略)
+//
+//	sys_device_port_status 有 (device_id, interface_name) 唯一约束(migration_177 reapplied)
+//	若某 device 已有 "GE0/0/1" 而现在要写 "GigabitEthernet0/0/1" -> "GE0/0/1" 会触发冲突
+//	解决: 先按 (device_id, 新名) 找出冲突行,保留 collected_at DESC 较新者(migration_177 同款策略)
 func Migrate187CleanGarbledInterfaceNames(db *gorm.DB) error {
 	log.Println("Running migration 187: 清理 sys_device_port_status + sys_device_mac_address 的乱码 interface_name")
 

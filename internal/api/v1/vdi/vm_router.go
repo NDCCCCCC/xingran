@@ -3,8 +3,8 @@ package vdi
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/xingran-next/xingran-go-backend/internal/core"
-	"github.com/xingran-next/xingran-go-backend/pkg/middleware"
 	vdiServices "github.com/xingran-next/xingran-go-backend/internal/services/vdi"
+	"github.com/xingran-next/xingran-go-backend/pkg/middleware"
 )
 
 // SetupVMRouter 设置虚拟机路由

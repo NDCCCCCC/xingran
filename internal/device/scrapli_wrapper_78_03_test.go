@@ -36,12 +36,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/scrapli/scrapligo/driver/network"
 	"github.com/scrapli/scrapligo/driver/options"
 	"github.com/scrapli/scrapligo/platform"
 	"github.com/scrapli/scrapligo/transport"
 	"github.com/scrapli/scrapligo/util"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
 )
 
 // newSW78 builds a ScrapliWrapper via the public NewScrapliWrapper constructor
@@ -815,10 +815,10 @@ func TestSW78_NewScrapliWrapper_Telnet(t *testing.T) {
 // in NewScrapliWrapper including the vendor→platform mapping).
 func TestSW78_GetLLDPCommand_AllVendors(t *testing.T) {
 	cases := map[models.DeviceVendor]string{
-		models.VendorHuawei: "display lldp neighbor brief",
-		models.VendorH3C:    "display lldp neighbor brief",
-		models.VendorRuijie: "show lldp neighbors",
-		models.VendorMaipu:  "show lldp neighbors",
+		models.VendorHuawei:            "display lldp neighbor brief",
+		models.VendorH3C:               "display lldp neighbor brief",
+		models.VendorRuijie:            "show lldp neighbors",
+		models.VendorMaipu:             "show lldp neighbors",
 		models.DeviceVendor(""):        "show lldp neighbors",
 		models.DeviceVendor("unknown"): "show lldp neighbors",
 	}
@@ -849,12 +849,14 @@ func TestSW78_ElapsedTime_ZeroPaths(t *testing.T) {
 // reply. This unlocks the previously-unreachable 80% of SendConfig's body.
 //
 // Fixture: huawei_vrp_sendconfig.fixture
-//   Line 1-3   : Open + on-open send-command flow (same as all other fixtures)
-//   Line 4     : system-view       (privilege escalation command echo)
-//   Line 5     : [dummy-host]      (configuration prompt per yaml pattern)
-//   Line 6     : sysname Dummy-Switch (actual config cmd echo)
-//   Line 7     : <dummy-host>      (exec prompt reply — fixture trick so the
-//                                   channel sees any valid prompt and returns)
+//
+//	Line 1-3   : Open + on-open send-command flow (same as all other fixtures)
+//	Line 4     : system-view       (privilege escalation command echo)
+//	Line 5     : [dummy-host]      (configuration prompt per yaml pattern)
+//	Line 6     : sysname Dummy-Switch (actual config cmd echo)
+//	Line 7     : <dummy-host>      (exec prompt reply — fixture trick so the
+//	                                channel sees any valid prompt and returns)
+//
 // Note: we do NOT call Close (D-78-03a).
 func TestSW78_SendConfig_HappyPath(t *testing.T) {
 	w := newSW78(t, "huawei_vrp_sendconfig.fixture")

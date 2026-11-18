@@ -157,7 +157,7 @@ func TestDictTypeHandler_GetByID_Success(t *testing.T) {
 	w := doJSON(t, h.GetByID, "POST", "/system/dict-types/"+id, nil, map[string]string{"id": id})
 	assert.Equal(t, http.StatusOK, w.Code)
 	var resp struct {
-		Code int              `json:"code"`
+		Code int             `json:"code"`
 		Data models.DictType `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
@@ -408,7 +408,7 @@ func TestDictDataHandler_GetByID_Success(t *testing.T) {
 	w := doJSON(t, h.GetByID, "POST", "/system/dict-data/"+id, nil, map[string]string{"id": id})
 	assert.Equal(t, http.StatusOK, w.Code)
 	var resp struct {
-		Code int              `json:"code"`
+		Code int             `json:"code"`
 		Data models.DictData `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))

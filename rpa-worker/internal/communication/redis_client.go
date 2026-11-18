@@ -45,7 +45,7 @@ func NewRedisClient(cfg *config.RedisConfig, workerID string, log logger.Logger)
 		client:     client,
 		streamName: cfg.StreamTasks,
 		groupName:  cfg.StreamGroup,
-		consumerID:  workerID,
+		consumerID: workerID,
 		logger:     log,
 		config:     cfg,
 	}, nil

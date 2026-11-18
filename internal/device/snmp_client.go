@@ -18,9 +18,9 @@ import (
 // SNMPClient SNMP客户端
 type SNMPClient struct {
 	client  *gosnmp.GoSNMP
-	mu      sync.RWMutex  // 保护 gosnmp.Conn 的并发访问
-	ready   bool          // 连接是否就绪
-	readyMu sync.RWMutex  // 保护 ready 字段，支持并发读取
+	mu      sync.RWMutex // 保护 gosnmp.Conn 的并发访问
+	ready   bool         // 连接是否就绪
+	readyMu sync.RWMutex // 保护 ready 字段，支持并发读取
 }
 
 // SNMPClientConfig SNMP客户端配置
@@ -147,7 +147,6 @@ func (c *SNMPClient) WaitForReady(timeout time.Duration) error {
 		}
 	}
 }
-
 
 // Get � 获取单个OID值
 func (c *SNMPClient) Get(oid string) (result interface{}, err error) {

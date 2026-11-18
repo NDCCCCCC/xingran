@@ -94,7 +94,8 @@ func (b *DefaultQueryBuilder) BuildQuery(
 //   - internal/services/system/menu_service.go:147 (后代批量删除)
 //
 // 模式: base case (parent_id IS NULL) UNION ALL recursive case (parent + child),
-//       再用 DISTINCT ON (id) ORDER BY depth DESC 取每个部门的最深一级链(即 root → … → 当前).
+//
+//	再用 DISTINCT ON (id) ORDER BY depth DESC 取每个部门的最深一级链(即 root → … → 当前).
 type DepartmentQueryBuilder struct{}
 
 func NewDepartmentQueryBuilder() *DepartmentQueryBuilder {
@@ -119,12 +120,14 @@ func NewDepartmentQueryBuilder() *DepartmentQueryBuilder {
 //   - recursive step: 对父级已经在 CTE 的子部门,把"自身名"追加到父级已积累的链尾,
 //     而不是把父名拼在前面 — 后者会把链路倒着算,且会双倍根名.
 //     正确写法: path_text = dpc.path_text || ' → ' || c.dept_name
-//               depth     = dpc.depth + 1
+//     depth     = dpc.depth + 1
 //
 // ⚠️ PostgreSQL 递归 CTE 的类型硬约束 (SQLSTATE 42804):
 // 非递归项与递归项的列类型必须**精确一致**(含长度限定符),否则 PG 直接报错:
-//     recursive query "dept_path_cte" column 3 has type character varying(100)
-//     in non-recursive term but type character varying overall
+//
+//	recursive query "dept_path_cte" column 3 has type character varying(100)
+//	in non-recursive term but type character varying overall
+//
 // base case 的 dept_name 是 varchar(100),而递归项 `path_text || ' → ' || c.dept_name`
 // 的结果是长度未定的 varchar → 类型不一致 → 整条查询失败(端点 500)。
 // 修法: base case 显式 CAST 成 text,让两侧都落到 text。
@@ -207,7 +210,7 @@ WHERE d.deleted_at IS NULL`
 // 并用相关子查询取主设备的 序列号/名称/型号。
 // 与 workstation_service.go:18-22 的生产 List 同款双方言写法：PG 专有 ::uuid/::text
 // 在 SQLite 报 "unrecognized token ':'"，且 floor_id/dept_id/user_id 为空串时
-// ''::uuid 在 PG 报 22P02 会让整条导出失败（P1-8）。双侧 CAST 后空串只是不匹配、
+// ”::uuid 在 PG 报 22P02 会让整条导出失败（P1-8）。双侧 CAST 后空串只是不匹配、
 // LEFT JOIN 给 NULL，导出不再整体失败。
 type WorkstationQueryBuilder struct{}
 

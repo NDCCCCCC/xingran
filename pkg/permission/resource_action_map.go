@@ -26,7 +26,8 @@ package permission
 // 字符串拼接 — 防止拼写错误漏检)。
 //
 // action 词汇(D-04 对齐 config.go 既有 PermissionCode 末段):
-//   list / view / add / edit / remove / export / import / resetPwd
+//
+//	list / view / add / edit / remove / export / import / resetPwd
 //
 // 注:`remove` 与 `delete` 同义 — `remove` 是 system:* 模块约定,`delete` 是
 // network:* 模块约定,本 phase map 仅含 `remove`(D-04 末段)。

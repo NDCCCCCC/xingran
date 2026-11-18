@@ -1,6 +1,5 @@
 //go:build archive_skip
 
-
 package migrations
 
 import (
@@ -17,8 +16,8 @@ import (
 //   - migration_168 (Phase 42 R1) 已建表 sys_reconciliation_exception，但 R1 只 seed
 //     全局规则，未配置 GiST 索引 + CHECK 约束。
 //   - R3 引入 CIDR 段级别例外规则引擎 + 命中测试工具，需要：
-//       (1) GiST inet_ops partial index 加速命中测试 SQL `ip_range >> $1::inet`（D-R3-A1-03）
-//       (2) CHECK 约束确保 exception_actions ⊆ 5 白名单值 + severity_override 仅 low/medium/high
+//     (1) GiST inet_ops partial index 加速命中测试 SQL `ip_range >> $1::inet`（D-R3-A1-03）
+//     (2) CHECK 约束确保 exception_actions ⊆ 5 白名单值 + severity_override 仅 low/medium/high
 //
 // 关键约束（Pitfall 1/6 + MEMORY.md `xingran-gorm-sql-constraint-naming-conflict`）：
 //   - 纯 SQL `DO $$ ... END $$`，禁止 GORM `check:` tag（GORM 命名不可控，且 v1.30.5 不稳定）

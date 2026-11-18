@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"log"
 
-	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
+	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"gorm.io/gorm"
 )
 
@@ -20,11 +20,11 @@ import (
 //     (asset_id, conflict_type) WHERE resolved_at IS NULL AND deleted_at IS NULL。
 //
 // 步骤清单:
-//   1. GORM AutoMigrate 创建 sys_data_reconciliation + sys_reconciliation_exception 两张表
-//   2. 物化视图 reconciliation_normalized — 反向推导物理链路
-//   3. unique index idx_recon_norm_asset (CONCURRENTLY 必需)
-//   4. partial unique index uniq_recon_asset_type_open(显式命名,D-11)
-//   5. 验证:SELECT COUNT(*) FROM reconciliation_normalized 不报错
+//  1. GORM AutoMigrate 创建 sys_data_reconciliation + sys_reconciliation_exception 两张表
+//  2. 物化视图 reconciliation_normalized — 反向推导物理链路
+//  3. unique index idx_recon_norm_asset (CONCURRENTLY 必需)
+//  4. partial unique index uniq_recon_asset_type_open(显式命名,D-11)
+//  5. 验证:SELECT COUNT(*) FROM reconciliation_normalized 不报错
 //
 // R1 已知约束:
 //   - sys_port_mac / sys_info_point / sys_workstation_info_point 尚未在项目 schema 中落地,

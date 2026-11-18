@@ -25,9 +25,9 @@ const (
 	wsoOrgHQ       = "11111111-1111-1111-1111-111111111111" // 分公司本部
 	wsoOrgWuhan    = "22222222-2222-2222-2222-222222222222" // 武汉中支
 	wsoBuildingID  = "b-zheshang"
-	wsoFloorHQ     = "f-4f"  // 继承本部
-	wsoFloorWuhan  = "f-1f"  // 覆盖到武汉中支
-	wsoFloorWuhan2 = "f-3f"  // 覆盖到武汉中支
+	wsoFloorHQ     = "f-4f" // 继承本部
+	wsoFloorWuhan  = "f-1f" // 覆盖到武汉中支
+	wsoFloorWuhan2 = "f-3f" // 覆盖到武汉中支
 )
 
 // setupFloorOrgOverrideDB 建最小 schema + 浙商大厦跨机构数据。

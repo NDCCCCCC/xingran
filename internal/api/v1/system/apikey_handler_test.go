@@ -146,7 +146,7 @@ func TestAPIKeyHandler_Create_Success(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code, "body=%s", w.Body.String())
 
 	var resp struct {
-		Code int `json:"code"`
+		Code int                    `json:"code"`
 		Data map[string]interface{} `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
@@ -211,7 +211,7 @@ func TestAPIKeyHandler_List_Empty(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 
 	var resp struct {
-		Code int `json:"code"`
+		Code int                    `json:"code"`
 		Data map[string]interface{} `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))

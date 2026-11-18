@@ -213,7 +213,7 @@ func newFakeVDIExtServer(t *testing.T, invalidOnce bool) *fakeVDIExtServer {
 		}
 		writeJSON(w, map[string]interface{}{
 			"error_code": 0, "error_message": "",
-			"data":       map[string]interface{}{"resources": resources},
+			"data": map[string]interface{}{"resources": resources},
 		})
 	})
 	mux.HandleFunc("/v1/resource/servers", func(w http.ResponseWriter, r *http.Request) {
@@ -293,7 +293,7 @@ func newFakeVDIExtServer(t *testing.T, invalidOnce bool) *fakeVDIExtServer {
 			}
 			writeJSON(w, map[string]interface{}{
 				"error_code": 0, "error_message": "",
-				"data":       map[string]interface{}{"task_id": 9, "server_id": ids},
+				"data": map[string]interface{}{"task_id": 9, "server_id": ids},
 			})
 		case http.MethodDelete:
 			writeJSON(w, map[string]interface{}{"error_code": 0, "error_message": ""})
@@ -313,7 +313,7 @@ func newFakeVDIExtServer(t *testing.T, invalidOnce bool) *fakeVDIExtServer {
 		f.mu.Unlock()
 		writeJSON(w, map[string]interface{}{
 			"error_code": 0, "error_message": "",
-			"data":       map[string]interface{}{"vm_id": "101", "name": "vm-alpha"},
+			"data": map[string]interface{}{"vm_id": "101", "name": "vm-alpha"},
 		})
 	})
 	mux.HandleFunc("/v1/run_position", func(w http.ResponseWriter, r *http.Request) {

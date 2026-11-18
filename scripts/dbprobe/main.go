@@ -1,12 +1,12 @@
 // dbprobe: 针对 debug session backend-hang-on-automigrate 的远端 dev DB 补建/诊断工具。
 //
 // 背景: SKIP_AUTOMIGRATE=true 旁路后, 两类对象在该 dev Supabase 库中缺失 (启动 WARN):
-//   1. sys_device_mac_history 父表 (PARTITION BY RANGE first_seen) 未建 → 月度分区创建失败 (42P01)。
-//      DeviceMACHistory 既不在 MigrateModelList 也不在 dbprovision extraModels; 原始建表
-//      迁移已归档丢失。此处按 model 定义 + 分区键重建 (CREATE IF NOT EXISTS, 幂等, 表空无 corruption 风险)。
-//   2. reconciliation_physical_chain (VIEW, 175) / reconciliation_normalized (MV, 176) 未建 →
-//      Phase 42 启动 RefreshView + cron "对账-物化视图刷新" 报 42P01。直接调用 migration_175/176。
-//   3. APIKey unique 约束归一化: 验证 cleanupOldConstraints 修复 (sys_api_keys 命名冲突 42704)。
+//  1. sys_device_mac_history 父表 (PARTITION BY RANGE first_seen) 未建 → 月度分区创建失败 (42P01)。
+//     DeviceMACHistory 既不在 MigrateModelList 也不在 dbprovision extraModels; 原始建表
+//     迁移已归档丢失。此处按 model 定义 + 分区键重建 (CREATE IF NOT EXISTS, 幂等, 表空无 corruption 风险)。
+//  2. reconciliation_physical_chain (VIEW, 175) / reconciliation_normalized (MV, 176) 未建 →
+//     Phase 42 启动 RefreshView + cron "对账-物化视图刷新" 报 42P01。直接调用 migration_175/176。
+//  3. APIKey unique 约束归一化: 验证 cleanupOldConstraints 修复 (sys_api_keys 命名冲突 42704)。
 //
 // 连接: 复用 internal/config.Load + DatabaseConfig.GetDSN() —— 自动带上本次修复的
 // connect_timeout + keepalive。每条操作带 60s ctx 超时 + 最多 5 次重试 (吸收链路随机 stall)。

@@ -37,17 +37,17 @@ type ADConfigCreateRequest struct {
 
 // ADConfigUpdateRequest 更新AD配置请求
 type ADConfigUpdateRequest struct {
-	ID            string `json:"-"`
-	ConfigName    string `json:"configName" binding:"required,max=100"`
-	ServerAddress string `json:"serverAddress" binding:"required,max=255"`
-	ServerPort    int    `json:"serverPort" binding:"required,min=1,max=65535"`
-	DomainName    string `json:"domainName" binding:"required,max=255"`
-	BaseDN        string `json:"baseDn" binding:"required,max=500"`
-	UseSSL        bool   `json:"useSsl"`
-	UseTLS        bool   `json:"useTls"`
-	SyncEnabled   bool   `json:"syncEnabled"`
-	SyncInterval  int    `json:"syncInterval" binding:"min=60"`
-	MemberOUDN    string `json:"memberOuDn,omitempty"` // 本部部门分组OU DN
+	ID            string                 `json:"-"`
+	ConfigName    string                 `json:"configName" binding:"required,max=100"`
+	ServerAddress string                 `json:"serverAddress" binding:"required,max=255"`
+	ServerPort    int                    `json:"serverPort" binding:"required,min=1,max=65535"`
+	DomainName    string                 `json:"domainName" binding:"required,max=255"`
+	BaseDN        string                 `json:"baseDn" binding:"required,max=500"`
+	UseSSL        bool                   `json:"useSsl"`
+	UseTLS        bool                   `json:"useTls"`
+	SyncEnabled   bool                   `json:"syncEnabled"`
+	SyncInterval  int                    `json:"syncInterval" binding:"min=60"`
+	MemberOUDN    string                 `json:"memberOuDn,omitempty"` // 本部部门分组OU DN
 	Status        *models.ADConfigStatus `json:"status,omitempty"`
 }
 

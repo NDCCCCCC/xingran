@@ -97,15 +97,14 @@ func (s *SyncService) syncDataInternal(ctx context.Context, config *models.ADCon
 		return nil, fmt.Errorf("创建同步日志失败: %w", err)
 	}
 
-
 	// Phase 38 Wave 1: 整个同步流程（多次 LDAP Search）封装进 FailoverClient.ExecuteWithFailover
 	// 一个 operation。所有 client.Search* 必须在闭包内（Pitfall 3：闭包返回后 client.Close()）；
 	// DB 写入（syncOUs/syncGroups/...）依赖 Search 结果，因此在闭包内 collect 后传出。
 	fc := NewFailoverClient(s.pool, config)
 	var (
-		ous      []*ldap.Entry
-		groups   []*ldap.Entry
-		users    []*ldap.Entry
+		ous       []*ldap.Entry
+		groups    []*ldap.Entry
+		users     []*ldap.Entry
 		computers []*ldap.Entry
 	)
 	if err := fc.ExecuteWithFailover(ctx, func(client LDAPClientIface) error {

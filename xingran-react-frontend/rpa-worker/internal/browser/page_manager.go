@@ -38,7 +38,7 @@ func (m *PageManager) Click(selector string) error {
 
 // Fill 填写表单
 func (m *PageManager) Fill(selector, value string) error {
-	m.logger.Debug("填写表单", 
+	m.logger.Debug("填写表单",
 		logger.String("selector", selector),
 		logger.String("value", maskValue(value)))
 	return m.page.Fill(selector, value)

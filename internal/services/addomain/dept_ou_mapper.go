@@ -55,8 +55,9 @@ func (m *DeptOUmapper) FindDeptByOUDN(ctx context.Context, ouDN string) (string,
 //     （跨域写入，是 phase 58 最严重的误路由形态）
 //
 // ⚠ 不带 ad_config_id 的旧方法 FindOUDNByDeptID 已随 moveUserToNewOU 一起删除：
-//   它唯一的生产调用方 moveUserToNewOU 属于已下线的 SyncUserUpdateToAD 路径，
-//   保留会留下一条「无配置作用域」的跨域误路由隐患。
+//
+//	它唯一的生产调用方 moveUserToNewOU 属于已下线的 SyncUserUpdateToAD 路径，
+//	保留会留下一条「无配置作用域」的跨域误路由隐患。
 func (m *DeptOUmapper) FindOUDNByDeptIDForConfig(ctx context.Context, deptID, adConfigID string) (string, error) {
 	var mapping models.DeptOUMapping
 	err := m.db.WithContext(ctx).

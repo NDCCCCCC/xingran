@@ -13,12 +13,12 @@ type Retryable func(error) bool
 
 // Config 重试配置
 type Config struct {
-	MaxRetries    int           // 最大重试次数
-	InitialDelay  time.Duration // 初始延迟
-	MaxDelay      time.Duration // 最大延迟
-	Multiplier    float64       // 延迟倍数
-	Jitter        bool          // 是否添加随机抖动
-	Retryable     Retryable     // 判断函数
+	MaxRetries   int           // 最大重试次数
+	InitialDelay time.Duration // 初始延迟
+	MaxDelay     time.Duration // 最大延迟
+	Multiplier   float64       // 延迟倍数
+	Jitter       bool          // 是否添加随机抖动
+	Retryable    Retryable     // 判断函数
 }
 
 // DefaultConfig 默认重试配置
@@ -121,7 +121,7 @@ func DoWithRetry(ctx context.Context, config *Config, fn func() error) error {
 func contains(s, substr string) bool {
 	return len(s) >= len(substr) &&
 		(s[:len(substr)] == substr ||
-		 containsIgnoreCase(s, substr))
+			containsIgnoreCase(s, substr))
 }
 
 func containsIgnoreCase(s, substr string) bool {

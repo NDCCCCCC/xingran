@@ -24,10 +24,10 @@ type WidgetDataFetcher interface {
 
 // WidgetDataResult Widget 数据获取结果
 type WidgetDataResult struct {
-	Data   interface{} `json:"data,omitempty"`   // 成功时的数据
-	Error  string      `json:"error,omitempty"`  // 失败时的错误消息
-	Code   int         `json:"code,omitempty"`   // 错误码（可选）
-	Cached bool        `json:"cached"`           // 是否来自缓存
+	Data   interface{} `json:"data,omitempty"`  // 成功时的数据
+	Error  string      `json:"error,omitempty"` // 失败时的错误消息
+	Code   int         `json:"code,omitempty"`  // 错误码（可选）
+	Cached bool        `json:"cached"`          // 是否来自缓存
 }
 
 // WidgetDataFetcherImpl Widget 数据获取实现

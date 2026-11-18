@@ -226,8 +226,8 @@ func TestEdc8004_DefaultMessage_AllCodes(t *testing.T) {
 func TestEdc8004_DefaultMessage_SelectedCodes(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
-		code         ErrorCode
-		expectedMsg  string
+		code        ErrorCode
+		expectedMsg string
 	}{
 		{CodeSuccess, "成功"},
 		{CodeParamError, "参数错误"},

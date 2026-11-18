@@ -14,9 +14,9 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
-	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	apperrors "github.com/xingran-next/xingran-go-backend/pkg/errors"
+	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 )
 
 // NormalizedRow reconciliation_normalized 物化视图单行(R1 + R2 检测引擎输入)
@@ -25,20 +25,20 @@ import (
 // — 来自 LEFT JOIN LATERAL,语义为"该资产最近一条已解决异常"的快照。
 // DetectLayer3 据此实现 7d 静默期(同 asset + type 在 7 天内不重复触发)。
 type NormalizedRow struct {
-	AssetID          string     `gorm:"column:asset_id" json:"assetId"`
-	AssetCode        string     `gorm:"column:asset_code" json:"assetCode"`
-	AssetIP          *string    `gorm:"column:asset_ip" json:"assetIp,omitempty"`
-	PhysicalUserID   *string    `gorm:"column:physical_user_id" json:"physicalUserId,omitempty"`
-	PhysicalUsername *string    `gorm:"column:physical_username" json:"physicalUsername,omitempty"`
-	AssetUserID      *string    `gorm:"column:asset_user_id" json:"assetUserId,omitempty"`
-	AssetUsername    *string    `gorm:"column:asset_username" json:"assetUsername,omitempty"`
-	AdUserID         *string    `gorm:"column:ad_id" json:"adUserId,omitempty"`
-	AdUsername       *string    `gorm:"column:ad_username" json:"adUsername,omitempty"`
-	AdIsEnabled      *bool      `gorm:"column:ad_is_enabled" json:"adIsEnabled,omitempty"`
-	MVRefreshedAt    time.Time  `gorm:"column:mv_refreshed_at" json:"mvRefreshedAt"`
-	MAC1             *string    `gorm:"column:mac1" json:"mac1,omitempty"`
-	MAC2             *string    `gorm:"column:mac2" json:"mac2,omitempty"`
-	MACJoin          *string    `gorm:"column:mac_join" json:"macJoin,omitempty"`
+	AssetID          string    `gorm:"column:asset_id" json:"assetId"`
+	AssetCode        string    `gorm:"column:asset_code" json:"assetCode"`
+	AssetIP          *string   `gorm:"column:asset_ip" json:"assetIp,omitempty"`
+	PhysicalUserID   *string   `gorm:"column:physical_user_id" json:"physicalUserId,omitempty"`
+	PhysicalUsername *string   `gorm:"column:physical_username" json:"physicalUsername,omitempty"`
+	AssetUserID      *string   `gorm:"column:asset_user_id" json:"assetUserId,omitempty"`
+	AssetUsername    *string   `gorm:"column:asset_username" json:"assetUsername,omitempty"`
+	AdUserID         *string   `gorm:"column:ad_id" json:"adUserId,omitempty"`
+	AdUsername       *string   `gorm:"column:ad_username" json:"adUsername,omitempty"`
+	AdIsEnabled      *bool     `gorm:"column:ad_is_enabled" json:"adIsEnabled,omitempty"`
+	MVRefreshedAt    time.Time `gorm:"column:mv_refreshed_at" json:"mvRefreshedAt"`
+	MAC1             *string   `gorm:"column:mac1" json:"mac1,omitempty"`
+	MAC2             *string   `gorm:"column:mac2" json:"mac2,omitempty"`
+	MACJoin          *string   `gorm:"column:mac_join" json:"macJoin,omitempty"`
 	// === Phase 43 R2 / D-A3-01 新增字段 ===
 	LastResolvedAt   *time.Time `gorm:"column:last_resolved_at" json:"lastResolvedAt,omitempty"`
 	LastResolvedBy   *string    `gorm:"column:last_resolved_by" json:"lastResolvedBy,omitempty"`
@@ -126,12 +126,13 @@ func (s *reconciliationDetectionImpl) ClassifySignals(row NormalizedRow) Conflic
 // ClassifyType 把 ConflictSignals 映射为 Type A-F
 //
 // 规则(D-08/D-09 锁定):
-//   A: physical + declared 匹配(健康,不入主表)
-//   B: physical 有, declared 无(物理链路有用户,但 ops_asset 没标责任人)
-//   C: physical + declared 都有但不匹配(物理使用人与责任人冲突)
-//   D: physical 无, declared 有(只有责任人,无物理使用者)
-//   E: physical + declared 都没有(异常:无用户关联)
-//   F: physical/declared 匹配但 ad 不一致(AD 账号不一致)
+//
+//	A: physical + declared 匹配(健康,不入主表)
+//	B: physical 有, declared 无(物理链路有用户,但 ops_asset 没标责任人)
+//	C: physical + declared 都有但不匹配(物理使用人与责任人冲突)
+//	D: physical 无, declared 有(只有责任人,无物理使用者)
+//	E: physical + declared 都没有(异常:无用户关联)
+//	F: physical/declared 匹配但 ad 不一致(AD 账号不一致)
 func (s *reconciliationDetectionImpl) ClassifyType(sig ConflictSignals) string {
 	if sig.HasPhysical && sig.HasDeclared && sig.PhysicalMatchDeclared {
 		// 健康:三路检查 AD 是否一致
@@ -199,14 +200,14 @@ func (s *reconciliationDetectionImpl) ComputeSeverity(t string) string {
 //  3. Type A 跳过(D-09,计入 skipped)
 //  4. [R2 / D-A3-01] guard 1:7d 静默期拦截
 //     — 若 last_resolved_at + last_conflict_type 与当前 conflictType 匹配,
-//       且 NOW() - last_resolved_at < 7d → 计入 skippedSilence,continue
+//     且 NOW() - last_resolved_at < 7d → 计入 skippedSilence,continue
 //  5. [R2 / D-A3-02] guard 2:24h 节流拦截
 //     — 查 sys_data_reconciliation WHERE detected_at > NOW() - INTERVAL '24h'
-//       AND asset_id=? AND conflict_type=? AND deleted_at IS NULL,
-//       命中则计入 skippedThrottle,continue
+//     AND asset_id=? AND conflict_type=? AND deleted_at IS NULL,
+//     命中则计入 skippedThrottle,continue
 //  6. 构造 sys_data_reconciliation 行 + UPSERT(2026-07-03 Phase 47 R3 改造)
 //     — ON CONFLICT 复用 partial unique index uniq_recon_asset_type_open,
-//       命中即更新 9 字段 EXCLUDED.* + detected_at = CURRENT_TIMESTAMP,UPSERT 命中计入 inserted
+//     命中即更新 9 字段 EXCLUDED.* + detected_at = CURRENT_TIMESTAMP,UPSERT 命中计入 inserted
 //  7. (D-01 死代码删除) 不再有 unique violation catch 静默 skip 路径 —
 //     24h 内同 (asset_id, conflict_type) 已存在 open 行由 PG 走 UPDATE,不再抛错
 //  8. 计数 inserted / skipped / skippedSilence / skippedThrottle 返回
@@ -401,8 +402,8 @@ func (s *reconciliationDetectionImpl) DetectLayer3(ctx context.Context) (int, in
 		//   asset_ip/exception_rule_id/applied_actions/confidence_score +
 		//   detected_at = NOW()。
 		// 返回 inserted 累计 INSERT 或 UPDATE 命中数(语义统一 D-03)。
-		rec.ID = ""                  // 显式重置,确保 GORM 走 INSERT-or-UPDATE 而非 full UPDATE
-		rec.CreatedAt = time.Time{}  // 同上
+		rec.ID = ""                 // 显式重置,确保 GORM 走 INSERT-or-UPDATE 而非 full UPDATE
+		rec.CreatedAt = time.Time{} // 同上
 		// 修复 SQLSTATE 42P10 (debug: recon-upsert-partial-idx):
 		// migration_201 (Phase 48-01) 切换了 partial unique index:
 		//   DROP uniq_recon_asset_type_open (asset_id, conflict_type)

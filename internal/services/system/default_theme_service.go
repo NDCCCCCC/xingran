@@ -11,8 +11,8 @@ import (
 
 // ThemeConfiguration 主题配置结构
 type ThemeConfiguration struct {
-	Mode         string         `json:"mode"`           // light, dark, auto
-	Style        string         `json:"style"`          // minimal, glassmorphism, neumorphism, flat2.0, luxury-quiet
+	Mode         string            `json:"mode"`                   // light, dark, auto
+	Style        string            `json:"style"`                  // minimal, glassmorphism, neumorphism, flat2.0, luxury-quiet
 	CustomColors map[string]string `json:"customColors,omitempty"` // 可选的自定义颜色
 }
 
@@ -30,14 +30,14 @@ type DefaultThemeService interface {
 
 // defaultThemeService 默认主题服务实现
 type defaultThemeService struct {
-	db          *gorm.DB
+	db            *gorm.DB
 	configService ConfigService
 }
 
 // NewDefaultThemeService 创建默认主题服务实例
 func NewDefaultThemeService(db *gorm.DB, configService ConfigService) DefaultThemeService {
 	return &defaultThemeService{
-		db:           db,
+		db:            db,
 		configService: configService,
 	}
 }
@@ -85,11 +85,11 @@ func (s *defaultThemeService) SetDefaultThemeConfig(ctx context.Context, config 
 
 	// 验证风格值
 	validStyles := map[string]bool{
-		"minimal": true,
+		"minimal":       true,
 		"glassmorphism": true,
-		"neumorphism": true,
-		"flat2.0": true,
-		"luxury-quiet": true,
+		"neumorphism":   true,
+		"flat2.0":       true,
+		"luxury-quiet":  true,
 	}
 	if !validStyles[config.Style] {
 		return fmt.Errorf("无效的主题风格: %s", config.Style)
@@ -132,7 +132,7 @@ func (s *defaultThemeService) SetDefaultThemeConfig(ctx context.Context, config 
 			ConfigName:  "默认主题配置",
 			ConfigKey:   "sys.theme.default",
 			ConfigValue: string(configJSON),
-			ConfigType:  "Y", // Y=normal/N=notice or other type
+			ConfigType:  "Y",      // Y=normal/N=notice or other type
 			IsSystem:    isSystem, // 系统内置
 			Remark:      &remark,
 		}

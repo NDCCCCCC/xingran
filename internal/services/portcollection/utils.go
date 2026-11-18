@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/xingran-next/xingran-go-backend/internal/models"
-	"github.com/xingran-next/xingran-go-backend/pkg/normalize"
 	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
+	"github.com/xingran-next/xingran-go-backend/pkg/normalize"
 )
 
 // NormalizeInterfaceName 标准化接口名称(转发到 pkg/normalize 单一真实源)。

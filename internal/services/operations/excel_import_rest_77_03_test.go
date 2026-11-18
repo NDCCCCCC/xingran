@@ -120,7 +120,7 @@ func TestImp77_ImportData_SheetFuzzyMatch(t *testing.T) {
 
 // TestImp77_ImportData_DependentRefs 端到端覆盖依赖引用二阶段
 // (resolveDependentReferencesBatch + applyDependentReferenceResults + groupRecordsByDependencyID
-//  + extractDependentValues + getTargetFieldForReferenceByName + getColumnByName)。
+//   - extractDependentValues + getTargetFieldForReferenceByName + getColumnByName)。
 //
 // 场景: 工位导入 2 行,buildingName 列先解析,floorName 列依赖 buildingName 的解析结果。
 func TestImp77_ImportData_DependentRefs(t *testing.T) {
@@ -287,8 +287,8 @@ func TestImp77_PopulateNewUserPasswords(t *testing.T) {
 	ctx := context.Background()
 
 	records := []map[string]any{
-		{"username": "new-alice"}, // 新用户
-		{"username": "new-bob"},   // 新用户
+		{"username": "new-alice"},     // 新用户
+		{"username": "new-bob"},       // 新用户
 		{"username": "existing-user"}, // 已存在
 	}
 

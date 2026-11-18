@@ -6,11 +6,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/xingran-next/xingran-go-backend/internal/models"
+	"github.com/glebarez/sqlite"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xuri/excelize/v2"
-	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 )
 
@@ -347,8 +347,10 @@ func TestWriteDeviceSheet_PhysicalDevicesWithRegex(t *testing.T) {
 // 后, 即便 workstation 表中有 floor_id/building_id 为空字符串的工位, 也能正常返回 ID。
 //
 // 修复前: queryWorkstationIDsForExport 复用 WorkstationQueryBuilder, 该 builder 包含
-//   LEFT JOIN ops_floors ON ops_floors.id = sys_workstation.floor_id::uuid
-// 在 PG 上若 floor_id 为空字符串, ''::uuid 会报错 → 整个 query 失败 →
+//
+//	LEFT JOIN ops_floors ON ops_floors.id = sys_workstation.floor_id::uuid
+//
+// 在 PG 上若 floor_id 为空字符串, ”::uuid 会报错 → 整个 query 失败 →
 // workstationIDs 返回空 → appendWorkstationDeviceSheets 提前返回 →
 // 用户看到只有工位列表 sheet, 没有设备 sheet。
 //

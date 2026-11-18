@@ -96,7 +96,6 @@ func (s *GroupSyncService) SyncSingleGroup(ctx context.Context, configID, groupD
 		return fmt.Errorf("AD配置不存在或未启用")
 	}
 
-
 	// Phase 38 Wave 1: 改走 FailoverClient.ExecuteWithFailover（账号池故障切换）
 	// 仅 LDAP Search 在闭包内；DB upsert/members 同步放闭包外（不依赖 LDAP 连接）
 	fc := NewFailoverClient(s.pool, &config)
@@ -222,14 +221,14 @@ func (s *GroupSyncService) GetGroupSyncStatus(ctx context.Context, configID stri
 
 // GroupSyncStatusInfo represents sync status for groups
 type GroupSyncStatusInfo struct {
-	ConfigID           string     `json:"configId"`
-	ConfigName         string     `json:"configName"`
-	LastSyncAt         *time.Time `json:"lastSyncAt,omitempty"`
-	SyncEnabled        bool       `json:"syncEnabled"`
-	TotalGroups        int64      `json:"totalGroups"`
-	RecentlySynced     int64      `json:"recentlySynced"`
-	TotalMemberRelations int64    `json:"totalMemberRelations"`
-	NeverSynced        int64      `json:"neverSynced"`
+	ConfigID             string     `json:"configId"`
+	ConfigName           string     `json:"configName"`
+	LastSyncAt           *time.Time `json:"lastSyncAt,omitempty"`
+	SyncEnabled          bool       `json:"syncEnabled"`
+	TotalGroups          int64      `json:"totalGroups"`
+	RecentlySynced       int64      `json:"recentlySynced"`
+	TotalMemberRelations int64      `json:"totalMemberRelations"`
+	NeverSynced          int64      `json:"neverSynced"`
 }
 
 // syncGroupEntries syncs LDAP group entries to the database

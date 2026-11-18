@@ -18,14 +18,14 @@ func TestEmitSuccessFormatDispatch(t *testing.T) {
 	data := map[string]any{"name": "张三", "age": float64(30)}
 
 	cases := map[string]string{
-		"yaml":   "name: 张三",
-		"yml":    "name: 张三",
-		"csv":    "age",
-		"table":  "张三",
-		"json":   `"name"`,
-		"JSON":   `"name"`, // 大小写归一
-		" yaml ": "name",  // TrimSpace 归一
-		"unknown": "",     // 未知 format 回退 JSON（非 tty）
+		"yaml":    "name: 张三",
+		"yml":     "name: 张三",
+		"csv":     "age",
+		"table":   "张三",
+		"json":    `"name"`,
+		"JSON":    `"name"`, // 大小写归一
+		" yaml ":  "name",   // TrimSpace 归一
+		"unknown": "",       // 未知 format 回退 JSON（非 tty）
 	}
 	for format, want := range cases {
 		var buf bytes.Buffer

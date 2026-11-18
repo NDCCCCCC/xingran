@@ -4,10 +4,10 @@ import (
 	"net"
 	"testing"
 
+	"github.com/glebarez/sqlite"
 	"github.com/lib/pq"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 
 	"github.com/xingran-next/xingran-go-backend/internal/models"
@@ -16,9 +16,9 @@ import (
 // makeRule helper 构造 SysReconciliationException
 func makeRule(id, cidr string, actions []string, sevOverride *string, scopeType string, scopeID *string, conflictTypes []string) models.SysReconciliationException {
 	return models.SysReconciliationException{
-		BaseModel: models.BaseModel{ID: id},
-		Name:      "rule-" + id,
-		IPRange:   cidr,
+		BaseModel:        models.BaseModel{ID: id},
+		Name:             "rule-" + id,
+		IPRange:          cidr,
 		ExceptionActions: pq.StringArray(actions),
 		SeverityOverride: sevOverride,
 		ScopeType:        scopeType,

@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/sirupsen/logrus"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	operationsmodels "github.com/xingran-next/xingran-go-backend/internal/models/operations"
 	"github.com/xingran-next/xingran-go-backend/internal/services"
@@ -15,7 +16,6 @@ import (
 	"github.com/xingran-next/xingran-go-backend/internal/websocket"
 	"github.com/xingran-next/xingran-go-backend/pkg/cache"
 	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
-	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 )
 
@@ -194,7 +194,7 @@ func RegisterReconciliationTasks(s *Scheduler, db *gorm.DB, cacheSvc cache.Cache
 				InvokeTarget:   fullInvokeTarget,
 				CronExpression: j.cronExpression,
 				MisfirePolicy:  models.MisfirePolicyImmediately, // MisfirePolicyImmediately
-				Status:         models.JobStatusNormal, // 0=启用
+				Status:         models.JobStatusNormal,          // 0=启用
 				NextRunTime:    &nextMinute,
 				Remark:         &j.remark,
 			}

@@ -57,10 +57,10 @@ func boolPtr(b bool) *bool { return &b }
 //	岗位:   P_gm=总经理（一把手岗）  P_vp=分管副总
 //	用户:   gm(P_gm 任职, dept D_a, O1) / leader_a(D_a 的 leader) / emp(普通员工, dept D_a1)
 type mgrFixture struct {
-	db        *gorm.DB
-	org0, org1 models.ManagerOrg
+	db              *gorm.DB
+	org0, org1      models.ManagerOrg
 	gm, leader, emp models.User
-	postGM, postVP string
+	postGM, postVP  string
 }
 
 func setupMgrFixture(t *testing.T) *mgrFixture {
@@ -398,7 +398,7 @@ func TestIsUUIDLike(t *testing.T) {
 	}{
 		{"123e4567-e89b-12d3-a456-426614174000", true},
 		{"123E4567-E89B-12D3-A456-426614174000", true},
-		{"123e4567e89b12d3a456426614174000", false},  // 缺连字符
+		{"123e4567e89b12d3a456426614174000", false},    // 缺连字符
 		{"123e4567-e89b-12d3-a456-42661417400", false}, // 长度 35
 		{"123e4567_e89b-12d3-a456-426614174000", false},
 		{"123e4567-g89b-12d3-a456-426614174000", false}, // 非法字符 g

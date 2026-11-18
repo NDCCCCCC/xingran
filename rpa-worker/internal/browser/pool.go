@@ -31,12 +31,12 @@ type Page interface {
 
 // Pool 浏览器池
 type Pool struct {
-	config    *config.BrowserConfig
-	pages     chan *PooledPage
-	logger    logger.Logger
-	mu        sync.RWMutex
-	created   int
-	closed    bool
+	config  *config.BrowserConfig
+	pages   chan *PooledPage
+	logger  logger.Logger
+	mu      sync.RWMutex
+	created int
+	closed  bool
 }
 
 // PooledPage 池化的页面

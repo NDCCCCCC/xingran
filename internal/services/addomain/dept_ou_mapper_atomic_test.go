@@ -8,10 +8,10 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/xingran-next/xingran-go-backend/internal/models"
+	"github.com/glebarez/sqlite"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/glebarez/sqlite"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"gorm.io/gorm"
 )
 

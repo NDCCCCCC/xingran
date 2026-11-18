@@ -1,6 +1,5 @@
 //go:build archive_skip
 
-
 package migrations
 
 import (
@@ -27,8 +26,8 @@ import (
 //     seed label 写作 "B类-物理无责" 渲染成 "物理无责", 文字顺序颠倒。
 //   - 用户反馈 "ABCDEF 是否按严重度排序" → 字母按 signals 组合分配 (非严重度),
 //     但 seed 的 list_class 颜色档次与 ComputeSeverity 也存在 2 处偏差:
-//       B (high) 应 error, seed 给 warning (轻一档)
-//       F (medium) 应 warning, seed 给 info (轻一档)
+//     B (high) 应 error, seed 给 warning (轻一档)
+//     F (medium) 应 warning, seed 给 info (轻一档)
 //   - HealthBadge.tsx tooltip 文字才是权威 (与 detection 对齐), 本次让 sys_dict_data
 //     也对齐同一真值, 消除"字典/检测"双真相源。
 //
@@ -50,17 +49,17 @@ func Migrate196ReconciliationDictLabelsAlign(db *gorm.DB) error {
 	log.Println("Running migration 196: 对齐 asset_reconciliation_conflict_type dict_label + list_class 与 detection 真值")
 
 	type labelUpdate struct {
-		value     string // dict_value (A/B/C/D/E/F)
-		newLabel  string // 对齐 detection 后的中文文案
-		newColor  string // 对齐 ComputeSeverity 后的颜色档次 (primary/success/warning/error/info/default)
+		value    string // dict_value (A/B/C/D/E/F)
+		newLabel string // 对齐 detection 后的中文文案
+		newColor string // 对齐 ComputeSeverity 后的颜色档次 (primary/success/warning/error/info/default)
 	}
 	updates := []labelUpdate{
-		{"A", "A类-完全一致", "success"},                     // success 不变
-		{"B", "B类-物理有/责任人无", "error"},                  // 原: warning (B 是 high)
-		{"C", "C类-物理有/责任人不一致(高危)", "error"},           // error 不变 (C 是 high)
-		{"D", "D类-物理无/责任人有", "warning"},                // warning 不变 (D 是 medium)
-		{"E", "E类-双方都无用户关联", "default"},                // default 不变 (E 是 low)
-		{"F", "F类-物理与责任人一致但 AD 不一致", "warning"},       // 原: info (F 是 medium)
+		{"A", "A类-完全一致", "success"},             // success 不变
+		{"B", "B类-物理有/责任人无", "error"},           // 原: warning (B 是 high)
+		{"C", "C类-物理有/责任人不一致(高危)", "error"},     // error 不变 (C 是 high)
+		{"D", "D类-物理无/责任人有", "warning"},         // warning 不变 (D 是 medium)
+		{"E", "E类-双方都无用户关联", "default"},         // default 不变 (E 是 low)
+		{"F", "F类-物理与责任人一致但 AD 不一致", "warning"}, // 原: info (F 是 medium)
 	}
 
 	dictType := "asset_reconciliation_conflict_type"

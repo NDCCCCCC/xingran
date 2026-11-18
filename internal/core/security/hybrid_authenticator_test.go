@@ -21,7 +21,7 @@ func TestHybridAuthenticator_Authenticate_LocalSuccess(t *testing.T) {
 	mockLocal := &mockAuthenticator{
 		authenticateFunc: func(ctx context.Context, req *AuthRequest) (*AuthResult, error) {
 			return &AuthResult{
-				User:      &UserResult{Username: "localuser"},
+				User:       &UserResult{Username: "localuser"},
 				AuthSource: "local",
 				NeedsSync:  false,
 			}, nil
@@ -51,7 +51,7 @@ func TestHybridAuthenticator_Authenticate_FallbackToAD(t *testing.T) {
 	mockAD := &mockAuthenticator{
 		authenticateFunc: func(ctx context.Context, req *AuthRequest) (*AuthResult, error) {
 			return &AuthResult{
-				User:      &UserResult{Username: "aduser"},
+				User:       &UserResult{Username: "aduser"},
 				AuthSource: "ad",
 				NeedsSync:  true,
 			}, nil

@@ -3,8 +3,8 @@ package system
 import (
 	"testing"
 
-	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/stretchr/testify/assert"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
 )
 
 // classifyUser 是 AD 用户批量同步的核心分类逻辑（纯函数，不依赖 DB）。

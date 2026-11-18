@@ -24,20 +24,20 @@ type Page interface {
 
 // Pool 浏览器池
 type Pool struct {
-	config    *config.BrowserConfig
-	pages     chan *PooledPage
-	logger    logger.Logger
-	mu        sync.RWMutex
-	created   int
-	closed    bool
+	config  *config.BrowserConfig
+	pages   chan *PooledPage
+	logger  logger.Logger
+	mu      sync.RWMutex
+	created int
+	closed  bool
 }
 
 // PooledPage 池化的页面
 type PooledPage struct {
-	page      Page
-	inUse     bool
-	lastUsed  time.Time
-	pool      *Pool
+	page     Page
+	inUse    bool
+	lastUsed time.Time
+	pool     *Pool
 }
 
 // NewPool 创建浏览器池
@@ -80,7 +80,7 @@ func (p *Pool) Acquire(ctx context.Context) (*PooledPage, error) {
 				return nil, ctx.Err()
 			}
 		}
-		
+
 		page, err := p.createPage(ctx)
 		if err != nil {
 			p.mu.Unlock()
@@ -88,14 +88,14 @@ func (p *Pool) Acquire(ctx context.Context) (*PooledPage, error) {
 		}
 		p.created++
 		p.mu.Unlock()
-		
+
 		pooledPage := &PooledPage{
 			page:     page,
 			inUse:    true,
 			lastUsed: time.Now(),
 			pool:     p,
 		}
-		
+
 		p.logger.Debug("创建新页面", logger.Int("total", p.created))
 		return pooledPage, nil
 	}
@@ -106,10 +106,10 @@ func (p *Pool) Release(page *PooledPage) {
 	if !page.inUse {
 		return
 	}
-	
+
 	page.inUse = false
 	page.lastUsed = time.Now()
-	
+
 	select {
 	case p.pages <- page:
 		// 成功放回池中
@@ -127,20 +127,20 @@ func (p *Pool) Release(page *PooledPage) {
 func (p *Pool) Close() error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	
+
 	if p.closed {
 		return nil
 	}
-	
+
 	p.closed = true
 	close(p.pages)
-	
+
 	for page := range p.pages {
 		if page.page != nil {
 			page.page.Close()
 		}
 	}
-	
+
 	p.logger.Info("浏览器池已关闭")
 	return nil
 }

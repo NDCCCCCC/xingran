@@ -9,15 +9,15 @@ import (
 
 // LLDPNeighborInfo LLDP邻居信息模型
 type LLDPNeighborInfo struct {
-	ID               string    `gorm:"type:uuid;primary_key" json:"id"`
-	DeviceID         string    `gorm:"type:uuid;not null" json:"deviceId"`
-	LocalInterface   string    `gorm:"size:100;not null" json:"localInterface"`
-	NeighborID       string    `gorm:"size:100;not null" json:"neighborId"`
-	NeighborInterface string   `gorm:"size:100;not null" json:"neighborInterface"`
-	NeighborName     string    `gorm:"size:200" json:"neighborName,omitempty"`
-	Capabilities     string    `gorm:"size:200" json:"capabilities,omitempty"`
-	DiscoveredAt     time.Time `gorm:"not null" json:"discoveredAt"`
-	CreatedAt        time.Time `json:"createdAt"`
+	ID                string    `gorm:"type:uuid;primary_key" json:"id"`
+	DeviceID          string    `gorm:"type:uuid;not null" json:"deviceId"`
+	LocalInterface    string    `gorm:"size:100;not null" json:"localInterface"`
+	NeighborID        string    `gorm:"size:100;not null" json:"neighborId"`
+	NeighborInterface string    `gorm:"size:100;not null" json:"neighborInterface"`
+	NeighborName      string    `gorm:"size:200" json:"neighborName,omitempty"`
+	Capabilities      string    `gorm:"size:200" json:"capabilities,omitempty"`
+	DiscoveredAt      time.Time `gorm:"not null" json:"discoveredAt"`
+	CreatedAt         time.Time `json:"createdAt"`
 }
 
 // TableName 设置表名

@@ -159,9 +159,9 @@ func executeMACHistoryCleanup(ctx context.Context, params map[string]interface{}
 // executeMACHistoryPurge 执行 MAC 历史"无意义记录"清理任务(2026-06-30 新增)
 //
 // 流程:
-//   1. 校验全局 purge 服务是否已注入
-//   2. 调用 PurgeMeaninglessRecords(ctx, dryRun=false)
-//   3. 返回 (deletedCount, backupTable, error)
+//  1. 校验全局 purge 服务是否已注入
+//  2. 调用 PurgeMeaninglessRecords(ctx, dryRun=false)
+//  3. 返回 (deletedCount, backupTable, error)
 //
 // 失败处理:
 //   - 服务未注入:返回 error,任务标记失败

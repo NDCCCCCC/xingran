@@ -11,21 +11,21 @@ import (
 
 // CreateVMServiceRequest 创建虚拟机请求（服务层）
 type CreateVMServiceRequest struct {
-	Name          string `json:"name,omitempty"`
-	ResourceID    string `json:"resource_id" validate:"required"`
-	VdiServerID   string `json:"vdi_server_id" validate:"required"`
-	CPUNumber     int    `json:"cpu_number" validate:"min=1,max=64"`   // CPU颗数
-	CPUCore       int    `json:"cpu_core" validate:"min=1,max=128"`    // 每颗CPU核数
-	Memory        int    `json:"memory" validate:"min=512,max=131072"`
-	Disk          int    `json:"disk" validate:"min=20,max=2000"`
+	Name        string `json:"name,omitempty"`
+	ResourceID  string `json:"resource_id" validate:"required"`
+	VdiServerID string `json:"vdi_server_id" validate:"required"`
+	CPUNumber   int    `json:"cpu_number" validate:"min=1,max=64"` // CPU颗数
+	CPUCore     int    `json:"cpu_core" validate:"min=1,max=128"`  // 每颗CPU核数
+	Memory      int    `json:"memory" validate:"min=512,max=131072"`
+	Disk        int    `json:"disk" validate:"min=20,max=2000"`
 	// VDI API specific fields
-	VTPID         int    `json:"vtp_id" validate:"required,min=1"`           // VTP platform ID
-	HostID        string `json:"host_id" validate:"required"`                 // Host position ID (father_id)
-	RunPositionID string `json:"run_position_id"`                              // Run position ID (empty if id == father_id)
-	DiskID        string `json:"disk_id" validate:"required"`                  // Personal disk ID
-	StorageID     string `json:"storage_id" validate:"required"`               // Storage location ID
-	NetworkID     string `json:"network_id" validate:"required"`               // Network interface ID
-	Count         int    `json:"count" validate:"min=1,max=10"`                // Number of VMs to create
+	VTPID         int    `json:"vtp_id" validate:"required,min=1"` // VTP platform ID
+	HostID        string `json:"host_id" validate:"required"`      // Host position ID (father_id)
+	RunPositionID string `json:"run_position_id"`                  // Run position ID (empty if id == father_id)
+	DiskID        string `json:"disk_id" validate:"required"`      // Personal disk ID
+	StorageID     string `json:"storage_id" validate:"required"`   // Storage location ID
+	NetworkID     string `json:"network_id" validate:"required"`   // Network interface ID
+	Count         int    `json:"count" validate:"min=1,max=10"`    // Number of VMs to create
 }
 
 // UpdateVMRequest 更新虚拟机请求
@@ -49,30 +49,30 @@ type ListVMRequest struct {
 
 // VDIVMDTO 虚拟机数据传输对象
 type VDIVMDTO struct {
-	ID            string     `json:"id"`
-	VMID          string     `json:"vm_id"`
-	Name          string     `json:"name"`
-	ResourceID    string     `json:"resource_id"`
-	PowerState    string     `json:"power_state"`
-	IPAddress     string     `json:"ip_address"`
-	MACAddress    string     `json:"mac_address"`
-	OSType        string     `json:"os_type"`
-	CPUNumber     int        `json:"cpu_number"`      // CPU颗数
-	CPUCore       int        `json:"cpu_core"`        // 每颗CPU的核数
-	CPUPer        int        `json:"cpu_per"`         // CPU使用率
-	Memory        int        `json:"memory"`
-	MemoryPer     int        `json:"memory_per"`      // 内存使用率
-	Disk          int        `json:"disk"`
-	DiskPer       int        `json:"disk_per"`        // 磁盘使用率
-	BoundUserID    *string    `json:"bound_user_id"`
-	BoundUserName  *string    `json:"bound_user_name"`
-	PolicyGroupID  *string    `json:"policy_group_id"`
+	ID            string  `json:"id"`
+	VMID          string  `json:"vm_id"`
+	Name          string  `json:"name"`
+	ResourceID    string  `json:"resource_id"`
+	PowerState    string  `json:"power_state"`
+	IPAddress     string  `json:"ip_address"`
+	MACAddress    string  `json:"mac_address"`
+	OSType        string  `json:"os_type"`
+	CPUNumber     int     `json:"cpu_number"` // CPU颗数
+	CPUCore       int     `json:"cpu_core"`   // 每颗CPU的核数
+	CPUPer        int     `json:"cpu_per"`    // CPU使用率
+	Memory        int     `json:"memory"`
+	MemoryPer     int     `json:"memory_per"` // 内存使用率
+	Disk          int     `json:"disk"`
+	DiskPer       int     `json:"disk_per"` // 磁盘使用率
+	BoundUserID   *string `json:"bound_user_id"`
+	BoundUserName *string `json:"bound_user_name"`
+	PolicyGroupID *string `json:"policy_group_id"`
 	// 网络配置信息
-	IPType         string     `json:"ip_type"`              // IP类型：STATIC/DHCP
-	SubnetMask     string     `json:"subnet_mask"`          // 子网掩码
-	DefaultGateway string     `json:"default_gateway"`      // 默认网关
-	NameServer     string     `json:"name_server"`          // DNS服务器
-	AssignIP       string     `json:"assign_ip"`            // 分配的IP地址
+	IPType         string     `json:"ip_type"`         // IP类型：STATIC/DHCP
+	SubnetMask     string     `json:"subnet_mask"`     // 子网掩码
+	DefaultGateway string     `json:"default_gateway"` // 默认网关
+	NameServer     string     `json:"name_server"`     // DNS服务器
+	AssignIP       string     `json:"assign_ip"`       // 分配的IP地址
 	VdiServerID    string     `json:"vdi_server_id"`
 	LastSyncAt     *time.Time `json:"last_sync_at"`
 }
@@ -87,22 +87,22 @@ type PageResult struct {
 
 // VDISyncResult VDI同步结果
 type VDISyncResult struct {
-	Total      int                    `json:"total"`
-	Success    int                    `json:"success"`
-	Failed     int                    `json:"failed"`
-	Duration   string                 `json:"duration"`
-	Servers    []VDIServerSyncResult  `json:"servers"`
-	StartTime  time.Time              `json:"start_time"`
-	EndTime    time.Time              `json:"end_time"`
+	Total     int                   `json:"total"`
+	Success   int                   `json:"success"`
+	Failed    int                   `json:"failed"`
+	Duration  string                `json:"duration"`
+	Servers   []VDIServerSyncResult `json:"servers"`
+	StartTime time.Time             `json:"start_time"`
+	EndTime   time.Time             `json:"end_time"`
 }
 
 // VDIServerSyncResult 单个VDI服务器的同步结果
 type VDIServerSyncResult struct {
-	ServerID    string `json:"server_id"`
-	ServerName  string `json:"server_name"`
-	Success     int    `json:"success"`
-	Failed      int    `json:"failed"`
-	ErrorMsg    string `json:"error_msg,omitempty"`
+	ServerID   string `json:"server_id"`
+	ServerName string `json:"server_name"`
+	Success    int    `json:"success"`
+	Failed     int    `json:"failed"`
+	ErrorMsg   string `json:"error_msg,omitempty"`
 }
 
 // VMPowerAction 虚拟机电源操作

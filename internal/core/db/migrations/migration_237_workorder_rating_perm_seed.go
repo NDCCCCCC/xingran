@@ -23,6 +23,7 @@ import (
 var workOrderRatingFTypeSeedCodes = []string{
 	"ops:workorder:rating:create",
 }
+
 // F_TYPE_SEED_END
 
 var workOrderRatingSeeds = []actionPermissionSeed{

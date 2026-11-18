@@ -75,6 +75,7 @@ var MockMACAddresses = []MACAddressEntry{
 // 参数:
 //   - interfaceName: 接口名称
 //   - count: MAC地址数量
+//
 // 返回:
 //   - MAC地址条目列表
 func GenerateHighMACCountPort(interfaceName string, count int) []MACAddressEntry {
@@ -94,18 +95,18 @@ func GenerateHighMACCountPort(interfaceName string, count int) []MACAddressEntry
 // map的key使用规范化接口名
 var MockLLDPNeighbors = map[string]*models.LLDPNeighborInfo{
 	"gi0/01": {
-		LocalInterface:   "GigabitEthernet0/0/1",
-		NeighborID:       "3815.sep12.eth0",
+		LocalInterface:    "GigabitEthernet0/0/1",
+		NeighborID:        "3815.sep12.eth0",
 		NeighborInterface: "eth0",
-		NeighborName:     "60P-28",
-		Capabilities:     "Router",
+		NeighborName:      "60P-28",
+		Capabilities:      "Router",
 	},
 	"gi0/02": {
-		LocalInterface:   "GigabitEthernet0/0/2",
-		NeighborID:       "3815.sep13.eth0",
+		LocalInterface:    "GigabitEthernet0/0/2",
+		NeighborID:        "3815.sep13.eth0",
 		NeighborInterface: "eth0",
-		NeighborName:     "60P-29",
-		Capabilities:     "Bridge",
+		NeighborName:      "60P-29",
+		Capabilities:      "Bridge",
 	},
 }
 
@@ -116,28 +117,28 @@ var MockLLDPNeighborsEmpty = map[string]*models.LLDPNeighborInfo{}
 // 注意: 使用BaseModel的ID字段,IPAddress字段
 var MockNetworkDevices = []models.NetworkDevice{
 	{
-		BaseModel:   models.BaseModel{ID: "device-1"},
-		DeviceName:  "TestSwitch-Core",
-		DeviceType:  models.DeviceTypeSwitch,
-		Vendor:      models.VendorHuawei,
-		IPAddress:   "192.168.1.1",
-		Status:      models.DeviceStatusOnline,
+		BaseModel:  models.BaseModel{ID: "device-1"},
+		DeviceName: "TestSwitch-Core",
+		DeviceType: models.DeviceTypeSwitch,
+		Vendor:     models.VendorHuawei,
+		IPAddress:  "192.168.1.1",
+		Status:     models.DeviceStatusOnline,
 	},
 	{
-		BaseModel:   models.BaseModel{ID: "device-2"},
-		DeviceName:  "TestRouter-Edge",
-		DeviceType:  models.DeviceTypeRouter,
-		Vendor:      models.VendorRuijie,
-		IPAddress:   "192.168.1.2",
-		Status:      models.DeviceStatusOnline,
+		BaseModel:  models.BaseModel{ID: "device-2"},
+		DeviceName: "TestRouter-Edge",
+		DeviceType: models.DeviceTypeRouter,
+		Vendor:     models.VendorRuijie,
+		IPAddress:  "192.168.1.2",
+		Status:     models.DeviceStatusOnline,
 	},
 	{
-		BaseModel:   models.BaseModel{ID: "device-3"},
-		DeviceName:  "TestFirewall",
-		DeviceType:  models.DeviceTypeFirewall,
-		Vendor:      models.VendorH3C,
-		IPAddress:   "192.168.1.3",
-		Status:      models.DeviceStatusOnline,
+		BaseModel:  models.BaseModel{ID: "device-3"},
+		DeviceName: "TestFirewall",
+		DeviceType: models.DeviceTypeFirewall,
+		Vendor:     models.VendorH3C,
+		IPAddress:  "192.168.1.3",
+		Status:     models.DeviceStatusOnline,
 	},
 }
 
@@ -145,27 +146,27 @@ var MockNetworkDevices = []models.NetworkDevice{
 var MockLLDPNeighborsByDevice = map[string]map[string]*models.LLDPNeighborInfo{
 	"device-1": {
 		"gi0/01": {
-			LocalInterface:   "GigabitEthernet0/0/1",
-			NeighborID:       "3815.sep12.eth0",
+			LocalInterface:    "GigabitEthernet0/0/1",
+			NeighborID:        "3815.sep12.eth0",
 			NeighborInterface: "eth0",
-			NeighborName:     "60P-28",
-			Capabilities:     "Router",
+			NeighborName:      "60P-28",
+			Capabilities:      "Router",
 		},
 		"gi0/02": {
-			LocalInterface:   "GigabitEthernet0/0/2",
-			NeighborID:       "3815.sep13.eth0",
+			LocalInterface:    "GigabitEthernet0/0/2",
+			NeighborID:        "3815.sep13.eth0",
 			NeighborInterface: "eth0",
-			NeighborName:     "60P-29",
-			Capabilities:     "Bridge",
+			NeighborName:      "60P-29",
+			Capabilities:      "Bridge",
 		},
 	},
 	"device-2": {
 		"gi0/01": {
-			LocalInterface:   "GigabitEthernet0/0/1",
-			NeighborID:       "router-2.core",
+			LocalInterface:    "GigabitEthernet0/0/1",
+			NeighborID:        "router-2.core",
 			NeighborInterface: "Port-Channel1",
-			NeighborName:     "CoreRouter",
-			Capabilities:     "Router",
+			NeighborName:      "CoreRouter",
+			Capabilities:      "Router",
 		},
 	},
 	"device-3": {}, // 防火墙设备没有LLDP邻居

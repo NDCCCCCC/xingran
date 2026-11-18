@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/xingran-next/xingran-go-backend/internal/models"
-	"github.com/stretchr/testify/require"
 	"github.com/glebarez/sqlite"
+	"github.com/stretchr/testify/require"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"gorm.io/gorm"
 )
 
@@ -407,9 +407,9 @@ func TestSyncOpsAssetChassisSN_RuijieTransition(t *testing.T) {
 	// info.SerialNumber 是新采集到的真 chassis SN。
 	// 注意: sync 只从内存读 device 字段,不需要 DB 中有 sys_network_device 行。
 	device := &models.NetworkDevice{
-		BaseModel: models.BaseModel{ID: "11111111-1111-1111-1111-111111111111"},
-		DeviceName: "CX-WH-WH-04F-FL-RS8607E-03",
-		Vendor: models.VendorRuijie,
+		BaseModel:    models.BaseModel{ID: "11111111-1111-1111-1111-111111111111"},
+		DeviceName:   "CX-WH-WH-04F-FL-RS8607E-03",
+		Vendor:       models.VendorRuijie,
 		SerialNumber: "G1M9140000175", // 旧值(updateDeviceInfo 之前)
 	}
 	info := &DeviceInfo{SerialNumber: "G1M913U000351"} // 真 chassis SN
@@ -430,8 +430,8 @@ func TestSyncOpsAssetChassisSN_RuijieNoChange(t *testing.T) {
 	insertChassisAsset(t, db, assetID, "G1HLC0R000096") // 已经同步好
 
 	device := &models.NetworkDevice{
-		BaseModel: models.BaseModel{ID: "33333333-3333-3333-3333-333333333333"},
-		Vendor: models.VendorRuijie,
+		BaseModel:    models.BaseModel{ID: "33333333-3333-3333-3333-333333333333"},
+		Vendor:       models.VendorRuijie,
 		SerialNumber: "G1HLC0R000096",
 	}
 	info := &DeviceInfo{SerialNumber: "G1HLC0R000096"} // 与 device 一致
@@ -454,8 +454,8 @@ func TestSyncOpsAssetChassisSN_NonRuijieSkipped(t *testing.T) {
 	// 模拟 huawei 设备: 即使 SN 在新值里变了(实际不会发生,huawei 走 only-if-empty),
 	// sync 应跳过非 ruijie vendor
 	device := &models.NetworkDevice{
-		BaseModel: models.BaseModel{ID: "55555555-5555-5555-5555-555555555555"},
-		Vendor: models.VendorHuawei,
+		BaseModel:    models.BaseModel{ID: "55555555-5555-5555-5555-555555555555"},
+		Vendor:       models.VendorHuawei,
 		SerialNumber: "102599861597",
 	}
 	info := &DeviceInfo{SerialNumber: "999999999999"} // 不同,但 vendor 非 ruijie
@@ -475,8 +475,8 @@ func TestSyncOpsAssetChassisSN_EmptyNewSNSkipped(t *testing.T) {
 	insertChassisAsset(t, db, assetID, "G1M9140000175")
 
 	device := &models.NetworkDevice{
-		BaseModel: models.BaseModel{ID: "77777777-7777-7777-7777-777777777777"},
-		Vendor: models.VendorRuijie,
+		BaseModel:    models.BaseModel{ID: "77777777-7777-7777-7777-777777777777"},
+		Vendor:       models.VendorRuijie,
 		SerialNumber: "G1M9140000175",
 	}
 	info := &DeviceInfo{SerialNumber: ""} // parse 失败 / 未填
@@ -498,8 +498,8 @@ func TestSyncOpsAssetChassisSN_BoardRowsUntouched(t *testing.T) {
 	insertBoardAsset(t, db, "a-board", "G1MA11N00053A")
 
 	device := &models.NetworkDevice{
-		BaseModel: models.BaseModel{ID: "99999999-9999-9999-9999-999999999999"},
-		Vendor: models.VendorRuijie,
+		BaseModel:    models.BaseModel{ID: "99999999-9999-9999-9999-999999999999"},
+		Vendor:       models.VendorRuijie,
 		SerialNumber: "G1M9140000175",
 	}
 	info := &DeviceInfo{SerialNumber: "G1M913U000351"}

@@ -12,11 +12,11 @@ type PTYManager struct {
 
 // ptySession 伪终端会话
 type ptySession struct {
-	ID      string
-	Shell   string
-	Input   chan string
-	Output  chan string
-	Done    chan struct{}
+	ID     string
+	Shell  string
+	Input  chan string
+	Output chan string
+	Done   chan struct{}
 }
 
 // NewPTYManager 创建伪终端管理器

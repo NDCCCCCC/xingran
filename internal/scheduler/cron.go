@@ -926,8 +926,8 @@ type DeviceMonitorService interface {
 // GlobalDeviceMonitorService 全局设备监控服务
 // 遵循 Go 最佳实践：使用 sync.RWMutex 保护全局变量
 var (
-	GlobalDeviceMonitorService        DeviceMonitorService
-	GlobalDeviceMonitorServiceMu      sync.RWMutex
+	GlobalDeviceMonitorService   DeviceMonitorService
+	GlobalDeviceMonitorServiceMu sync.RWMutex
 )
 
 // GlobalDeviceInfoCollectionService 全局设备信息采集服务

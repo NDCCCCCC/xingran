@@ -1,6 +1,5 @@
 //go:build archive_skip
 
-
 package migrations
 
 import (
@@ -13,7 +12,7 @@ import (
 // 修复历史数据:user_id 有值但 status 仍为 Available(0) 的工位
 //
 // 触发条件:
-//   - user_id IS NOT NULL AND user_id != ''
+//   - user_id IS NOT NULL AND user_id != ”
 //   - status = 0 (空闲,与 user_id 不一致)
 //   - deleted_at IS NULL (仅修复活数据)
 //   - **Maintain(2) 不修改**,保留维护语义

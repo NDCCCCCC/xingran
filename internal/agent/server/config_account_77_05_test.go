@@ -530,9 +530,9 @@ func stubAcctCmds77(t *testing.T, pRun, pOut, pNew func(idx int) string) (calls 
 // fakeStrategy 实现 platformStrategy 6 方法 — 行为与 ldap_client_mock_test.go
 // fakeStrategy 同构 (preset + 调用计数 + last* 透传断言字段)。
 type fakeStrategy struct {
-	createErr, deleteErr, resetErr, enableErr, disableErr, listErr error
-	listResult                                                      []string
-	lastCreate                                                      *Account
+	createErr, deleteErr, resetErr, enableErr, disableErr, listErr             error
+	listResult                                                                 []string
+	lastCreate                                                                 *Account
 	createCalls, deleteCalls, resetCalls, enableCalls, disableCalls, listCalls int
 }
 
@@ -860,13 +860,13 @@ func TestAcct77_ParseWindowsUsers(t *testing.T) {
 func TestAcct77_ParseLinuxUsers(t *testing.T) {
 	// uid>=1000 过滤; 空行 / 无冒号 / UID 非数字 / parts<3 全部跳过
 	input := "" +
-		"root:x:0:0:root:/root:/bin/bash\n" +        // uid<1000 跳过
-		"sysuser:x:999:999::/:/sbin/nologin\n" +     // uid<1000 跳过
+		"root:x:0:0:root:/root:/bin/bash\n" + // uid<1000 跳过
+		"sysuser:x:999:999::/:/sbin/nologin\n" + // uid<1000 跳过
 		"alice:x:1000:1000::/home/alice:/bin/bash\n" + // 入
-		"bob:x:1001:1001::/home/bob:/bin/bash\n" +   // 入
-		"\n" +                                        // 空行跳过
-		"weirdnocolon\n" +                            // 无冒号跳过
-		"x:y\n" +                                     // parts<3 跳过
-		"charlie:x:not-a-num:/home/c:/bin/c\n"       // uid 非数字跳过
+		"bob:x:1001:1001::/home/bob:/bin/bash\n" + // 入
+		"\n" + // 空行跳过
+		"weirdnocolon\n" + // 无冒号跳过
+		"x:y\n" + // parts<3 跳过
+		"charlie:x:not-a-num:/home/c:/bin/c\n" // uid 非数字跳过
 	assert.Equal(t, []string{"alice", "bob"}, parseLinuxUsers(input))
 }

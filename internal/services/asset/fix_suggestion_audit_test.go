@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/glebarez/sqlite"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 )
 
@@ -217,10 +217,10 @@ func TestFixSuggestionApplyWritesOperLog(t *testing.T) {
 
 	// 2. 模拟 handler 写 operlog(D-C3 audit:Apply 用 OperTypeUpdate=2)
 	operParam, _ := json.Marshal(map[string]interface{}{
-		"id":                "sug-app-1",
-		"action":            "apply",
-		"preFixUserId":      "old-user-id",
-		"suggestedUserId":   "new-user-id",
+		"id":              "sug-app-1",
+		"action":          "apply",
+		"preFixUserId":    "old-user-id",
+		"suggestedUserId": "new-user-id",
 	})
 	writeOperLog(db, "资产对账-修复建议", 2, string(operParam))
 

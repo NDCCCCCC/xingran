@@ -41,32 +41,32 @@ func TestFieldDocCoverage(t *testing.T) {
 func TestFieldDocModuleFields(t *testing.T) {
 	cases := map[string]string{
 		// operations
-		"longitude":    "经度（通过地址自动解析，decimal(11,8)）",
-		"orgId":        "所属机构 ID（UUID，必须为有效 UUID 而非部门名）",
-		"floorNo":      "楼层编号（如 3F）",
-		"isp":          "运营商（电信/移动/联通等）",
-		"monthlyFee":   "月租费用（元）",
+		"longitude":  "经度（通过地址自动解析，decimal(11,8)）",
+		"orgId":      "所属机构 ID（UUID，必须为有效 UUID 而非部门名）",
+		"floorNo":    "楼层编号（如 3F）",
+		"isp":        "运营商（电信/移动/联通等）",
+		"monthlyFee": "月租费用（元）",
 		// network
-		"deviceName":   "设备名称",
-		"ipAddress":    "IP 地址（设备管理地址，唯一）",
-		"macAddress":   "MAC 地址（入库自动归一化为大写+冒号）",
-		"vlanId":       "VLAN ID",
-		"lastSeenAt":   "最后在线时间",
+		"deviceName": "设备名称",
+		"ipAddress":  "IP 地址（设备管理地址，唯一）",
+		"macAddress": "MAC 地址（入库自动归一化为大写+冒号）",
+		"vlanId":     "VLAN ID",
+		"lastSeenAt": "最后在线时间",
 		// monitor
-		"cpuUsage":     "CPU 使用率（%）",
-		"memoryUsage":  "内存使用率（%）",
-		"diskUsage":    "磁盘使用率（%）",
-		"hitRate":      "缓存命中率",
+		"cpuUsage":    "CPU 使用率（%）",
+		"memoryUsage": "内存使用率（%）",
+		"diskUsage":   "磁盘使用率（%）",
+		"hitRate":     "缓存命中率",
 		// workorder / scheduler / duty / knowledge / vdi / rpa
-		"assigneeId":   "处理人（被分配人）ID（UUID）",
-		"priority":     "优先级",
-		"cronExpression": "Cron 表达式（5 段）",
-		"misfirePolicy": "错失触发策略",
-		"swapReason":   "调换原因",
+		"assigneeId":        "处理人（被分配人）ID（UUID）",
+		"priority":          "优先级",
+		"cronExpression":    "Cron 表达式（5 段）",
+		"misfirePolicy":     "错失触发策略",
+		"swapReason":        "调换原因",
 		"sourceWorkOrderId": "来源工单 ID（工单转知识库）",
-		"cpu_per":      "CPU 使用率（%）",
-		"vm_id":        "虚拟机 ID（VDI 平台唯一标识）",
-		"workerId":     "RPA Worker 标识",
+		"cpu_per":           "CPU 使用率（%）",
+		"vm_id":             "虚拟机 ID（VDI 平台唯一标识）",
+		"workerId":          "RPA Worker 标识",
 	}
 	for f, want := range cases {
 		got, ok := FieldDoc(f)
@@ -83,14 +83,14 @@ func TestFieldDocModuleFields(t *testing.T) {
 // TestEnumHintModuleFields 新模块枚举按仓库常量核实
 func TestEnumHintModuleFields(t *testing.T) {
 	cases := map[string]string{
-		"deviceType":   "server=服务器 storage=存储 ups=UPS pdu=PDU firewall=防火墙 kvm=KVM cabinet=机柜 other=其他",
-		"macType":      "dynamic=动态学习 static=静态配置 secure=安全MAC",
-		"vendor":       "huawei=华为 h3c=华三 ruijie=锐捷 maipu=迈普 cisco=思科",
-		"priority":     "0=低 1=中 2=高 3=紧急",
+		"deviceType":    "server=服务器 storage=存储 ups=UPS pdu=PDU firewall=防火墙 kvm=KVM cabinet=机柜 other=其他",
+		"macType":       "dynamic=动态学习 static=静态配置 secure=安全MAC",
+		"vendor":        "huawei=华为 h3c=华三 ruijie=锐捷 maipu=迈普 cisco=思科",
+		"priority":      "0=低 1=中 2=高 3=紧急",
 		"misfirePolicy": "0=默认 1=立即执行 2=执行一次 3=放弃执行",
-		"deskType":     "0=一字型 1=L型",
-		"ip_type":      "STATIC=静态 DHCP=动态",
-		"level":        "1=城市级汇总 2=具体楼宇",
+		"deskType":      "0=一字型 1=L型",
+		"ip_type":       "STATIC=静态 DHCP=动态",
+		"level":         "1=城市级汇总 2=具体楼宇",
 	}
 	for f, want := range cases {
 		if got := EnumHint(f); got != want {
@@ -142,11 +142,11 @@ func TestFieldDocUnknown(t *testing.T) {
 // TestFieldDocSnakeCase snake_case 变体可归一化命中
 func TestFieldDocSnakeCase(t *testing.T) {
 	cases := map[string]string{
-		"user_id":     "用户 ID（UUID）",
-		"role_key":    "角色权限字符（唯一，如 admin）",
-		"dict_label":  "字典标签（显示文本）",
+		"user_id":      "用户 ID（UUID）",
+		"role_key":     "角色权限字符（唯一，如 admin）",
+		"dict_label":   "字典标签（显示文本）",
 		"old_password": "原密码（修改密码时校验）",
-		"page_size":   "每页条数",
+		"page_size":    "每页条数",
 	}
 	for in, want := range cases {
 		got, ok := FieldDoc(in)

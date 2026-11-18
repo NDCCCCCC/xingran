@@ -176,13 +176,13 @@ func TestReg8001_RegisterNoticeTasks(t *testing.T) {
 
 	// cron.go 注册函数群注册的全部 taskType(逐一列名)
 	registered := []string{
-		"notice_publish",       // RegisterNoticeTasks
-		"duty_reminder",        // RegisterNoticeTasks
-		"device_status_check",  // RegisterNetworkDeviceTasks
-		"device_info_update",   // RegisterNetworkDeviceTasks
-		"port_collection",      // RegisterNetworkDeviceTasks
-		"mac_collection",       // RegisterNetworkDeviceTasks
-		"config_backup",        // RegisterNetworkDeviceTasks
+		"notice_publish",      // RegisterNoticeTasks
+		"duty_reminder",       // RegisterNoticeTasks
+		"device_status_check", // RegisterNetworkDeviceTasks
+		"device_info_update",  // RegisterNetworkDeviceTasks
+		"port_collection",     // RegisterNetworkDeviceTasks
+		"mac_collection",      // RegisterNetworkDeviceTasks
+		"config_backup",       // RegisterNetworkDeviceTasks
 	}
 	for _, taskType := range registered {
 		assert.True(t, s.IsTaskRegistered(taskType), "taskType %s 应已注册", taskType)
@@ -1282,8 +1282,6 @@ func TestGap8001_ExecuteNoticePublishTask(t *testing.T) {
 	SetDB(&stubDBGetter8001{db: db})
 	require.NoError(t, executeNoticePublishTask(context.Background(), map[string]any{"param": "no-such-notice-8001"}))
 }
-
-
 
 // TestGap8001_AddJob_Running_InvalidCron addJob 错误分支:running 状态下 AddJob
 // 传入非法 cron 表达式 → cron.AddFunc 报错 → AddJob 透传错误。

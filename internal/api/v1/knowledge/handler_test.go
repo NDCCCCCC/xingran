@@ -31,30 +31,30 @@ type mockKnowledgeService struct {
 	knowledgeServices.KnowledgeCacheService
 
 	// Article methods
-	GetKnowledgeArticleListFunc func(ctx context.Context, req *services.KnowledgeArticleListRequest) ([]models.KnowledgeArticle, int64, error)
-	GetArticleStatisticsFunc     func(ctx context.Context) (*services.KnowledgeArticleStatistics, error)
-	GetKnowledgeArticleFunc     func(ctx context.Context, id string) (*models.KnowledgeArticle, error)
-	CreateKnowledgeArticleFunc  func(ctx context.Context, req *services.KnowledgeArticleCreateRequest, creatorID string) (*models.KnowledgeArticle, error)
-	UpdateKnowledgeArticleFunc  func(ctx context.Context, id string, req *services.KnowledgeArticleUpdateRequest, operatorID string) error
-	DeleteKnowledgeArticleFunc  func(ctx context.Context, id string) error
-	IncrementViewCountFunc       func(ctx context.Context, id string) error
-	IncrementLikeCountFunc       func(ctx context.Context, id string) error
-	SearchKnowledgeArticlesFunc func(ctx context.Context, req *services.SearchKnowledgeRequest) ([]models.KnowledgeArticle, int64, error)
+	GetKnowledgeArticleListFunc   func(ctx context.Context, req *services.KnowledgeArticleListRequest) ([]models.KnowledgeArticle, int64, error)
+	GetArticleStatisticsFunc      func(ctx context.Context) (*services.KnowledgeArticleStatistics, error)
+	GetKnowledgeArticleFunc       func(ctx context.Context, id string) (*models.KnowledgeArticle, error)
+	CreateKnowledgeArticleFunc    func(ctx context.Context, req *services.KnowledgeArticleCreateRequest, creatorID string) (*models.KnowledgeArticle, error)
+	UpdateKnowledgeArticleFunc    func(ctx context.Context, id string, req *services.KnowledgeArticleUpdateRequest, operatorID string) error
+	DeleteKnowledgeArticleFunc    func(ctx context.Context, id string) error
+	IncrementViewCountFunc        func(ctx context.Context, id string) error
+	IncrementLikeCountFunc        func(ctx context.Context, id string) error
+	SearchKnowledgeArticlesFunc   func(ctx context.Context, req *services.SearchKnowledgeRequest) ([]models.KnowledgeArticle, int64, error)
 	ConvertWorkOrderToArticleFunc func(ctx context.Context, workOrderID string, req *services.ConvertWorkOrderToArticleRequest, creatorID string) (*models.KnowledgeArticle, error)
 
 	// Category methods
-	GetKnowledgeCategoryListFunc  func(ctx context.Context, req *services.KnowledgeCategoryListRequest) ([]models.KnowledgeCategory, error)
-	GetKnowledgeCategoryFunc      func(ctx context.Context, id string) (*models.KnowledgeCategory, error)
-	CreateKnowledgeCategoryFunc   func(ctx context.Context, req *services.KnowledgeCategoryCreateRequest, creatorID string) (*models.KnowledgeCategory, error)
-	UpdateKnowledgeCategoryFunc   func(ctx context.Context, id string, req *services.KnowledgeCategoryUpdateRequest, operatorID string) error
-	DeleteKnowledgeCategoryFunc   func(ctx context.Context, id string) error
+	GetKnowledgeCategoryListFunc func(ctx context.Context, req *services.KnowledgeCategoryListRequest) ([]models.KnowledgeCategory, error)
+	GetKnowledgeCategoryFunc     func(ctx context.Context, id string) (*models.KnowledgeCategory, error)
+	CreateKnowledgeCategoryFunc  func(ctx context.Context, req *services.KnowledgeCategoryCreateRequest, creatorID string) (*models.KnowledgeCategory, error)
+	UpdateKnowledgeCategoryFunc  func(ctx context.Context, id string, req *services.KnowledgeCategoryUpdateRequest, operatorID string) error
+	DeleteKnowledgeCategoryFunc  func(ctx context.Context, id string) error
 
 	// Tag methods
-	GetAllTagsFunc  func(ctx context.Context) ([]models.KnowledgeTag, error)
+	GetAllTagsFunc   func(ctx context.Context) ([]models.KnowledgeTag, error)
 	GetTagByNameFunc func(ctx context.Context, name string) (*models.KnowledgeTag, error)
-	CreateTagFunc   func(ctx context.Context, name string) (*models.KnowledgeTag, error)
-	UpdateTagFunc   func(ctx context.Context, id string, name string) error
-	DeleteTagFunc   func(ctx context.Context, id string) error
+	CreateTagFunc    func(ctx context.Context, name string) (*models.KnowledgeTag, error)
+	UpdateTagFunc    func(ctx context.Context, id string, name string) error
+	DeleteTagFunc    func(ctx context.Context, id string) error
 
 	// Cache invalidation methods
 	InvalidateCategoryCacheFunc   func(ctx context.Context) error

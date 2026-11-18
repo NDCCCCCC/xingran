@@ -11,16 +11,16 @@ import (
 
 // swaggerDoc 是 docs/docs.go 中 Swagger 2.0 spec 的解析目标（只取需要的字段）。
 type swaggerDoc struct {
-	BasePath    string                          `json:"basePath"`
-	Paths       map[string]map[string]swagOp    `json:"paths"`
-	Definitions map[string]swagSchema           `json:"definitions"`
+	BasePath    string                       `json:"basePath"`
+	Paths       map[string]map[string]swagOp `json:"paths"`
+	Definitions map[string]swagSchema        `json:"definitions"`
 }
 
 type swagOp struct {
-	Summary     string      `json:"summary"`
-	Description string      `json:"description"`
-	Tags        []string    `json:"tags"`
-	Parameters  []swagParam `json:"parameters"`
+	Summary     string                  `json:"summary"`
+	Description string                  `json:"description"`
+	Tags        []string                `json:"tags"`
+	Parameters  []swagParam             `json:"parameters"`
 	Responses   map[string]swagResponse `json:"responses"`
 }
 

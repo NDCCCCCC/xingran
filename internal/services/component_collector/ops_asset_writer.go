@@ -168,12 +168,12 @@ func (w *OpsAssetWriter) Write(ctx context.Context, deviceID, parentAssetID stri
 // (asset_id, conflict_type, recon_category).
 func (w *OpsAssetWriter) emitComponentAnomaly(ctx context.Context, parentAssetID string, comp Component) error {
 	snapshot, _ := json.Marshal(map[string]interface{}{
-		"componentSN":    comp.SerialNumber,
-		"componentType":  comp.ComponentType,
-		"componentSlot":  comp.Slot,
-		"model":          comp.Model,
-		"source":         comp.Source,
-		"detectedAt":     time.Now().UTC().Format(time.RFC3339),
+		"componentSN":   comp.SerialNumber,
+		"componentType": comp.ComponentType,
+		"componentSlot": comp.Slot,
+		"model":         comp.Model,
+		"source":        comp.Source,
+		"detectedAt":    time.Now().UTC().Format(time.RFC3339),
 	})
 	return w.emitter.Emit(ctx, parentAssetID, "F", "component_serial", snapshot)
 }

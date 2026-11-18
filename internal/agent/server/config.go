@@ -15,19 +15,19 @@ import (
 	"strings"
 	"time"
 
-	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
+	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 )
 
 // 默认配置常量
 const (
-	defaultBackendURL  = "https://localhost:9000"
-	defaultListenAddr   = ":8443"
+	defaultBackendURL        = "https://localhost:9000"
+	defaultListenAddr        = ":8443"
 	defaultHeartbeatInterval = 30 * time.Second
-	defaultLogLevel    = "info"
-	defaultLogPath     = "/var/log/xingran-agent"
-	defaultPlatform    = "linux"
+	defaultLogLevel          = "info"
+	defaultLogPath           = "/var/log/xingran-agent"
+	defaultPlatform          = "linux"
 )
 
 // Config Agent 服务配置
@@ -73,13 +73,13 @@ func LoadConfig(path string) (*Config, error) {
 		ListenAddr:         defaultListenAddr,
 		TLSCertFile:        "",
 		TLSKeyFile:         "",
-		HeartbeatInterval: defaultHeartbeatInterval,
+		HeartbeatInterval:  defaultHeartbeatInterval,
 		LogLevel:           defaultLogLevel,
 		LogPath:            defaultLogPath,
 		Platform:           defaultPlatform,
-		TLSEnabled:         true,  // 默认启用 TLS
-		VerifyCertificates: true,  // 默认验证证书
-		CAFile:             "",    // 可选 CA bundle
+		TLSEnabled:         true, // 默认启用 TLS
+		VerifyCertificates: true, // 默认验证证书
+		CAFile:             "",   // 可选 CA bundle
 	}
 
 	// 如果指定了配置文件，尝试加载
@@ -229,7 +229,7 @@ type SystemFingerprint struct {
 // CollectSystemFingerprint 收集系统指纹
 func CollectSystemFingerprint() (*SystemFingerprint, error) {
 	fp := &SystemFingerprint{
-		OSType:  runtime.GOOS,
+		OSType:   runtime.GOOS,
 		Platform: runtime.GOOS,
 	}
 

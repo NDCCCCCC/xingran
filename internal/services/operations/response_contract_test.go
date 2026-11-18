@@ -99,7 +99,7 @@ func TestResponseContract_OperlogChain(t *testing.T) {
 func TestResponseContract_DiffAttack_NChangesMFixed(t *testing.T) {
 	type snapshot struct {
 		Total int64 `json:"total"`
-		Count int    `json:"count"`
+		Count int   `json:"count"`
 	}
 	// 两相邻档位（Dept / DeptChild）的同源覆盖见 TestHomology_DiffInvariant_NChangesMFixed；
 	// 此处锁「响应体数值字段仅随 M 变化、不随 N−M 变化」的防复活不变式。

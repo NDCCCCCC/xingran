@@ -4,16 +4,16 @@ import "time"
 
 // DeptSyncResult 部门同步结果
 type DeptSyncResult struct {
-	StartTime    time.Time        `json:"startTime"`
-	EndTime      time.Time        `json:"endTime"`
-	Duration     time.Duration    `json:"duration"`
-	TotalDepts   int              `json:"totalDepts"`
-	SuccessDepts int              `json:"successDepts"`
-	FailedDepts  int              `json:"failedDepts"`
-	SkippedDepts int              `json:"skippedDepts"`
-	Errors       []DeptSyncError  `json:"errors,omitempty"`
-	ADConfigID   string           `json:"adConfigId"`
-	Status       string           `json:"status"` // running/completed/failed
+	StartTime    time.Time       `json:"startTime"`
+	EndTime      time.Time       `json:"endTime"`
+	Duration     time.Duration   `json:"duration"`
+	TotalDepts   int             `json:"totalDepts"`
+	SuccessDepts int             `json:"successDepts"`
+	FailedDepts  int             `json:"failedDepts"`
+	SkippedDepts int             `json:"skippedDepts"`
+	Errors       []DeptSyncError `json:"errors,omitempty"`
+	ADConfigID   string          `json:"adConfigId"`
+	Status       string          `json:"status"` // running/completed/failed
 }
 
 // DeptSyncError 部门同步错误

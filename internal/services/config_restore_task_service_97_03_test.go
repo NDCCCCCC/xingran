@@ -30,11 +30,11 @@ func TestV130R03_DeviceMismatchReturns400(t *testing.T) {
 
 	// backup belongs to dev-src
 	bk := &models.ConfigBackup{
-		ID:             "bk-src",
+		ID:            "bk-src",
 		DeviceID:      "dev-src",
 		DeviceName:    "src-device",
-		ConfigContent:  "sysname Src\n",
-		ConfigHash:     "srchash",
+		ConfigContent: "sysname Src\n",
+		ConfigHash:    "srchash",
 		StorageType:   models.StorageTypeDatabase,
 		BackupType:    models.BackupTypeManual,
 		Version:       1,
@@ -69,11 +69,11 @@ func TestV130R03_DuplicateRestoreReturns409(t *testing.T) {
 	require.NoError(t, db.Create(dev).Error)
 
 	bk := &models.ConfigBackup{
-		ID:             "bk-conflict",
+		ID:            "bk-conflict",
 		DeviceID:      "dev-conflict",
 		DeviceName:    "conflict-device",
-		ConfigContent:  "sysname Conflict\n",
-		ConfigHash:     "conflicthash",
+		ConfigContent: "sysname Conflict\n",
+		ConfigHash:    "conflicthash",
 		StorageType:   models.StorageTypeDatabase,
 		BackupType:    models.BackupTypeManual,
 		Version:       1,

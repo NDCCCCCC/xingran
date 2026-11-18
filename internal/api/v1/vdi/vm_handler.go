@@ -5,8 +5,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/xingran-next/xingran-go-backend/internal/core"
-	vdiServices "github.com/xingran-next/xingran-go-backend/internal/services/vdi"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
+	vdiServices "github.com/xingran-next/xingran-go-backend/internal/services/vdi"
 	"github.com/xingran-next/xingran-go-backend/internal/utils/operlog"
 	"github.com/xingran-next/xingran-go-backend/pkg/constants"
 	"github.com/xingran-next/xingran-go-backend/pkg/response"
@@ -215,6 +215,7 @@ func (h *VMHandler) Operate(c *gin.Context) {
 	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "虚拟机管理", operlog.OperTypeStatus)
 	response.Success(c, nil)
 }
+
 // StartVM 启动虚拟机
 // @Summary 启动虚拟机
 // @Description 批量启动指定的虚拟机
@@ -298,7 +299,6 @@ func (h *VMHandler) RestartVM(c *gin.Context) {
 	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "虚拟机管理", operlog.OperTypeStatus)
 	response.Success(c, nil)
 }
-
 
 // BindUser 绑定用户到虚拟机
 // @Summary 绑定用户
@@ -473,7 +473,7 @@ func (h *VMHandler) SyncAll(c *gin.Context) {
 
 	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "虚拟机管理", operlog.OperTypeSync)
 	response.Success(c, map[string]interface{}{
-		"message": "同步任务已提交",
+		"message":   "同步任务已提交",
 		"server_id": serverID,
 	})
 }

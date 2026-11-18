@@ -173,7 +173,7 @@ func TestNotifHandler_ListEmailConfigs_Empty(t *testing.T) {
 	var resp struct {
 		Code int `json:"code"`
 		Data struct {
-			Total int64 `json:"total"`
+			Total int64      `json:"total"`
 			List  []struct{} `json:"list"`
 		} `json:"data"`
 	}

@@ -30,9 +30,9 @@ type SelectorEvent struct {
 // SelectorEventCollector 选择器事件累积器（单执行单 goroutine，零锁设计；
 // mutex 仅防御 worker 复用 page 的边缘场景）。
 type SelectorEventCollector struct {
-	mu        sync.Mutex
-	events    []SelectorEvent
-	lastURL   string
+	mu         sync.Mutex
+	events     []SelectorEvent
+	lastURL    string
 	elementSeq int
 }
 

@@ -19,7 +19,7 @@ func setupMigrate234DB(t *testing.T, withColumn bool) *gorm.DB {
 		col = ", org_id TEXT"
 	}
 	require.NoError(t, db.Exec(
-		`CREATE TABLE ops_floors (id TEXT PRIMARY KEY, name TEXT, building_id TEXT` + col + `)`).Error)
+		`CREATE TABLE ops_floors (id TEXT PRIMARY KEY, name TEXT, building_id TEXT`+col+`)`).Error)
 	return db
 }
 

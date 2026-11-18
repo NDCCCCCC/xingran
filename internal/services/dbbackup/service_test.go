@@ -880,7 +880,7 @@ func TestTriggerRestore_SQLiteOfflineDegrade(t *testing.T) {
 	// SQLite 配置（newTestService 默认即 SQLite），Restore 返回离线恢复降级错误。
 	exec := &fakeDumpExecutor{
 		tables: []string{"sys_user"}, dumpBytes: []byte("X"),
-		restoreErr: fmt.Errorf("已将恢复产物落到 /data/live.db.pending_restore；请停服后执行 "+
+		restoreErr: fmt.Errorf("已将恢复产物落到 /data/live.db.pending_restore；请停服后执行 " +
 			"`go run ./scripts/ops/db-backup-restore.go -db /data/live.db -pending /data/live.db.pending_restore`"),
 	}
 	svc := newTestService(t, db, exec)

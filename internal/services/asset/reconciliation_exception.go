@@ -195,11 +195,11 @@ func ValidateActions(actions pq.StringArray) error {
 		return errors.New("exception_actions 必填(至少 1 项)")
 	}
 	whitelist := map[string]struct{}{
-		"no_alert":     {},
-		"no_notice":    {},
-		"no_workorder": {},
+		"no_alert":      {},
+		"no_notice":     {},
+		"no_workorder":  {},
 		"skip_severity": {},
-		"silence":      {},
+		"silence":       {},
 	}
 	for _, a := range actions {
 		if _, ok := whitelist[a]; !ok {
@@ -343,11 +343,11 @@ func (s *reconciliationExceptionServiceImpl) GetByID(ctx context.Context, id str
 // Create 创建例外规则
 //
 // 行为:
-//   1. ValidateCIDR / ValidateActions / ValidateSeverityOverride / ValidateReason
-//   2. 构造 model(IsActive=0 默认启用,CreatedBy 默认 0 — handler 可通过
-//      gin context 注入真实 user_id,但本 service 层保持 ctx-agnostic)
-//   3. db.Create
-//   4. 失效工位健康度缓存（见 invalidateExceptionRuleCache，Phase 147 CACHE-02）
+//  1. ValidateCIDR / ValidateActions / ValidateSeverityOverride / ValidateReason
+//  2. 构造 model(IsActive=0 默认启用,CreatedBy 默认 0 — handler 可通过
+//     gin context 注入真实 user_id,但本 service 层保持 ctx-agnostic)
+//  3. db.Create
+//  4. 失效工位健康度缓存（见 invalidateExceptionRuleCache，Phase 147 CACHE-02）
 //
 // 注意:ScopeType 不在 service 层强校验(DB default 'global' + 前端 Radio.Group
 // 限制 global/dept/user 三选一);ScopeID 在 R3 仅做"nil 允许"非强校验(避免
@@ -401,10 +401,10 @@ func (s *reconciliationExceptionServiceImpl) Create(ctx context.Context, req *Cr
 // Update 更新例外规则
 //
 // 行为:
-//   1. 先 First 验证 id 存在(不存在返回 error)
-//   2. Validate(同 Create)
-//   3. db.Updates(GORM Updates 只 SET 包含字段)
-//   4. 失效工位健康度缓存（Phase 147）
+//  1. 先 First 验证 id 存在(不存在返回 error)
+//  2. Validate(同 Create)
+//  3. db.Updates(GORM Updates 只 SET 包含字段)
+//  4. 失效工位健康度缓存（Phase 147）
 func (s *reconciliationExceptionServiceImpl) Update(ctx context.Context, id string, req *UpdateExceptionRuleRequest) error {
 	if id == "" {
 		return errors.New("规则ID不能为空")

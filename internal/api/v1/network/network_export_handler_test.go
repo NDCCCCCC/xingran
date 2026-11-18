@@ -418,18 +418,18 @@ func TestExportHandler_ExportBackups(t *testing.T) {
 	h := newExportHandler(env)
 	netSeedDevice(t, env.db, "dev-bk1", "备份设备", "10.0.0.5")
 	b := &models.ConfigBackup{
-		ID:           "bk-1",
-		DeviceID:     "dev-bk1",
-		DeviceName:   "备份设备",
-		BackupType:   models.BackupTypeManual,
-		StorageType:  models.StorageTypeDatabase,
-		Version:      1,
-		ConfigHash:   "abc123",
+		ID:            "bk-1",
+		DeviceID:      "dev-bk1",
+		DeviceName:    "备份设备",
+		BackupType:    models.BackupTypeManual,
+		StorageType:   models.StorageTypeDatabase,
+		Version:       1,
+		ConfigHash:    "abc123",
 		ConfigContent: "vlan 1",
-		BackupSize:   6,
-		Compressed:   false,
-		ChangeReason: "initial",
-		CreatedBy:    "tester",
+		BackupSize:    6,
+		Compressed:    false,
+		ChangeReason:  "initial",
+		CreatedBy:     "tester",
 	}
 	require.NoError(t, env.db.Create(b).Error)
 

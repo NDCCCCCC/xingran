@@ -3,8 +3,8 @@ package migrations
 import (
 	"log"
 
-	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
+	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"gorm.io/gorm"
 )
 
@@ -323,13 +323,13 @@ func seedReconciliationMenus(db *gorm.DB) error {
 
 	// 2. 两个路由菜单
 	menus := []struct {
-		name     string
-		path     string
+		name      string
+		path      string
 		component string
-		perms    string
-		icon     string
-		orderNum int
-		remark   string
+		perms     string
+		icon      string
+		orderNum  int
+		remark    string
 	}{
 		{"对账看板", "dashboard", "asset/reconciliation/dashboard/index", "asset:reconciliation:dashboard", "#", 10, "Phase 42 R1: 5 KPI + 3 图表(D-04 父路由 302 → dashboard)"},
 		{"异常列表", "exceptions", "asset/reconciliation/exceptions/index", "asset:reconciliation:list", "#", 20, "Phase 42 R1: Type A-F 异常只读列表(D-18 R1 无 markResolved)"},

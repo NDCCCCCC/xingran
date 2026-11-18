@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	apperrors "github.com/xingran-next/xingran-go-backend/pkg/errors"
-	"github.com/xingran-next/xingran-go-backend/internal/models/system/requests"
 	"github.com/stretchr/testify/assert"
+	"github.com/xingran-next/xingran-go-backend/internal/models/system/requests"
+	apperrors "github.com/xingran-next/xingran-go-backend/pkg/errors"
 )
 
 // TestRoleService_Create_RoleNameExists 测试创建角色时角色名已存在的错误
@@ -54,13 +54,13 @@ func TestRoleService_Update_RoleNotFound(t *testing.T) {
 
 	// Try to update a non-existent role
 	updateReq := &requests.RoleUpdateRequest{
-		ID:        "non-existent-id",
-		RoleName:  "更新后的角色",
-		RoleKey:   "updated_role",
-		RoleSort:  1,
-		Status:    0,
-		MenuIds:   []string{},
-		DeptIds:   []string{},
+		ID:       "non-existent-id",
+		RoleName: "更新后的角色",
+		RoleKey:  "updated_role",
+		RoleSort: 1,
+		Status:   0,
+		MenuIds:  []string{},
+		DeptIds:  []string{},
 	}
 	err := roleService.Update(ctx, updateReq)
 
@@ -105,7 +105,7 @@ func TestRoleService_Delete_RoleHasUsers(t *testing.T) {
 			// Verify it's either RoleNotFound or RoleHasUsers
 			assert.True(t,
 				appErr.Code == apperrors.CodeRoleNotFound ||
-				appErr.Code == apperrors.CodeRoleHasUsers,
+					appErr.Code == apperrors.CodeRoleHasUsers,
 				"Expected RoleNotFound or RoleHasUsers error code",
 			)
 		}

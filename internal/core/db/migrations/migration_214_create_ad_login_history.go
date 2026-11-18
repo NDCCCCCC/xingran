@@ -51,7 +51,7 @@ func Migrate214CreateADLoginHistory(db *gorm.DB) error {
 	// 2. 创建当前月 + 未来 2 个月的分区(边界计算仿 migration_mac_history.go)
 	now := time.Now()
 	monthsToCreate := []time.Time{
-		now,                 // 当前月
+		now,                  // 当前月
 		now.AddDate(0, 1, 0), // 下个月
 		now.AddDate(0, 2, 0), // 再下个月
 	}

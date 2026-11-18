@@ -63,14 +63,14 @@ import (
 // ==================== 配置旋钮 ====================
 
 const (
-	adDriftKeyEnabled          = "ad_sync.drift_alert.enabled"
-	adDriftKeyTolerance        = "ad_sync.drift_alert.tolerance"
-	adDriftKeyThrottle         = "ad_sync.drift_alert.throttle_minutes"
-	adDriftKeyNoticeEnabled    = "ad_sync.drift_alert.notice_enabled"
-	adDriftKeyWSEnabled        = "ad_sync.drift_alert.ws_enabled"
-	adDriftKeyWebhookEnabled   = "ad_sync.drift_alert.webhook_enabled"
-	adDriftKeyWebhookConfigID  = "ad_sync.drift_alert.webhook_config_id"
-	adDriftBaselineConfigKey   = "ad_sync.drift_alert.baseline" // 基线存 sys_config（member_count,distinct_groups）
+	adDriftKeyEnabled         = "ad_sync.drift_alert.enabled"
+	adDriftKeyTolerance       = "ad_sync.drift_alert.tolerance"
+	adDriftKeyThrottle        = "ad_sync.drift_alert.throttle_minutes"
+	adDriftKeyNoticeEnabled   = "ad_sync.drift_alert.notice_enabled"
+	adDriftKeyWSEnabled       = "ad_sync.drift_alert.ws_enabled"
+	adDriftKeyWebhookEnabled  = "ad_sync.drift_alert.webhook_enabled"
+	adDriftKeyWebhookConfigID = "ad_sync.drift_alert.webhook_config_id"
+	adDriftBaselineConfigKey  = "ad_sync.drift_alert.baseline" // 基线存 sys_config（member_count,distinct_groups）
 
 	adDriftDefaultEnabled         = true
 	adDriftDefaultTolerance       = 0

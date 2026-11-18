@@ -15,7 +15,8 @@ import (
 // hardcode allowedOrigins to []string{"*"} and instead reads from config.
 //
 // RED baseline: This test FAILS because cmd/main.go:104 currently hardcodes:
-//   allowedOrigins := []string{"*"}
+//
+//	allowedOrigins := []string{"*"}
 //
 // GREEN after Phase 110 TLS-04: When the hardcoded wildcard is removed and replaced
 // with a config read (e.g., allowedOrigins := cfg.Server.AllowedOrigins), the test PASSES.
@@ -35,8 +36,8 @@ func TestMain_AllowedOrigins_FromConfig_NotWildcard(t *testing.T) {
 	hardcodedWildcard := `allowedOrigins := []string{"*"}`
 
 	if strings.Contains(src, hardcodedWildcard) {
-		t.Errorf("allowedOrigins should NOT be hardcoded to []string{\"*\"}; "+
-			"should read from config (cfg.Server.AllowedOrigins). "+
+		t.Errorf("allowedOrigins should NOT be hardcoded to []string{\"*\"}; " +
+			"should read from config (cfg.Server.AllowedOrigins). " +
 			"Found hardcoded wildcard at cmd/main.go:104")
 	}
 

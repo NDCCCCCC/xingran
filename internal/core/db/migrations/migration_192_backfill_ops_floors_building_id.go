@@ -13,7 +13,7 @@ import (
 // 背景 (2026-07-01):
 //   - 现象: 信息点列表 (internal/services/operations/infopoint_service.go:202-209)
 //     通过三级 LEFT JOIN 算 building_name:
-//        ops_info_points → sys_workstation → ops_floors → ops_buildings
+//     ops_info_points → sys_workstation → ops_floors → ops_buildings
 //   - 根因: 342 行信息点对应楼层的 ops_floors.building_id 为 NULL(用户探查
 //     SQL 确认:workstation_missing=0, floor_missing=0, building_missing=342,
 //     building_name_blank=342, total=1341)
@@ -21,7 +21,7 @@ import (
 //     给前端展示用),82% 工位(1187/1447)有值,可作为反推源头
 //
 // 策略 (按"先任一工位冗余值"反推):
-//   - 对每一个 building_id 为空 (NULL 或 '') 的 ops_floors,
+//   - 对每一个 building_id 为空 (NULL 或 ”) 的 ops_floors,
 //     从其下任意一个有 building_id 的 sys_workstation 反推
 //   - 同楼层多个工位可能冗余值不同(legacy 写入 bug),取任意一个都显著优于
 //     "永不显示";后续如发现仍有不一致,以同楼层"众数 building_id"二次修正
@@ -35,10 +35,11 @@ import (
 //   - UPDATE 不动 sys_workstation、不动 ops_info_points、不动 ops_buildings
 //
 // 验证(执行后):
-//   SELECT COUNT(*) FROM ops_floors
-//    WHERE building_id IS NULL OR building_id = '';
-//   期望: 0(或低于修复前 — 仍可能剩少量"整层工位冗余字段全空"的孤儿楼层,
-//        那部分需手工映射,见 export_unresolved_floors.sql 产物)
+//
+//	SELECT COUNT(*) FROM ops_floors
+//	 WHERE building_id IS NULL OR building_id = '';
+//	期望: 0(或低于修复前 — 仍可能剩少量"整层工位冗余字段全空"的孤儿楼层,
+//	     那部分需手工映射,见 export_unresolved_floors.sql 产物)
 //
 // 数据库合并备忘 (用户在解决 internal/core/db/database.go 的合并冲突时使用):
 //   - 此文件函数签名: Migrate192BackfillOpsFloorsBuildingId

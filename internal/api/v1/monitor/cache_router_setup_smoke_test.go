@@ -37,7 +37,7 @@ func ci87MonitorSmokeCore(t *testing.T, withCache bool) *core.Core {
 }
 
 // TestSetupCacheRouter_RegistersPermissionWiredRoutes 缓存监控全路由注册
-//（DataCacheService 非 nil 分支）。
+// （DataCacheService 非 nil 分支）。
 func TestSetupCacheRouter_RegistersPermissionWiredRoutes(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	testCore := ci87MonitorSmokeCore(t, true)

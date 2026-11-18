@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/glebarez/sqlite"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"gorm.io/gorm"
 )
 
@@ -116,7 +116,7 @@ func TestGrantNewMenuToRolesHavingParent_ParameterizedOrControlled(t *testing.T)
 		"JOIN sys_menu m ON rm.menu_id = m.id",
 		"WHERE m.menu_name =",
 		"ON CONFLICT DO NOTHING",
-		"$1::uuid",     // 参数化占位符(newMenuID, ::uuid cast)
+		"$1::uuid",       // 参数化占位符(newMenuID, ::uuid cast)
 		"menu_name = $2", // 参数化占位符(parentMenuName)
 	}
 	for _, w := range want {

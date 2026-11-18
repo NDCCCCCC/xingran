@@ -9,22 +9,22 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/xingran-next/xingran-go-backend/internal/models"
 	apiOpsRequests "github.com/xingran-next/xingran-go-backend/internal/api/v1/operations/requests"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
 	opsModels "github.com/xingran-next/xingran-go-backend/internal/models/operations"
 	opsServices "github.com/xingran-next/xingran-go-backend/internal/services/operations"
 )
 
 // mockServerRoomService implements opsServices.ServerRoomService.
 type mockServerRoomService struct {
-	CreateFunc                    func(ctx context.Context, r *opsModels.OpsServerRoom) error
-	UpdateFunc                    func(ctx context.Context, r *opsModels.OpsServerRoom) error
-	DeleteFunc                    func(ctx context.Context, id string) error
-	GetByIDFunc                   func(ctx context.Context, id string) (*opsModels.OpsServerRoom, error)
-	ListFunc                      func(ctx context.Context, req apiOpsRequests.ServerRoomListRequest) (*opsServices.PageResult, error)
-	BatchDeleteFunc               func(ctx context.Context, ids []string) error
-	StatisticsFunc                func(ctx context.Context) (*opsServices.ServerRoomStatisticsResult, error)
-	SearchServerRoomOptionsFunc   func(ctx context.Context, p map[string]interface{}) ([]opsServices.DropdownOption, error)
+	CreateFunc                  func(ctx context.Context, r *opsModels.OpsServerRoom) error
+	UpdateFunc                  func(ctx context.Context, r *opsModels.OpsServerRoom) error
+	DeleteFunc                  func(ctx context.Context, id string) error
+	GetByIDFunc                 func(ctx context.Context, id string) (*opsModels.OpsServerRoom, error)
+	ListFunc                    func(ctx context.Context, req apiOpsRequests.ServerRoomListRequest) (*opsServices.PageResult, error)
+	BatchDeleteFunc             func(ctx context.Context, ids []string) error
+	StatisticsFunc              func(ctx context.Context) (*opsServices.ServerRoomStatisticsResult, error)
+	SearchServerRoomOptionsFunc func(ctx context.Context, p map[string]interface{}) ([]opsServices.DropdownOption, error)
 }
 
 func (m *mockServerRoomService) Create(ctx context.Context, r *opsModels.OpsServerRoom) error {

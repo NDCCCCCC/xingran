@@ -5,10 +5,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/xingran-next/xingran-go-backend/internal/models"
+	"github.com/glebarez/sqlite"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/glebarez/sqlite"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"gorm.io/gorm"
 )
 
@@ -25,11 +25,11 @@ func newMACHistoryTestDB(t *testing.T) *gorm.DB {
 // makeTestDevice 构造一个 NetworkDevice(ID 通过 BaseModel 嵌入字段设置)。
 func makeTestDevice(id string) *models.NetworkDevice {
 	return &models.NetworkDevice{
-		BaseModel:   models.BaseModel{ID: id},
-		DeviceName:  "test-device",
-		IPAddress:   "10.0.0.1",
-		DeviceType:  models.DeviceTypeSwitch,
-		Vendor:      models.VendorHuawei,
+		BaseModel:  models.BaseModel{ID: id},
+		DeviceName: "test-device",
+		IPAddress:  "10.0.0.1",
+		DeviceType: models.DeviceTypeSwitch,
+		Vendor:     models.VendorHuawei,
 	}
 }
 

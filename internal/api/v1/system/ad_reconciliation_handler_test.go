@@ -150,9 +150,9 @@ func TestPhase59_ReconHandler_SuccessPageData(t *testing.T) {
 	svc := &fakeDeptOUMismatchService{
 		rows: []addomainServices.DeptOUMismatchRow{
 			{
-				DeptID:       &deptID,
-				Username:     &username,
-				MismatchType: "user_ou_mismatch",
+				DeptID:         &deptID,
+				Username:       &username,
+				MismatchType:   "user_ou_mismatch",
 				MismatchDetail: "用户 OU「OU=Sales,DC=corp,DC=com」与部门映射 OU「OU=IT,DC=corp,DC=com」不一致",
 			},
 		},

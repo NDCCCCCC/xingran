@@ -57,7 +57,7 @@ func TestShardedNonceStorage_CleansExpiredOnInterval(t *testing.T) {
 	sharded.cleanupExpiredNonces()
 
 	// 验证过期 nonce 已被清理
-	assert.Equal(t, 0, sharded.GetNonceCount() - countNoncesByKeys(sharded, []string{freshNonce}),
+	assert.Equal(t, 0, sharded.GetNonceCount()-countNoncesByKeys(sharded, []string{freshNonce}),
 		"expired nonce should be removed; fresh nonce should remain")
 
 	// 更直接的断言: 检查 fresh 还在, expired 不在

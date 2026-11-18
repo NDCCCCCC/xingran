@@ -44,7 +44,7 @@ func NewRedisClient(cfg *config.RedisConfig, workerID string, log logger.Logger)
 		client:     client,
 		streamName: cfg.StreamTasks,
 		groupName:  cfg.StreamGroup,
-		consumerID:  workerID,
+		consumerID: workerID,
 		logger:     log,
 	}, nil
 }
@@ -75,24 +75,24 @@ func (r *RedisClient) ConsumeTasks(ctx context.Context) (*types.TaskMessage, str
 	for _, stream := range results {
 		for _, message := range stream.Messages {
 			var task types.TaskMessage
-			
+
 			// 将 Values 转换为 JSON
 			valuesJSON, err := json.Marshal(message.Values)
 			if err != nil {
 				r.logger.Error("序列化消息失败", logger.Err(err))
 				continue
 			}
-			
+
 			if err := json.Unmarshal(valuesJSON, &task); err != nil {
 				r.logger.Error("解析任务失败", logger.Err(err))
 				continue
 			}
 
-			r.logger.Info("获取到任务", 
+			r.logger.Info("获取到任务",
 				logger.String("execution_id", task.ExecutionID),
 				logger.String("task_id", task.TaskID),
 				logger.String("message_id", message.ID))
-			
+
 			return &task, message.ID, nil
 		}
 	}

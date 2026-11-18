@@ -157,7 +157,7 @@ func TestPhase58_FirstEnabledADConfigID_SkipsSyncDisabled(t *testing.T) {
 
 	seedDrainADConfig(t, db, "cfg-A", "A-同步关闭", "DC=a,DC=com", false, 0) // sync_enabled=0, status=0
 	seedDrainADConfig(t, db, "cfg-B", "B-同步开启", "DC=b,DC=com", true, 0)  // sync_enabled=1, status=0
-	seedDrainADConfig(t, db, "cfg-C", "C-停用", "DC=c,DC=com", true, 1)     // sync_enabled=1, status=1
+	seedDrainADConfig(t, db, "cfg-C", "C-停用", "DC=c,DC=com", true, 1)    // sync_enabled=1, status=1
 
 	// seedDrainADConfig 用同一秒的时间戳，显式错开 created_at 让 ORDER BY 具备确定性
 	base := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)

@@ -160,5 +160,3 @@ func getMemoryViaWMIC() (uint64, uint64, error) {
 	// 如果解析失败，返回错误而不是默认值
 	return 0, 0, fmt.Errorf("无法解析wmic内存命令输出")
 }
-
-

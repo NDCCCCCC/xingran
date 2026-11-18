@@ -1,6 +1,7 @@
 // 补 seed: 直接调 internal/core/db.initData() 跑 admin/menu/role seed。
 // 绕过 AutoMigrate hang,跑完后 backend 即可 :9000 LISTENING。
-//   go run ./scripts/seedmain
+//
+//	go run ./scripts/seedmain
 package main
 
 import (

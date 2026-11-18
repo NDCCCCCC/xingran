@@ -119,21 +119,45 @@ func toCiscoMACFormat(mac string) string {
 
 // RegisterPortSecTemplates 注册 Phase 125 端口安全渲染闭包。
 func RegisterPortSecTemplates() {
-	vendorPortTemplate[models.VendorHuawei][PortSecEnable] = func(p PortTemplateParams) ([]string, error) { return renderPortSec(p, models.VendorHuawei, PortSecEnable) }
-	vendorPortTemplate[models.VendorHuawei][PortSecDisable] = func(p PortTemplateParams) ([]string, error) { return renderPortSec(p, models.VendorHuawei, PortSecDisable) }
-	vendorPortTemplate[models.VendorHuawei][PortSecMaxMac] = func(p PortTemplateParams) ([]string, error) { return renderPortSec(p, models.VendorHuawei, PortSecMaxMac) }
-	vendorPortTemplate[models.VendorHuawei][PortSecSticky] = func(p PortTemplateParams) ([]string, error) { return renderPortSec(p, models.VendorHuawei, PortSecSticky) }
-	vendorPortTemplate[models.VendorHuawei][PortSecStaticBind] = func(p PortTemplateParams) ([]string, error) { return renderPortSec(p, models.VendorHuawei, PortSecStaticBind) }
+	vendorPortTemplate[models.VendorHuawei][PortSecEnable] = func(p PortTemplateParams) ([]string, error) {
+		return renderPortSec(p, models.VendorHuawei, PortSecEnable)
+	}
+	vendorPortTemplate[models.VendorHuawei][PortSecDisable] = func(p PortTemplateParams) ([]string, error) {
+		return renderPortSec(p, models.VendorHuawei, PortSecDisable)
+	}
+	vendorPortTemplate[models.VendorHuawei][PortSecMaxMac] = func(p PortTemplateParams) ([]string, error) {
+		return renderPortSec(p, models.VendorHuawei, PortSecMaxMac)
+	}
+	vendorPortTemplate[models.VendorHuawei][PortSecSticky] = func(p PortTemplateParams) ([]string, error) {
+		return renderPortSec(p, models.VendorHuawei, PortSecSticky)
+	}
+	vendorPortTemplate[models.VendorHuawei][PortSecStaticBind] = func(p PortTemplateParams) ([]string, error) {
+		return renderPortSec(p, models.VendorHuawei, PortSecStaticBind)
+	}
 	vendorPortTemplate[models.VendorH3C][PortSecEnable] = func(p PortTemplateParams) ([]string, error) { return renderPortSec(p, models.VendorH3C, PortSecEnable) }
-	vendorPortTemplate[models.VendorH3C][PortSecDisable] = func(p PortTemplateParams) ([]string, error) { return renderPortSec(p, models.VendorH3C, PortSecDisable) }
+	vendorPortTemplate[models.VendorH3C][PortSecDisable] = func(p PortTemplateParams) ([]string, error) {
+		return renderPortSec(p, models.VendorH3C, PortSecDisable)
+	}
 	vendorPortTemplate[models.VendorH3C][PortSecMaxMac] = func(p PortTemplateParams) ([]string, error) { return renderPortSec(p, models.VendorH3C, PortSecMaxMac) }
 	vendorPortTemplate[models.VendorH3C][PortSecSticky] = func(p PortTemplateParams) ([]string, error) { return renderPortSec(p, models.VendorH3C, PortSecSticky) }
-	vendorPortTemplate[models.VendorH3C][PortSecStaticBind] = func(p PortTemplateParams) ([]string, error) { return renderPortSec(p, models.VendorH3C, PortSecStaticBind) }
-	vendorPortTemplate[models.VendorRuijie][PortSecEnable] = func(p PortTemplateParams) ([]string, error) { return renderPortSec(p, models.VendorRuijie, PortSecEnable) }
-	vendorPortTemplate[models.VendorRuijie][PortSecDisable] = func(p PortTemplateParams) ([]string, error) { return renderPortSec(p, models.VendorRuijie, PortSecDisable) }
-	vendorPortTemplate[models.VendorRuijie][PortSecMaxMac] = func(p PortTemplateParams) ([]string, error) { return renderPortSec(p, models.VendorRuijie, PortSecMaxMac) }
-	vendorPortTemplate[models.VendorRuijie][PortSecSticky] = func(p PortTemplateParams) ([]string, error) { return renderPortSec(p, models.VendorRuijie, PortSecSticky) }
-	vendorPortTemplate[models.VendorRuijie][PortSecStaticBind] = func(p PortTemplateParams) ([]string, error) { return renderPortSec(p, models.VendorRuijie, PortSecStaticBind) }
+	vendorPortTemplate[models.VendorH3C][PortSecStaticBind] = func(p PortTemplateParams) ([]string, error) {
+		return renderPortSec(p, models.VendorH3C, PortSecStaticBind)
+	}
+	vendorPortTemplate[models.VendorRuijie][PortSecEnable] = func(p PortTemplateParams) ([]string, error) {
+		return renderPortSec(p, models.VendorRuijie, PortSecEnable)
+	}
+	vendorPortTemplate[models.VendorRuijie][PortSecDisable] = func(p PortTemplateParams) ([]string, error) {
+		return renderPortSec(p, models.VendorRuijie, PortSecDisable)
+	}
+	vendorPortTemplate[models.VendorRuijie][PortSecMaxMac] = func(p PortTemplateParams) ([]string, error) {
+		return renderPortSec(p, models.VendorRuijie, PortSecMaxMac)
+	}
+	vendorPortTemplate[models.VendorRuijie][PortSecSticky] = func(p PortTemplateParams) ([]string, error) {
+		return renderPortSec(p, models.VendorRuijie, PortSecSticky)
+	}
+	vendorPortTemplate[models.VendorRuijie][PortSecStaticBind] = func(p PortTemplateParams) ([]string, error) {
+		return renderPortSec(p, models.VendorRuijie, PortSecStaticBind)
+	}
 }
 
 func init() {

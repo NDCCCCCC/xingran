@@ -8,8 +8,8 @@ import (
 
 	"github.com/xingran-next/xingran-go-backend/internal/config"
 	"github.com/xingran-next/xingran-go-backend/internal/core"
-	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 	_ "github.com/xingran-next/xingran-go-backend/internal/models"
+	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 )
 
 func main() {

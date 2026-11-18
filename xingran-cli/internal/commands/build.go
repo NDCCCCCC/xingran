@@ -224,13 +224,13 @@ func buildActionCmd(m EndpointMeta, run RunFunc, emit EmitFunc) *cobra.Command {
 	// 参数顺序：必填在前，其余按名称字母序
 	flags := endpointFlags(m)
 	cmd := &cobra.Command{
-		Use:     use,
-		Short:   m.Summary,
-		Long:    buildActionLong(m, flags),
-		Example: buildExample(m, flags),
-		Args:               cobra.ExactArgs(len(m.PathArgs)),
-		SilenceUsage:       true,
-		SilenceErrors:      true,
+		Use:           use,
+		Short:         m.Summary,
+		Long:          buildActionLong(m, flags),
+		Example:       buildExample(m, flags),
+		Args:          cobra.ExactArgs(len(m.PathArgs)),
+		SilenceUsage:  true,
+		SilenceErrors: true,
 		RunE: func(c *cobra.Command, args []string) error {
 			flagVals := map[string]any{}
 			var missing []string

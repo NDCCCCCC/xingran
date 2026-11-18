@@ -8,10 +8,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/xingran-next/xingran-go-backend/pkg/constants"
-	"github.com/xingran-next/xingran-go-backend/pkg/datascope"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/internal/services/base"
+	"github.com/xingran-next/xingran-go-backend/pkg/constants"
+	"github.com/xingran-next/xingran-go-backend/pkg/datascope"
 	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"gorm.io/gorm"
 )
@@ -287,28 +287,28 @@ func (s *vmServiceImpl) saveOrUpdateVM(ctx context.Context, resource VDIVMResour
 	if err == gorm.ErrRecordNotFound {
 		// 创建新记录
 		vm = models.VDIVirtualMachine{
-			VMID:        resource.ID,
-			Name:        resource.VMName,
-			ResourceID:  resourceID,
-			PowerState:  s.mapPowerState(resource.Status),
-			IPAddress:   ipAddress,
-			MACAddress:  resource.MAC,
-			OSType:      resource.OSType,
-			CPUNumber:   s.parseIntSafe(resource.CPUNumber),
-			CPUCore:     s.parseIntSafe(resource.CPUCore),
-			CPUPer:      s.parseIntSafe(resource.CPUPer),
-			Memory:      s.parseIntSafe(resource.MemAll),
-			MemoryPer:   s.parseIntSafe(resource.MemPer),
-			Disk:        s.parseIntSafe(resource.DiscAll),
-			DiskPer:     s.parseIntSafe(resource.DiscPer),
+			VMID:       resource.ID,
+			Name:       resource.VMName,
+			ResourceID: resourceID,
+			PowerState: s.mapPowerState(resource.Status),
+			IPAddress:  ipAddress,
+			MACAddress: resource.MAC,
+			OSType:     resource.OSType,
+			CPUNumber:  s.parseIntSafe(resource.CPUNumber),
+			CPUCore:    s.parseIntSafe(resource.CPUCore),
+			CPUPer:     s.parseIntSafe(resource.CPUPer),
+			Memory:     s.parseIntSafe(resource.MemAll),
+			MemoryPer:  s.parseIntSafe(resource.MemPer),
+			Disk:       s.parseIntSafe(resource.DiscAll),
+			DiskPer:    s.parseIntSafe(resource.DiscPer),
 			// 网络配置信息
-			IPType:        s.mapIPType(resource.IPState),
-			SubnetMask:    resource.Subnetmask,
+			IPType:         s.mapIPType(resource.IPState),
+			SubnetMask:     resource.Subnetmask,
 			DefaultGateway: resource.DefaultGateway,
-			NameServer:    resource.NameServer,
-			AssignIP:      resource.AssignIP,
-			VdiServerID:   vdiServerID,
-			LastSyncAt:    &time.Time{},
+			NameServer:     resource.NameServer,
+			AssignIP:       resource.AssignIP,
+			VdiServerID:    vdiServerID,
+			LastSyncAt:     &time.Time{},
 		}
 		// 调试日志：打印CPU使用率原始值和解析后的值
 		if resource.CPUPer != "" {
@@ -323,27 +323,27 @@ func (s *vmServiceImpl) saveOrUpdateVM(ctx context.Context, resource VDIVMResour
 			s.db.WithContext(ctx).Unscoped().Delete(&vm)
 			// 创建新记录
 			vm = models.VDIVirtualMachine{
-				VMID:        resource.ID,
-				Name:        resource.VMName,
-				ResourceID:  resourceID,
-				PowerState:  s.mapPowerState(resource.Status),
-				IPAddress:   ipAddress,
-				MACAddress:  resource.MAC,
-				OSType:      resource.OSType,
-				CPUNumber:   s.parseIntSafe(resource.CPUNumber),
-				CPUCore:     s.parseIntSafe(resource.CPUCore),
-				CPUPer:      s.parseIntSafe(resource.CPUPer),
-				Memory:      s.parseIntSafe(resource.MemAll),
-				MemoryPer:   s.parseIntSafe(resource.MemPer),
-				Disk:        s.parseIntSafe(resource.DiscAll),
-				DiskPer:     s.parseIntSafe(resource.DiscPer),
-				IPType:        s.mapIPType(resource.IPState),
-				SubnetMask:    resource.Subnetmask,
+				VMID:           resource.ID,
+				Name:           resource.VMName,
+				ResourceID:     resourceID,
+				PowerState:     s.mapPowerState(resource.Status),
+				IPAddress:      ipAddress,
+				MACAddress:     resource.MAC,
+				OSType:         resource.OSType,
+				CPUNumber:      s.parseIntSafe(resource.CPUNumber),
+				CPUCore:        s.parseIntSafe(resource.CPUCore),
+				CPUPer:         s.parseIntSafe(resource.CPUPer),
+				Memory:         s.parseIntSafe(resource.MemAll),
+				MemoryPer:      s.parseIntSafe(resource.MemPer),
+				Disk:           s.parseIntSafe(resource.DiscAll),
+				DiskPer:        s.parseIntSafe(resource.DiscPer),
+				IPType:         s.mapIPType(resource.IPState),
+				SubnetMask:     resource.Subnetmask,
 				DefaultGateway: resource.DefaultGateway,
-				NameServer:    resource.NameServer,
-				AssignIP:      resource.AssignIP,
-				VdiServerID:   vdiServerID,
-				LastSyncAt:    &time.Time{},
+				NameServer:     resource.NameServer,
+				AssignIP:       resource.AssignIP,
+				VdiServerID:    vdiServerID,
+				LastSyncAt:     &time.Time{},
 			}
 			if resource.CPUPer != "" {
 				applogger.Debugf("[VDI] SYNC DEBUG VM: %s, 清理软删除记录后重新创建, CPUPer: %d",
@@ -353,19 +353,19 @@ func (s *vmServiceImpl) saveOrUpdateVM(ctx context.Context, resource VDIVMResour
 		} else {
 			// 更新现有记录
 			updates := map[string]interface{}{
-				"name":          resource.VMName,
-				"resource_id":   resourceID,
-				"power_state":   s.mapPowerState(resource.Status),
-				"mac_address":   resource.MAC,
-				"os_type":       resource.OSType,
-				"cpu_number":    s.parseIntSafe(resource.CPUNumber),
-				"cpu_core":      s.parseIntSafe(resource.CPUCore),
-				"cpu_per":       s.parseIntSafe(resource.CPUPer),
-				"last_sync_at":  time.Now(),
-				"memory":        s.parseIntSafe(resource.MemAll),
-				"memory_per":    s.parseIntSafe(resource.MemPer),
-				"disk":          s.parseIntSafe(resource.DiscAll),
-				"disk_per":      s.parseIntSafe(resource.DiscPer),
+				"name":         resource.VMName,
+				"resource_id":  resourceID,
+				"power_state":  s.mapPowerState(resource.Status),
+				"mac_address":  resource.MAC,
+				"os_type":      resource.OSType,
+				"cpu_number":   s.parseIntSafe(resource.CPUNumber),
+				"cpu_core":     s.parseIntSafe(resource.CPUCore),
+				"cpu_per":      s.parseIntSafe(resource.CPUPer),
+				"last_sync_at": time.Now(),
+				"memory":       s.parseIntSafe(resource.MemAll),
+				"memory_per":   s.parseIntSafe(resource.MemPer),
+				"disk":         s.parseIntSafe(resource.DiscAll),
+				"disk_per":     s.parseIntSafe(resource.DiscPer),
 			}
 
 			// Smart IP update strategy
@@ -403,9 +403,9 @@ func (s *vmServiceImpl) mapPowerState(status string) string {
 	// 10=等待agent接入, 11=关机, 12=挂起, 13=待确认, 14=待确认, 15=正常使用
 	switch status {
 	case "10":
-		return "pending"   // 等待agent接入
+		return "pending" // 等待agent接入
 	case "11":
-		return "stopped"   // 关机
+		return "stopped" // 关机
 	case "12":
 		return "suspended" // 挂起
 	case "13":
@@ -413,7 +413,7 @@ func (s *vmServiceImpl) mapPowerState(status string) string {
 	case "14":
 		return "unknown14" // 待确认
 	case "15":
-		return "in_use"    // 正常使用
+		return "in_use" // 正常使用
 	default:
 		return "unknown"
 	}
@@ -525,13 +525,13 @@ func (s *vmServiceImpl) CreateVM(ctx context.Context, req *CreateVMServiceReques
 
 	// 4. 构建VDI API创建请求
 	createReq := CreateServerRequest{
-		Resource: ResourceInfo{ID: resourceID},
-		Host:     HostInfo{ID: req.HostID},
+		Resource:    ResourceInfo{ID: resourceID},
+		Host:        HostInfo{ID: req.HostID},
 		RunPosition: PositionInfo{ID: req.RunPositionID},
-		Disk:     DiskInfo{ID: req.DiskID},
-		Storage:  StorageInfo{ID: req.StorageID},
-		Network:  NetworkInfo{ID: req.NetworkID},
-		Servers:  ServerCount{Count: req.Count},
+		Disk:        DiskInfo{ID: req.DiskID},
+		Storage:     StorageInfo{ID: req.StorageID},
+		Network:     NetworkInfo{ID: req.NetworkID},
+		Servers:     ServerCount{Count: req.Count},
 	}
 
 	// 5. 调用VDI API创建虚拟机
@@ -980,9 +980,9 @@ func (s *vmServiceImpl) toDTO(vm *models.VDIVirtualMachine) *VDIVMDTO {
 		MemoryPer:     vm.MemoryPer,
 		Disk:          vm.Disk,
 		DiskPer:       vm.DiskPer,
-		BoundUserID:    vm.BoundUserID,
-		BoundUserName:  vm.BoundUserName,
-		PolicyGroupID:  vm.PolicyGroupID,
+		BoundUserID:   vm.BoundUserID,
+		BoundUserName: vm.BoundUserName,
+		PolicyGroupID: vm.PolicyGroupID,
 		// 网络配置信息
 		IPType:         vm.IPType,
 		SubnetMask:     vm.SubnetMask,

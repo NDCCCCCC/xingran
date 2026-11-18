@@ -43,7 +43,7 @@ func RegisterMACHistoryMatViewTasks(s *Scheduler, db *gorm.DB, matViewSvc servic
 
 	// 计算下次执行时间（下一个 5 分钟整点）
 	now := time.Now()
-	nextMinute := (now.Minute()/5+1)*5
+	nextMinute := (now.Minute()/5 + 1) * 5
 	nextRunTime := time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), nextMinute, 0, 0, now.Location())
 	remark := "MAC地址历史物化视图定时刷新任务，每5分钟执行一次，REFRESH MATERIALIZED VIEW CONCURRENTLY 避免锁表"
 

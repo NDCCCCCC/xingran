@@ -180,7 +180,7 @@ func ResolvePhysicalProfileWithOID(vendor models.DeviceVendor, model, sysObjectI
 //  1. 型号 modelRules.unsupported[action] 命中 → ErrActionNotSupported（Evidence 必含依据）
 //  2. 型号 modelPhysicalRule 命中 → 用型号画像（其优先级高于厂商级 unsupported）
 //  3. 厂商 vendorUnsupported[action] 命中 → ErrActionNotSupported
-//  4/5. 厂商 entry.physical 基线 / 全局默认 → ResolvePhysicalProfile
+//     4/5. 厂商 entry.physical 基线 / 全局默认 → ResolvePhysicalProfile
 //
 // params 用 PortTemplateParams 作为载体（portcollection 自有类型，避免 import portwrite 循环）；
 // 仅消费 Speed / SpeedMode / Duplex / MTU 四个字段。

@@ -19,17 +19,17 @@ import (
 
 // Compile-time assertion: mock services satisfy rpa service interfaces.
 var (
-	_ rpa.FlowControlService    = (*mockFlowControlService)(nil)
-	_ rpa.ErrorHandlingService  = (*mockErrorHandlingService)(nil)
-	_ rpa.DataMapperService     = (*mockDataMapperService)(nil)
+	_ rpa.FlowControlService   = (*mockFlowControlService)(nil)
+	_ rpa.ErrorHandlingService = (*mockErrorHandlingService)(nil)
+	_ rpa.DataMapperService    = (*mockDataMapperService)(nil)
 )
 
 // mockFlowControlService implements rpa.FlowControlService via function fields.
 type mockFlowControlService struct {
 	rpa.FlowControlService
 
-	ExecuteConditionFunc func(ctx context.Context, condition *rpa.ConditionAction, variables map[string]interface{}) (bool, error)
-	ExecuteLoopFunc      func(ctx context.Context, loop *rpa.LoopAction, variables map[string]interface{}) ([]map[string]interface{}, error)
+	ExecuteConditionFunc  func(ctx context.Context, condition *rpa.ConditionAction, variables map[string]interface{}) (bool, error)
+	ExecuteLoopFunc       func(ctx context.Context, loop *rpa.LoopAction, variables map[string]interface{}) ([]map[string]interface{}, error)
 	EvaluateConditionFunc func(ctx context.Context, expr string, variables map[string]interface{}) (bool, error)
 }
 
@@ -58,8 +58,8 @@ func (m *mockFlowControlService) EvaluateCondition(ctx context.Context, expr str
 type mockErrorHandlingService struct {
 	rpa.ErrorHandlingService
 
-	HandleErrorFunc    func(ctx context.Context, req *rpa.ErrorHandleRequest) (*rpa.ErrorHandleResult, error)
-	ExecuteRetryFunc   func(ctx context.Context, req *rpa.RetryRequest) (*rpa.RetryResult, error)
+	HandleErrorFunc     func(ctx context.Context, req *rpa.ErrorHandleRequest) (*rpa.ErrorHandleResult, error)
+	ExecuteRetryFunc    func(ctx context.Context, req *rpa.RetryRequest) (*rpa.RetryResult, error)
 	ExecuteRollbackFunc func(ctx context.Context, req *rpa.RollbackRequest) error
 	ExecuteFallbackFunc func(ctx context.Context, req *rpa.FallbackRequest) (*rpa.FallbackResult, error)
 }

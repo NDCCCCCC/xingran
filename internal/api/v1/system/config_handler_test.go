@@ -210,7 +210,7 @@ func TestConfigHandler_List_Empty(t *testing.T) {
 	var resp struct {
 		Code int `json:"code"`
 		Data struct {
-			Total int64 `json:"total"`
+			Total int64         `json:"total"`
 			List  []interface{} `json:"list"`
 		} `json:"data"`
 	}
@@ -268,7 +268,7 @@ func TestConfigHandler_GetByID_Success(t *testing.T) {
 	w := doJSON(t, h.GetByID, "POST", "/system/configs/"+id, nil, map[string]string{"id": id})
 	assert.Equal(t, http.StatusOK, w.Code)
 	var resp struct {
-		Code int `json:"code"`
+		Code int           `json:"code"`
 		Data models.Config `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
@@ -294,7 +294,7 @@ func TestConfigHandler_GetByKey_Success(t *testing.T) {
 		map[string]string{"configKey": "sys.second"})
 	assert.Equal(t, http.StatusOK, w.Code)
 	var resp struct {
-		Code int `json:"code"`
+		Code int           `json:"code"`
 		Data models.Config `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
@@ -661,8 +661,8 @@ func TestConfigHandler_List_RawPagination(t *testing.T) {
 		Code int `json:"code"`
 		Data struct {
 			Total    int64 `json:"total"`
-			Current  int    `json:"current"`
-			PageSize int    `json:"pageSize"`
+			Current  int   `json:"current"`
+			PageSize int   `json:"pageSize"`
 		} `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))

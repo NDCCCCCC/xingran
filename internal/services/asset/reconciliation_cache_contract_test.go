@@ -44,8 +44,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 
-	"github.com/xingran-next/xingran-go-backend/internal/services/base"
 	services "github.com/xingran-next/xingran-go-backend/internal/services"
+	"github.com/xingran-next/xingran-go-backend/internal/services/base"
 	"github.com/xingran-next/xingran-go-backend/internal/services/system"
 	pkgcache "github.com/xingran-next/xingran-go-backend/pkg/cache"
 )

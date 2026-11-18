@@ -29,9 +29,9 @@ import (
 // =====================================================================
 
 type mockColumnConfigService struct {
-	GetByPageKeyFunc    func(ctx context.Context, userID, pageKey string) ([]*models.UserColumnConfig, error)
-	SaveFunc            func(ctx context.Context, userID string, req *systemRequests.ColumnConfigSaveRequest) error
-	ResetFunc           func(ctx context.Context, userID, pageKey string) error
+	GetByPageKeyFunc     func(ctx context.Context, userID, pageKey string) ([]*models.UserColumnConfig, error)
+	SaveFunc             func(ctx context.Context, userID string, req *systemRequests.ColumnConfigSaveRequest) error
+	ResetFunc            func(ctx context.Context, userID, pageKey string) error
 	GetDefaultConfigFunc func(ctx context.Context, pageKey string) ([]*models.UserColumnConfig, error)
 }
 
@@ -171,7 +171,9 @@ func TestColumnConfigHandler_Save_BindError(t *testing.T) {
 
 func TestColumnConfigHandler_Save_ServiceError(t *testing.T) {
 	svc := &mockColumnConfigService{
-		SaveFunc: func(_ context.Context, _ string, _ *systemRequests.ColumnConfigSaveRequest) error { return errors.New("boom") },
+		SaveFunc: func(_ context.Context, _ string, _ *systemRequests.ColumnConfigSaveRequest) error {
+			return errors.New("boom")
+		},
 	}
 	h := newColumnConfigHandler(svc)
 	body := map[string]interface{}{"pageKey": "user.list", "columnConfigs": []map[string]interface{}{{"columnKey": "name", "visible": true}}}

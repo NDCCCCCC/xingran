@@ -152,7 +152,7 @@ func TestMenuHandler_GetTree_Success(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 
 	var resp struct {
-		Code int          `json:"code"`
+		Code int           `json:"code"`
 		Data []models.Menu `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
@@ -209,7 +209,7 @@ func TestMenuHandler_GetByID_Success(t *testing.T) {
 	w := doJSON(t, h.GetByID, "POST", "/system/menus/"+id, nil, map[string]string{"id": id})
 	assert.Equal(t, http.StatusOK, w.Code)
 	var resp struct {
-		Code int        `json:"code"`
+		Code int         `json:"code"`
 		Data models.Menu `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
@@ -312,11 +312,11 @@ func TestMenuHandler_Update_Success(t *testing.T) {
 
 	newName := "NewName"
 	body := requests.MenuUpdateRequest{
-		MenuName:  newName,
-		MenuType:  models.MenuTypeDir,
-		Visible:   models.VisibleHidden,
-		Status:    models.MenuStatusNormal,
-		OrderNum:  5,
+		MenuName: newName,
+		MenuType: models.MenuTypeDir,
+		Visible:  models.VisibleHidden,
+		Status:   models.MenuStatusNormal,
+		OrderNum: 5,
 	}
 	_ = doJSON(t, h.Update, "POST", "/system/menus/"+id+"/update", body, map[string]string{"id": id})
 
@@ -462,7 +462,7 @@ func TestMenuHandler_GetUserMenus_Success(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 
 	var resp struct {
-		Code int          `json:"code"`
+		Code int           `json:"code"`
 		Data []models.Menu `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
@@ -504,7 +504,7 @@ func TestMenuHandler_GetAllUserMenus_IncludesHidden(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 
 	var resp struct {
-		Code int          `json:"code"`
+		Code int           `json:"code"`
 		Data []models.Menu `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
@@ -540,8 +540,8 @@ func TestMenuHandler_GetUserPermissions_Success(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 
 	var resp struct {
-		Code   int      `json:"code"`
-		Data   []string `json:"data"`
+		Code int      `json:"code"`
+		Data []string `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
 	assert.Equal(t, 0, resp.Code)

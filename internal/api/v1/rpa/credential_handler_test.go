@@ -25,20 +25,20 @@ var _ rpa.CredentialService = (*mockCredentialService)(nil)
 type mockCredentialService struct {
 	rpa.CredentialService
 
-	CreateCredentialFunc        func(ctx context.Context, req *rpamodels.CredentialCreateRequest, userID string) (*rpamodels.RPACredential, error)
-	UpdateCredentialFunc        func(ctx context.Context, id string, req *rpamodels.CredentialUpdateRequest, userID string) error
-	DeleteCredentialFunc        func(ctx context.Context, id string, userID string) error
-	GetCredentialFunc           func(ctx context.Context, id string, userID string) (*rpamodels.RPACredential, error)
-	ListCredentialsFunc         func(ctx context.Context, params *rpamodels.CredentialListParams, userID string, deptID string) ([]rpamodels.RPACredential, int64, error)
+	CreateCredentialFunc          func(ctx context.Context, req *rpamodels.CredentialCreateRequest, userID string) (*rpamodels.RPACredential, error)
+	UpdateCredentialFunc          func(ctx context.Context, id string, req *rpamodels.CredentialUpdateRequest, userID string) error
+	DeleteCredentialFunc          func(ctx context.Context, id string, userID string) error
+	GetCredentialFunc             func(ctx context.Context, id string, userID string) (*rpamodels.RPACredential, error)
+	ListCredentialsFunc           func(ctx context.Context, params *rpamodels.CredentialListParams, userID string, deptID string) ([]rpamodels.RPACredential, int64, error)
 	GetCredentialForExecutionFunc func(ctx context.Context, targetSystem string, userID string, deptID string) (*rpamodels.RPACredential, error)
-	DecryptCredentialFunc       func(ctx context.Context, cred *rpamodels.RPACredential) (*rpa.CredentialData, error)
-	CreateSessionFunc           func(ctx context.Context, req *rpamodels.SessionCreateRequest) (*rpamodels.RPASession, error)
-	GetValidSessionFunc         func(ctx context.Context, credentialID string, targetSystem string) (*rpamodels.RPASession, error)
-	InvalidateSessionFunc       func(ctx context.Context, sessionID string, reason string) error
-	CleanupExpiredSessionsFunc  func(ctx context.Context) error
-	RecordLoginSuccessFunc      func(ctx context.Context, credentialID string) error
-	RecordLoginFailureFunc      func(ctx context.Context, credentialID string) error
-	UpdateLastUsedFunc          func(ctx context.Context, credentialID string) error
+	DecryptCredentialFunc         func(ctx context.Context, cred *rpamodels.RPACredential) (*rpa.CredentialData, error)
+	CreateSessionFunc             func(ctx context.Context, req *rpamodels.SessionCreateRequest) (*rpamodels.RPASession, error)
+	GetValidSessionFunc           func(ctx context.Context, credentialID string, targetSystem string) (*rpamodels.RPASession, error)
+	InvalidateSessionFunc         func(ctx context.Context, sessionID string, reason string) error
+	CleanupExpiredSessionsFunc    func(ctx context.Context) error
+	RecordLoginSuccessFunc        func(ctx context.Context, credentialID string) error
+	RecordLoginFailureFunc        func(ctx context.Context, credentialID string) error
+	UpdateLastUsedFunc            func(ctx context.Context, credentialID string) error
 }
 
 func (m *mockCredentialService) CreateCredential(ctx context.Context, req *rpamodels.CredentialCreateRequest, userID string) (*rpamodels.RPACredential, error) {

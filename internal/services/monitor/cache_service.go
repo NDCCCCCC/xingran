@@ -88,13 +88,13 @@ type StatsProvider interface {
 
 // CacheListParams 缓存列表查询参数
 type CacheListParams struct {
-	Key      string
-	Type     string
-	Level    string // "l1", "l2", "all"
-	Current  int
-	PageSize int
+	Key           string
+	Type          string
+	Level         string // "l1", "l2", "all"
+	Current       int
+	PageSize      int
 	OrderByColumn string
-	IsAsc        bool
+	IsAsc         bool
 }
 
 // CacheOperateParams 缓存操作参数
@@ -149,7 +149,6 @@ var cacheAllowedSortFields = map[string]string{
 	"createdAt": "created_at",
 	"updatedAt": "updated_at",
 }
-
 
 // cacheServiceImpl 缓存服务实现
 

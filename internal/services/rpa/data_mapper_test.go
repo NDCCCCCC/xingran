@@ -308,16 +308,16 @@ func TestDataMapper_MapFields_Types(t *testing.T) {
 
 	// lookup 命中 / 未命中走默认 / 未配置表
 	out, err = svc.MapFields(ctx, &DataMappingRule{
-		Type:  MappingTypeLookup, Source: "num",
-		Params:      map[string]interface{}{"table": map[string]interface{}{"7": "seven"}},
+		Type: MappingTypeLookup, Source: "num",
+		Params:       map[string]interface{}{"table": map[string]interface{}{"7": "seven"}},
 		DefaultValue: "unknown",
 	}, source)
 	require.NoError(t, err)
 	assert.Equal(t, "seven", out)
 
 	out, err = svc.MapFields(ctx, &DataMappingRule{
-		Type:  MappingTypeLookup, Source: "num",
-		Params:      map[string]interface{}{"table": map[string]interface{}{"x": "y"}},
+		Type: MappingTypeLookup, Source: "num",
+		Params:       map[string]interface{}{"table": map[string]interface{}{"x": "y"}},
 		DefaultValue: "dv",
 	}, source)
 	require.NoError(t, err)

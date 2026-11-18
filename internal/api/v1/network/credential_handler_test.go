@@ -31,13 +31,13 @@ func newCredentialTestEnv(t *testing.T) *netTestEnv {
 func seedCredential(t *testing.T, env *netTestEnv, id, name string, protocol models.ProtocolType, isDefault bool) *models.AuthCredential {
 	t.Helper()
 	c := &models.AuthCredential{
-		BaseModel:     models.BaseModel{ID: id},
+		BaseModel:      models.BaseModel{ID: id},
 		CredentialName: name,
-		ProtocolType:  protocol,
-		Username:      "admin",
-		Password:      "enc:secret",
-		SNMPVersion:   "v2c",
-		IsDefault:     isDefault,
+		ProtocolType:   protocol,
+		Username:       "admin",
+		Password:       "enc:secret",
+		SNMPVersion:    "v2c",
+		IsDefault:      isDefault,
 	}
 	require.NoError(t, env.db.Create(c).Error)
 	return c
@@ -360,11 +360,11 @@ func TestCredentialHandler_GetDevicesByCredential(t *testing.T) {
 	t.Run("success_with_devices", func(t *testing.T) {
 		credID := "g1"
 		dev := &models.NetworkDevice{
-			BaseModel:   models.BaseModel{ID: "dev-g1"},
-			DeviceName:  "bound-device",
-			DeviceType:  models.DeviceType("switch"),
-			Vendor:      models.DeviceVendor("huawei"),
-			IPAddress:   "10.4.4.4",
+			BaseModel:    models.BaseModel{ID: "dev-g1"},
+			DeviceName:   "bound-device",
+			DeviceType:   models.DeviceType("switch"),
+			Vendor:       models.DeviceVendor("huawei"),
+			IPAddress:    "10.4.4.4",
 			CredentialID: &credID,
 		}
 		require.NoError(t, env.db.Create(dev).Error)

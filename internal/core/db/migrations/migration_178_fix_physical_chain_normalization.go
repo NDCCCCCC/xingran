@@ -14,10 +14,10 @@ import (
 // 背景:
 //   - migration_175 创建 reconciliation_physical_chain 视图时,JOIN 条件用了字节级
 //     严格比对:
-//       * mac.mac_address ('b022.7a2e.4a4f' Cisco 小写点分) =
-//         a.mac1        ('B0:22:7A:2E:4A:4F' Windows 大写冒号)  ← 永远不匹配
-//       * port.interface_name ('GE2/25' 短名) =
-//         mac.interface_name ('GigabitEthernet 2/25' 长名)    ← 永远不匹配
+//   - mac.mac_address ('b022.7a2e.4a4f' Cisco 小写点分) =
+//     a.mac1        ('B0:22:7A:2E:4A:4F' Windows 大写冒号)  ← 永远不匹配
+//   - port.interface_name ('GE2/25' 短名) =
+//     mac.interface_name ('GigabitEthernet 2/25' 长名)    ← 永远不匹配
 //   - 导致 reconciliation_normalized 物化视图(migration_176 重建)里的
 //     physical_user_id / physical_username 永远是 NULL
 //   - ClassifySignals.hasPhysical 永远 false → 所有设备的 conflict_type 都是
@@ -26,11 +26,11 @@ import (
 //     但 view 是 Phase 45 R5 早期创建,没被同步修复
 //
 // 修复:
-//   1. CREATE OR REPLACE VIEW reconciliation_physical_chain:用 LOWER + REGEXP_REPLACE
-//      把 MAC 归一化到 12 位 hex;interface_name 走 GE/Gi/GigabitEthernet 归一化
-//   2. REFRESH MATERIALIZED VIEW reconciliation_normalized:让 MV 立即重算
-//   3. 同时把 InfoPoint JOIN 也加 port.device_id 防御,避免 port_status 漂移
-//   4. 跑一次 ops_asset_physical 物理化表的 refresh(如有 cron 在维护则跳过)
+//  1. CREATE OR REPLACE VIEW reconciliation_physical_chain:用 LOWER + REGEXP_REPLACE
+//     把 MAC 归一化到 12 位 hex;interface_name 走 GE/Gi/GigabitEthernet 归一化
+//  2. REFRESH MATERIALIZED VIEW reconciliation_normalized:让 MV 立即重算
+//  3. 同时把 InfoPoint JOIN 也加 port.device_id 防御,避免 port_status 漂移
+//  4. 跑一次 ops_asset_physical 物理化表的 refresh(如有 cron 在维护则跳过)
 func Migrate178FixPhysicalChainNormalization(db *gorm.DB) error {
 	log.Println("Running migration 178: Fix reconciliation_physical_chain view normalization + refresh MV")
 

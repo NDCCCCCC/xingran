@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/stretchr/testify/require"
 	"github.com/glebarez/sqlite"
+	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 )
 
@@ -26,7 +26,7 @@ func normalizeIface(s string) string {
 
 // physicalJoin 复刻 service.GetPhysicalDevices 的 Phase 3 v3 逻辑:
 //   - workstation_ports CTE: port.id::text = ip.port_id (无 device_id 严格匹配),
-//                           effective_device_id = ip.device_id
+//     effective_device_id = ip.device_id
 //   - latest_mac JOIN: mac.norm_iface = wp.norm_iface AND mac.device_id = wp.effective_device_id
 //   - ip.device_id 必须在 sys_network_device 存在 (EXISTS 防御)
 //
@@ -240,7 +240,9 @@ func TestGetPhysicalDevices_InvalidDeviceId(t *testing.T) {
 // 验证工位未绑定 user_id 时, 服务不再因 user_id 早退而返回空数组。
 //
 // 修复前: workstation_device_service.go 早退分支 (workstation.UserID == nil)
-//   导致工位未绑定用户时返回 ([]WorkstationDevice{}, nil), 即使端口有 MAC 也"看似空"。
+//
+//	导致工位未绑定用户时返回 ([]WorkstationDevice{}, nil), 即使端口有 MAC 也"看似空"。
+//
 // 修复后: 物理链路是客观事实, 与 user_id 无关, 服务进入物理链路召回。
 //
 // Phase 148 / DIALECT-03 改写：旧版「只建 sys_workstation 表、缺表/PG 语法报错即
@@ -248,8 +250,9 @@ func TestGetPhysicalDevices_InvalidDeviceId(t *testing.T) {
 // 断言**真实结果**：未绑用户仍能召回 1 台、err=nil、字段逐项对齐 PG 版口径。
 //
 // 业务背景:
-//   工位 3f130 信息点绑定了网络端口 CX-WH-WH-04F-FL-RS8607E-01 GE2/6 (有 MAC),
-//   但工位 user_id = NULL。修复前前端"物理链路设备(N 台)"为空;修复后能正常显示。
+//
+//	工位 3f130 信息点绑定了网络端口 CX-WH-WH-04F-FL-RS8607E-01 GE2/6 (有 MAC),
+//	但工位 user_id = NULL。修复前前端"物理链路设备(N 台)"为空;修复后能正常显示。
 func TestGetPhysicalDevices_UserIDEmpty(t *testing.T) {
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	require.NoError(t, err)

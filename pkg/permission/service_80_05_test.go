@@ -71,10 +71,10 @@ func seedMenu8005(t *testing.T, db *gorm.DB, m *models.Menu) string {
 func seedRole8005(t *testing.T, db *gorm.DB, roleName, roleKey string) string {
 	t.Helper()
 	role := models.Role{
-		RoleName: roleName,
-		RoleKey:  roleKey,
+		RoleName:  roleName,
+		RoleKey:   roleKey,
 		DataScope: models.DataScopeAll,
-		Status:   models.RoleStatusEnabled,
+		Status:    models.RoleStatusEnabled,
 	}
 	require.NoError(t, db.Create(&role).Error)
 	return role.ID

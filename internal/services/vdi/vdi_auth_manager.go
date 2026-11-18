@@ -35,7 +35,7 @@ type VDIAuthManager struct {
 // NewVDIAuthManager 创建VDI认证管理器（从数据库模型）
 func NewVDIAuthManager(db *gorm.DB, serverID string, server models.VDIServer) *VDIAuthManager {
 	return &VDIAuthManager{
-		db:         db,
+		db: db,
 		httpClient: &http.Client{
 			Timeout: vdiAuthHTTPTimeout,
 			Transport: &http.Transport{

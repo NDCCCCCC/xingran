@@ -1,14 +1,13 @@
 //go:build archive_skip
 
-
 package migrations
 
 import (
 	"fmt"
 	"log"
 
-	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
+	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"gorm.io/gorm"
 )
 
@@ -24,11 +23,11 @@ import (
 //   - D-11 防告警风暴语义不变:重复采集对同一 (asset, conflict_type, recon_category) 仍只产生 1 条 open。
 //
 // 步骤清单:
-//   1. SQLite 分支:仅 AutoMigrate(由 GORM tag 自动建 4+1 列),跳过 partial unique index。
-//   2. PostgreSQL 分支:ALTER ops_asset ADD 4 列(IF NOT EXISTS) + ALTER sys_data_reconciliation ADD 1 列。
-//   3. 5 个普通 index(4 个 idx_ops_asset_* + 1 个 idx_recon_category)IF NOT EXISTS。
-//   4. 索引切换:DROP uniq_recon_asset_type_open → CREATE uniq_recon_asset_type_cat_open (DO $$ 块幂等)。
-//   5. 字典 seed:dict_type asset_reconciliation_recon_category + 2 条 dict_data(component_serial/future_expansion)。
+//  1. SQLite 分支:仅 AutoMigrate(由 GORM tag 自动建 4+1 列),跳过 partial unique index。
+//  2. PostgreSQL 分支:ALTER ops_asset ADD 4 列(IF NOT EXISTS) + ALTER sys_data_reconciliation ADD 1 列。
+//  3. 5 个普通 index(4 个 idx_ops_asset_* + 1 个 idx_recon_category)IF NOT EXISTS。
+//  4. 索引切换:DROP uniq_recon_asset_type_open → CREATE uniq_recon_asset_type_cat_open (DO $$ 块幂等)。
+//  5. 字典 seed:dict_type asset_reconciliation_recon_category + 2 条 dict_data(component_serial/future_expansion)。
 //
 // 幂等保证:
 //   - 所有 ALTER 用 ADD COLUMN IF NOT EXISTS(PG 9.6+ 支持)

@@ -180,14 +180,14 @@ const (
 	CodeDutyExists   ErrorCode = 9001 // 值班已存在
 
 	// 54000-54999 VDI 桌面云模块
-	CodeVDIServerNotFound  ErrorCode = 54001 // VDI 服务器不存在
-	CodeVDIServerExists    ErrorCode = 54002 // VDI 服务器已存在
-	CodeVDIApiFailed       ErrorCode = 54003 // VDI API 调用失败
-	CodeVDIAuthFailed      ErrorCode = 54004 // VDI 认证失败
-	CodeVDITokenExpired    ErrorCode = 54005 // VDI Token 过期
-	CodeVMNotFound         ErrorCode = 54006 // 虚拟机不存在
-	CodeVMExists           ErrorCode = 54007 // 虚拟机已存在
-	CodeVMOperationFailed  ErrorCode = 54008 // 虚拟机操作失败
+	CodeVDIServerNotFound   ErrorCode = 54001 // VDI 服务器不存在
+	CodeVDIServerExists     ErrorCode = 54002 // VDI 服务器已存在
+	CodeVDIApiFailed        ErrorCode = 54003 // VDI API 调用失败
+	CodeVDIAuthFailed       ErrorCode = 54004 // VDI 认证失败
+	CodeVDITokenExpired     ErrorCode = 54005 // VDI Token 过期
+	CodeVMNotFound          ErrorCode = 54006 // 虚拟机不存在
+	CodeVMExists            ErrorCode = 54007 // 虚拟机已存在
+	CodeVMOperationFailed   ErrorCode = 54008 // 虚拟机操作失败
 	CodeVMInconsistentState ErrorCode = 54009 // 虚拟机状态不一致
 )
 

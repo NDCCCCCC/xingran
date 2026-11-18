@@ -27,14 +27,14 @@ const (
 //     的 TIMESTAMP 历史包袱),因此本模型刻意不写 AfterFind 时区修补。
 type ADLoginHistory struct {
 	ID                   string           `gorm:"type:uuid;primary_key" json:"id"`
-	ComputerID           string           `gorm:"type:uuid;not null" json:"computerId"`                    // 设备ID快照(非外键)
-	ComputerNameSnapshot string           `gorm:"size:255;not null" json:"computerNameSnapshot"`           // 计算机名快照(设备改名后历史可读)
-	ADConfigID           string           `gorm:"type:uuid;not null" json:"adConfigId"`                    // 所属AD配置
-	LoginTime            time.Time        `gorm:"not null" json:"loginTime"`                               // 登录时间(AD lastLogon 值,分区键)
-	DetectedAt           time.Time        `gorm:"not null" json:"detectedAt"`                              // 检测时间(同步时刻)
-	LoginUser            string           `gorm:"size:255" json:"loginUser,omitempty"`                     // 登录用户(description parts[1])
-	IPAddress            string           `gorm:"size:50" json:"ipAddress,omitempty"`                      // IP 地址(description parts[2])
-	EventType            ADLoginEventType `gorm:"size:20;not null" json:"eventType"`                       // initial / login
+	ComputerID           string           `gorm:"type:uuid;not null" json:"computerId"`          // 设备ID快照(非外键)
+	ComputerNameSnapshot string           `gorm:"size:255;not null" json:"computerNameSnapshot"` // 计算机名快照(设备改名后历史可读)
+	ADConfigID           string           `gorm:"type:uuid;not null" json:"adConfigId"`          // 所属AD配置
+	LoginTime            time.Time        `gorm:"not null" json:"loginTime"`                     // 登录时间(AD lastLogon 值,分区键)
+	DetectedAt           time.Time        `gorm:"not null" json:"detectedAt"`                    // 检测时间(同步时刻)
+	LoginUser            string           `gorm:"size:255" json:"loginUser,omitempty"`           // 登录用户(description parts[1])
+	IPAddress            string           `gorm:"size:50" json:"ipAddress,omitempty"`            // IP 地址(description parts[2])
+	EventType            ADLoginEventType `gorm:"size:20;not null" json:"eventType"`             // initial / login
 	CreatedAt            time.Time        `json:"createdAt"`
 }
 

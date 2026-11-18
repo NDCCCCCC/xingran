@@ -2,10 +2,10 @@ package device
 
 import (
 	"fmt"
-	"io/fs"
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"io/fs"
 	"path/filepath"
 	"strings"
 	"testing"

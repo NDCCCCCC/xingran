@@ -175,10 +175,10 @@ func TestWorkstationImport_DeptInferFromUser_Mixed(t *testing.T) {
 		`INSERT INTO sys_user (id, username, nickname, dept_id, status) VALUES ('u3', 'wangwu', '王五', 'ghost-dept', 0)`).Error)
 
 	res := importDeptInferRows(t, db, [][]string{
-		{"W-MIX-1", "研发大楼", "3楼", "不存在的部门名", "张三"},  // 反推 → d2
-		{"W-MIX-2", "研发大楼", "3楼", "不存在的部门名", "李四"},  // 用户无部门 → 空
-		{"W-MIX-3", "研发大楼", "3楼", "不存在的部门名", "王五"},  // 用户脏部门 → 空
-		{"W-MIX-4", "研发大楼", "3楼", "信息技术部", "张三"},    // 显式部门 → d1
+		{"W-MIX-1", "研发大楼", "3楼", "不存在的部门名", "张三"}, // 反推 → d2
+		{"W-MIX-2", "研发大楼", "3楼", "不存在的部门名", "李四"}, // 用户无部门 → 空
+		{"W-MIX-3", "研发大楼", "3楼", "不存在的部门名", "王五"}, // 用户脏部门 → 空
+		{"W-MIX-4", "研发大楼", "3楼", "信息技术部", "张三"},   // 显式部门 → d1
 		{"W-MIX-5", "研发大楼", "3楼", "不存在的部门名", ""},   // 无用户 → 空
 	})
 	assert.Empty(t, res.Errors, "不应有校验错误: %+v", res.Errors)

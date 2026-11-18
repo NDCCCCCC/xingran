@@ -119,14 +119,24 @@ func RegisterCiscoTemplates() {
 	}
 	m[ActionSetAccessVLAN] = renderCiscoSetAccessVlan
 	m[ActionPortBinding] = renderCiscoPortBinding
-	m[TrunkSetNative] = renderRuijieTrunkSetNative         // switchport trunk native vlan（Cisco 原生，锐捷同源）
-	m[TrunkSetAllowed] = renderRuijieTrunkSetAllowed        // switchport trunk allowed vlan add|remove|全量（Cisco 原生）
+	m[TrunkSetNative] = renderRuijieTrunkSetNative   // switchport trunk native vlan（Cisco 原生，锐捷同源）
+	m[TrunkSetAllowed] = renderRuijieTrunkSetAllowed // switchport trunk allowed vlan add|remove|全量（Cisco 原生）
 	// TrunkSetHybrid 不注册：RenderCommand → ErrUnknownAction（vendor 差异契约）
-	m[PortSecEnable] = func(p PortTemplateParams) ([]string, error) { return renderPortSec(p, models.VendorRuijie, PortSecEnable) }
-	m[PortSecDisable] = func(p PortTemplateParams) ([]string, error) { return renderPortSec(p, models.VendorRuijie, PortSecDisable) }
-	m[PortSecMaxMac] = func(p PortTemplateParams) ([]string, error) { return renderPortSec(p, models.VendorRuijie, PortSecMaxMac) }
-	m[PortSecSticky] = func(p PortTemplateParams) ([]string, error) { return renderPortSec(p, models.VendorRuijie, PortSecSticky) }
-	m[PortSecStaticBind] = func(p PortTemplateParams) ([]string, error) { return renderPortSec(p, models.VendorRuijie, PortSecStaticBind) }
+	m[PortSecEnable] = func(p PortTemplateParams) ([]string, error) {
+		return renderPortSec(p, models.VendorRuijie, PortSecEnable)
+	}
+	m[PortSecDisable] = func(p PortTemplateParams) ([]string, error) {
+		return renderPortSec(p, models.VendorRuijie, PortSecDisable)
+	}
+	m[PortSecMaxMac] = func(p PortTemplateParams) ([]string, error) {
+		return renderPortSec(p, models.VendorRuijie, PortSecMaxMac)
+	}
+	m[PortSecSticky] = func(p PortTemplateParams) ([]string, error) {
+		return renderPortSec(p, models.VendorRuijie, PortSecSticky)
+	}
+	m[PortSecStaticBind] = func(p PortTemplateParams) ([]string, error) {
+		return renderPortSec(p, models.VendorRuijie, PortSecStaticBind)
+	}
 }
 
 func init() {

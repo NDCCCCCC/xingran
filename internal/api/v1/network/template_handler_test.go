@@ -28,14 +28,14 @@ func newTemplateTestEnv(t *testing.T) *netTestEnv {
 func seedTemplate(t *testing.T, env *netTestEnv, id, name, code string, isSystem bool, content string) *models.ConfigTemplate {
 	t.Helper()
 	tpl := &models.ConfigTemplate{
-		BaseModel:      models.BaseModel{ID: id},
-		TemplateName:   name,
-		TemplateCode:   code,
-		TemplateType:   models.TemplateTypeConfig,
-		Vendor:         models.DeviceVendor("huawei"),
-		DeviceType:     models.DeviceType("switch"),
+		BaseModel:       models.BaseModel{ID: id},
+		TemplateName:    name,
+		TemplateCode:    code,
+		TemplateType:    models.TemplateTypeConfig,
+		Vendor:          models.DeviceVendor("huawei"),
+		DeviceType:      models.DeviceType("switch"),
 		TemplateContent: content,
-		IsSystem:       isSystem,
+		IsSystem:        isSystem,
 	}
 	require.NoError(t, env.db.Create(tpl).Error)
 	return tpl

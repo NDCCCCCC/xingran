@@ -18,15 +18,19 @@ import (
 //     反查 sys_user.id,这样 MV 可以双源 declared(D-R5-A2-01)。
 //
 // 关键决策:
+//
 //   - 不新建 sys_port_mac 表(sys_device_mac_address 已存 MAC 历史)
+//
 //   - 不新建 sys_workstation_info_point 表(ops_info_points.workstation_id 已建立工位主链路)
+//
 //   - 新建 ops_asset_physical 表:物理链路结果物理化,与 R3 检测引擎测试对齐。
+//
 //   - 普通 VIEW 而非 MATERIALIZED VIEW:
 //
-//   (a) 普通视图在 AutoMigrate 之前 dropDependent 已 CASCADE 清理,
-//       migration_175/176 在 AutoMigrate 之后重建,无 ALTER TYPE 阻塞风险
-//       (参考 memory `gorm-automigrate-blocked-by-matview.md` 教训)
-//   (b) 普通视图零存储开销,数据实时跟随 sys_device_mac_address 等源表变化
+//     (a) 普通视图在 AutoMigrate 之前 dropDependent 已 CASCADE 清理,
+//     migration_175/176 在 AutoMigrate 之后重建,无 ALTER TYPE 阻塞风险
+//     (参考 memory `gorm-automigrate-blocked-by-matview.md` 教训)
+//     (b) 普通视图零存储开销,数据实时跟随 sys_device_mac_address 等源表变化
 //
 // SQLite:
 //   - sys_device_mac_address / ops_info_points / sys_device_port_status 都是 PostgreSQL-only,

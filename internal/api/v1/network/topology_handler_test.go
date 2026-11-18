@@ -21,12 +21,12 @@ import (
 )
 
 type mockFilterRuleService struct {
-	CreateFunc         func(ctx context.Context, req *topology.CreateFilterRuleRequest) (*models.MACFilterRule, error)
-	UpdateFunc         func(ctx context.Context, id string, req *topology.UpdateFilterRuleRequest) error
-	DeleteFunc         func(ctx context.Context, id string) error
-	GetByIDFunc        func(ctx context.Context, id string) (*models.MACFilterRule, error)
-	ListFunc           func(ctx context.Context, params topology.ListFilterRulesParams) (*topology.PageResult, error)
-	GetEffectiveFunc   func(ctx context.Context, device *models.NetworkDevice) (*models.MACFilterRule, error)
+	CreateFunc       func(ctx context.Context, req *topology.CreateFilterRuleRequest) (*models.MACFilterRule, error)
+	UpdateFunc       func(ctx context.Context, id string, req *topology.UpdateFilterRuleRequest) error
+	DeleteFunc       func(ctx context.Context, id string) error
+	GetByIDFunc      func(ctx context.Context, id string) (*models.MACFilterRule, error)
+	ListFunc         func(ctx context.Context, params topology.ListFilterRulesParams) (*topology.PageResult, error)
+	GetEffectiveFunc func(ctx context.Context, device *models.NetworkDevice) (*models.MACFilterRule, error)
 
 	lastCreateReq *topology.CreateFilterRuleRequest
 	lastUpdateID  string

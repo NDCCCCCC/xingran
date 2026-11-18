@@ -64,10 +64,10 @@ type DeviceRef struct {
 // DeviceInfoCollectionService.collectComponentInfo hook's job. Pipeline.Run
 // accepts an already-built ComponentSet and writes its effect.
 type Pipeline struct {
-	db        *gorm.DB
-	assetSvc  AssetLookup
-	operLog   operlog.Recorder
-	emitter   *ReconciliationEmitter
+	db       *gorm.DB
+	assetSvc AssetLookup
+	operLog  operlog.Recorder
+	emitter  *ReconciliationEmitter
 }
 
 // NewPipeline constructs a Pipeline bound to the supplied dependencies.

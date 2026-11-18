@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"github.com/sirupsen/logrus"
+	"github.com/xingran-next/xingran-go-backend/pkg/logger"
 )
 
 const (

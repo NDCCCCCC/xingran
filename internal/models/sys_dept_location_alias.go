@@ -21,7 +21,7 @@ type SysDeptLocationAlias struct {
 	BaseModel
 	DeptID     string `gorm:"type:varchar(64);not null;index:idx_location_id,priority:2" json:"deptId"`     // 原组织部门ID(逻辑部门) — 系统内 sys_dept.id
 	LocationID string `gorm:"type:varchar(64);not null;index:idx_location_id,priority:1" json:"locationId"` // 物理位置部门ID(外部机构) — 工位导入时的归属方
-	Scope      string `gorm:"type:varchar(32);not null;default:'workstation'" json:"scope"`                // 作用范围: workstation / floor / building / ...
+	Scope      string `gorm:"type:varchar(32);not null;default:'workstation'" json:"scope"`                 // 作用范围: workstation / floor / building / ...
 	Remark     string `gorm:"type:varchar(255)" json:"remark,omitempty"`                                    // 备注
 }
 

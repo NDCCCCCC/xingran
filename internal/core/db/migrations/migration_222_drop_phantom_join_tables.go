@@ -40,10 +40,10 @@ func Migrate222DropPhantomJoinTables(db *gorm.DB) error {
 	log.Println("Running migration 222: drop phantom join tables")
 
 	phantomTables := []string{
-		"user_posts",           // → sys_user_post
-		"user_roles",           // → sys_user_role
-		"role_menus",           // → sys_role_menu
-		"role_depts",           // → sys_role_dept
+		"user_posts",             // → sys_user_post
+		"user_roles",             // → sys_user_role
+		"role_menus",             // → sys_role_menu
+		"role_depts",             // → sys_role_dept
 		"sys_dept_group_mapping", // 已下线「部门-用户组映射」功能的遗留表
 	}
 

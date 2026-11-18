@@ -135,7 +135,7 @@ func TestPublicKeyConsistency(t *testing.T) {
 	defer resp2.Body.Close()
 
 	var pubKeyResp1, pubKeyResp2 struct {
-		Code int    `json:"code"`
+		Code int `json:"code"`
 		Data struct {
 			PublicKey string `json:"publicKey"`
 		} `json:"data"`

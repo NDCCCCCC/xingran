@@ -22,9 +22,9 @@ import (
 
 // API 路径常量
 const (
-	APIPathHeartbeat   = "/api/v1/agent/heartbeat"
-	APIPathStatus      = "/api/v1/agent/status"
-	APIPathRegister    = "/api/v1/vdi/agent/register"
+	APIPathHeartbeat    = "/api/v1/agent/heartbeat"
+	APIPathStatus       = "/api/v1/agent/status"
+	APIPathRegister     = "/api/v1/vdi/agent/register"
 	APIPathTokenRefresh = "/api/v1/agent/refresh"
 )
 
@@ -40,15 +40,15 @@ const (
 
 // JWTAuthenticator JWT 认证管理器
 type JWTAuthenticator struct {
-	secret         string
-	tokenExpiry    time.Duration
-	backendURL     string
-	agentID        string
-	vmID           string
-	httpClient     *http.Client
-	mu             sync.RWMutex
-	currentToken   string
-	tokenExpiryAt  time.Time
+	secret        string
+	tokenExpiry   time.Duration
+	backendURL    string
+	agentID       string
+	vmID          string
+	httpClient    *http.Client
+	mu            sync.RWMutex
+	currentToken  string
+	tokenExpiryAt time.Time
 }
 
 // jwtClaims JWT 声明
@@ -63,17 +63,17 @@ func NewJWTAuthenticator(secret, backendURL, agentID, vmID string, tlsConfig *tl
 	// 如果未提供 TLS 配置，使用安全的默认值
 	if tlsConfig == nil {
 		tlsConfig = &tls.Config{
-			MinVersion: tls.VersionTLS13,  // 强制 TLS 1.3
+			MinVersion: tls.VersionTLS13, // 强制 TLS 1.3
 			// InsecureSkipVerify 默认为 false，不设置
 		}
 	}
 
 	return &JWTAuthenticator{
-		secret:       secret,
-		backendURL:   strings.TrimSuffix(backendURL, "/"),
-		tokenExpiry:  defaultTokenExpiry,
-		agentID:      agentID,
-		vmID:         vmID,
+		secret:      secret,
+		backendURL:  strings.TrimSuffix(backendURL, "/"),
+		tokenExpiry: defaultTokenExpiry,
+		agentID:     agentID,
+		vmID:        vmID,
 		httpClient: &http.Client{
 			Timeout: 30 * time.Second,
 			Transport: &http.Transport{
@@ -309,9 +309,9 @@ func (a *JWTAuthenticator) CallBackend(ctx context.Context, method, path string,
 // SendHeartbeat 发送心跳
 func (a *JWTAuthenticator) SendHeartbeat(ctx context.Context) error {
 	heartbeatData := map[string]interface{}{
-		"agent_id": a.agentID,
-		"vm_id":    a.vmID,
-		"status":   "healthy",
+		"agent_id":  a.agentID,
+		"vm_id":     a.vmID,
+		"status":    "healthy",
 		"timestamp": time.Now().Unix(),
 	}
 

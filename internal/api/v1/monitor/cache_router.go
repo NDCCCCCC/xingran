@@ -345,9 +345,9 @@ func SetupCacheRouter(r *gin.RouterGroup, core *core.Core) {
 
 	// ==================== 增强缓存管理路由 ====================
 	enhancedCacheHandler := NewCacheEnhancedHandler(core)
-	r.POST("/cache/stats", middleware.RequirePermissions(cacheRead, core), enhancedCacheHandler.GetCacheStats)                    // 获取缓存统计信息
+	r.POST("/cache/stats", middleware.RequirePermissions(cacheRead, core), enhancedCacheHandler.GetCacheStats)                           // 获取缓存统计信息
 	r.POST("/cache/invalidate", middleware.RequireStrictPermissions(cacheClean, core), enhancedCacheHandler.InvalidateByModule)          // 按模块清除缓存
 	r.POST("/cache/invalidate-pattern", middleware.RequireStrictPermissions(cacheClean, core), enhancedCacheHandler.InvalidateByPattern) // 按模式清除缓存
 	r.POST("/cache/warmup", middleware.RequireStrictPermissions(cacheClean, core), enhancedCacheHandler.WarmUpCache)                     // 执行缓存预热
-	r.POST("/cache/key-info", middleware.RequirePermissions(cacheRead, core), enhancedCacheHandler.GetKeyInfo)                    // 获取缓存键信息
+	r.POST("/cache/key-info", middleware.RequirePermissions(cacheRead, core), enhancedCacheHandler.GetKeyInfo)                           // 获取缓存键信息
 }

@@ -124,9 +124,13 @@ func (m *mockDeviceCacheService) GetDevicesByCredential(ctx context.Context, cre
 	return nil, nil
 }
 
-func (m *mockDeviceCacheService) InvalidateDeviceCache(ctx context.Context, deviceID string) error { return nil }
-func (m *mockDeviceCacheService) InvalidateStatisticsCache(ctx context.Context) error             { return nil }
-func (m *mockDeviceCacheService) InvalidateDeptCache(ctx context.Context, deptID string) error     { return nil }
+func (m *mockDeviceCacheService) InvalidateDeviceCache(ctx context.Context, deviceID string) error {
+	return nil
+}
+func (m *mockDeviceCacheService) InvalidateStatisticsCache(ctx context.Context) error { return nil }
+func (m *mockDeviceCacheService) InvalidateDeptCache(ctx context.Context, deptID string) error {
+	return nil
+}
 func (m *mockDeviceCacheService) InvalidateCredentialCache(ctx context.Context, credentialID string) error {
 	return nil
 }

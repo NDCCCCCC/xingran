@@ -362,7 +362,7 @@ func TestReconciliationService_GetByWorkstationCache(t *testing.T) {
 
 // TestReconciliationService_DirtyCacheSelfHeal Phase 103 CONV-02 (WR-04 锁):
 // 缓存命中但 Workstation.ID 为空（脏条目）→ 回源重建 + 失效脏键自愈
-//（等价原实现 compute 后 Set 覆写语义），TTL 窗口内不重复重算。
+// （等价原实现 compute 后 Set 覆写语义），TTL 窗口内不重复重算。
 func TestReconciliationService_DirtyCacheSelfHeal(t *testing.T) {
 	db := newGapTestDB(t)
 	seedWorkstationHealth(t, db)

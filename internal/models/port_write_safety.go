@@ -18,11 +18,11 @@ import (
 //   - rolled_back 下发失败，回滚命令执行成功
 //   - rollback_failed 下发失败且回滚也失败 —— 显式告警状态，不允许静默
 type PortWriteSnapshot struct {
-	ID          string `gorm:"type:uuid;primary_key" json:"id"`
-	PortID      string `gorm:"type:uuid;not null;index" json:"portId"`
-	DeviceID    string `gorm:"type:uuid;not null;index" json:"deviceId"`
+	ID            string `gorm:"type:uuid;primary_key" json:"id"`
+	PortID        string `gorm:"type:uuid;not null;index" json:"portId"`
+	DeviceID      string `gorm:"type:uuid;not null;index" json:"deviceId"`
 	InterfaceName string `gorm:"size:100" json:"interfaceName,omitempty"`
-	Action      string `gorm:"size:50;not null" json:"action"`
+	Action        string `gorm:"size:50;not null" json:"action"`
 	// BeforeState 端口下发前状态 JSON（adminStatus/description/vlan/dot1xEnabled）
 	BeforeState string `gorm:"type:text" json:"beforeState"`
 	// RollbackCommands 预生成的逆序回滚命令 JSON（[]string）
@@ -54,8 +54,8 @@ func (p *PortWriteSnapshot) BeforeCreate(tx *gorm.DB) error {
 // 与内存锁双层：内存锁覆盖单实例并发，DB 行跨实例互斥。锁带 expires_at TTL，
 // 进程重启不残留（过期行在 Acquire 时先清理），crash 后 TTL 自然释放。
 type PortWriteLock struct {
-	PortID    string `gorm:"type:uuid;primary_key" json:"portId"`
-	Holder    string `gorm:"size:100;not null" json:"holder"`
+	PortID    string    `gorm:"type:uuid;primary_key" json:"portId"`
+	Holder    string    `gorm:"size:100;not null" json:"holder"`
 	ExpiresAt time.Time `gorm:"not null;index" json:"expiresAt"`
 	CreatedAt time.Time `json:"createdAt"`
 }

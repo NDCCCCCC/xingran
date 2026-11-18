@@ -11,15 +11,15 @@ import "time"
 // 字段使用 camelCase JSON tag，与前端「发现结果」表格列
 // （ipAddress / deviceName / vendor / model / deviceType）对齐。
 type DeviceDiscoveryResult struct {
-	ID          string    `gorm:"type:uuid;primary_key" json:"id"`
-	DiscoveryID string    `gorm:"type:uuid;not null;index:idx_ddr_discovery_id" json:"discoveryId"`
-	IPAddress   string    `gorm:"size:64" json:"ipAddress"`
-	DeviceType  string    `gorm:"size:64" json:"deviceType"`
-	Vendor      string    `gorm:"size:128" json:"vendor"`
-	Model       string    `gorm:"size:128" json:"model"`
-	SysName     string    `gorm:"size:255" json:"deviceName"`
-	SysDescr    string    `gorm:"type:text" json:"sysDescr"`
-	IsAlive     bool      `gorm:"default:true" json:"isAlive"`
+	ID          string `gorm:"type:uuid;primary_key" json:"id"`
+	DiscoveryID string `gorm:"type:uuid;not null;index:idx_ddr_discovery_id" json:"discoveryId"`
+	IPAddress   string `gorm:"size:64" json:"ipAddress"`
+	DeviceType  string `gorm:"size:64" json:"deviceType"`
+	Vendor      string `gorm:"size:128" json:"vendor"`
+	Model       string `gorm:"size:128" json:"model"`
+	SysName     string `gorm:"size:255" json:"deviceName"`
+	SysDescr    string `gorm:"type:text" json:"sysDescr"`
+	IsAlive     bool   `gorm:"default:true" json:"isAlive"`
 	// Seq 保留设备在本次发现结果中的原始顺序，避免批量插入后因随机 UUID 主键
 	// 导致查询顺序不确定（Phase 137 / FIX-07）。
 	Seq       int       `gorm:"default:0" json:"seq"`

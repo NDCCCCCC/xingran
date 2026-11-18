@@ -306,7 +306,7 @@ func TestRoleHandler_GetByID_Success(t *testing.T) {
 	w := doJSON(t, h.GetByID, "POST", "/system/roles/"+id, nil, map[string]string{"id": id})
 	assert.Equal(t, http.StatusOK, w.Code)
 	var resp struct {
-		Code int `json:"code"`
+		Code int         `json:"code"`
 		Data models.Role `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
@@ -561,7 +561,7 @@ func TestRoleHandler_GetAllEnabled(t *testing.T) {
 	w := doJSON(t, h.GetAllEnabled, "POST", "/system/roles/all", nil, nil)
 	assert.Equal(t, http.StatusOK, w.Code)
 	var resp struct {
-		Code int `json:"code"`
+		Code int                      `json:"code"`
 		Data []map[string]interface{} `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
@@ -583,7 +583,7 @@ func TestRoleHandler_GetAllEnabled_Empty(t *testing.T) {
 	w := doJSON(t, h.GetAllEnabled, "POST", "/system/roles/all", nil, nil)
 	assert.Equal(t, http.StatusOK, w.Code)
 	var resp struct {
-		Code int `json:"code"`
+		Code int                      `json:"code"`
 		Data []map[string]interface{} `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
@@ -743,7 +743,7 @@ func TestRoleHandler_GetAllEnabled_SimplifiedFields(t *testing.T) {
 	w := doJSON(t, h.GetAllEnabled, "POST", "/system/roles/all", nil, nil)
 	require.Equal(t, http.StatusOK, w.Code)
 	var resp struct {
-		Code int `json:"code"`
+		Code int                      `json:"code"`
 		Data []map[string]interface{} `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))

@@ -1,6 +1,5 @@
 //go:build archive_skip
 
-
 package migrations
 
 import (
@@ -22,9 +21,9 @@ func Migrate141VDICPUFields(db *gorm.DB) error {
 
 	// Add new columns for detailed CPU information
 	newColumns := []struct {
-		name     string
-		colType  string
-		comment  string
+		name    string
+		colType string
+		comment string
 	}{
 		{"cpu_number", "int", "CPU颗数"},
 		{"cpu_core", "int", "每颗CPU的核数"},
@@ -106,27 +105,27 @@ func Rollback141VDICPUFields(db *gorm.DB) error {
 // VDIVirtualMachine temporary model definition for migration
 type VDIVirtualMachine struct {
 	gorm.Model
-	VMID          string    `gorm:"type:varchar(100);uniqueIndex;not null"`
-	Name          string    `gorm:"type:varchar(200);not null"`
-	ResourceID    string    `gorm:"type:varchar(100);index"`
-	Status        int       `gorm:"type:int;default:0"`
-	PowerState    string    `gorm:"type:varchar(50)"`
-	IPAddress     string    `gorm:"type:varchar(50)"`
-	MACAddress    string    `gorm:"type:varchar(50)"`
-	OSType        string    `gorm:"type:varchar(50)"`
-	CPU           int       `gorm:"type:int"`              // Legacy field
-	CPUNumber     int       `gorm:"type:int"`              // CPU颗数
-	CPUCore       int       `gorm:"type:int"`              // 每颗CPU的核数
-	CPUPer        int       `gorm:"type:int"`              // CPU使用率
-	Memory        int       `gorm:"type:int"`
-	MemoryPer     int       `gorm:"type:int"`              // 内存使用率
-	Disk          int       `gorm:"type:int"`
-	DiskPer       int       `gorm:"type:int"`              // 磁盘使用率
-	BoundUserID   *string   `gorm:"type:varchar(100)"`
-	BoundUserName *string   `gorm:"type:varchar(200)"`
-	PolicyGroupID *string   `gorm:"type:varchar(100)"`
+	VMID          string  `gorm:"type:varchar(100);uniqueIndex;not null"`
+	Name          string  `gorm:"type:varchar(200);not null"`
+	ResourceID    string  `gorm:"type:varchar(100);index"`
+	Status        int     `gorm:"type:int;default:0"`
+	PowerState    string  `gorm:"type:varchar(50)"`
+	IPAddress     string  `gorm:"type:varchar(50)"`
+	MACAddress    string  `gorm:"type:varchar(50)"`
+	OSType        string  `gorm:"type:varchar(50)"`
+	CPU           int     `gorm:"type:int"` // Legacy field
+	CPUNumber     int     `gorm:"type:int"` // CPU颗数
+	CPUCore       int     `gorm:"type:int"` // 每颗CPU的核数
+	CPUPer        int     `gorm:"type:int"` // CPU使用率
+	Memory        int     `gorm:"type:int"`
+	MemoryPer     int     `gorm:"type:int"` // 内存使用率
+	Disk          int     `gorm:"type:int"`
+	DiskPer       int     `gorm:"type:int"` // 磁盘使用率
+	BoundUserID   *string `gorm:"type:varchar(100)"`
+	BoundUserName *string `gorm:"type:varchar(200)"`
+	PolicyGroupID *string `gorm:"type:varchar(100)"`
 	LastSyncAt    *time.Time
-	VdiServerID   string    `gorm:"type:varchar(100);index;not null"`
+	VdiServerID   string `gorm:"type:varchar(100);index;not null"`
 }
 
 // TableName 指定表名

@@ -18,13 +18,13 @@ import (
 //     (ROADMAP SC 7)。需要在 MV 上 LEFT JOIN LATERAL 取最近一条已解决记录
 //   - LEFT JOIN LATERAL 语法来自 D-A3-01 specifics 锁定:
 //     LEFT JOIN LATERAL (
-//         SELECT resolved_at, resolved_by, conflict_type
-//         FROM sys_data_reconciliation r
-//         WHERE r.asset_id = a.id
-//           AND r.resolved_at IS NOT NULL
-//           AND r.deleted_at IS NULL
-//         ORDER BY r.resolved_at DESC
-//         LIMIT 1
+//     SELECT resolved_at, resolved_by, conflict_type
+//     FROM sys_data_reconciliation r
+//     WHERE r.asset_id = a.id
+//     AND r.resolved_at IS NOT NULL
+//     AND r.deleted_at IS NULL
+//     ORDER BY r.resolved_at DESC
+//     LIMIT 1
 //     ) last_resolved ON true
 //
 // 与 dropDependentMaterializedViews 的关系:
@@ -50,11 +50,13 @@ import (
 //     — 为简化,本 migration 在 CREATE UNIQUE INDEX 之后重建此辅助索引
 //
 // SQLite 兼容:
+//
 //   - SQLite 不支持 MATERIALIZED VIEW,DROP/CREATE 会语法错误
+//
 //   - 仅 PostgreSQL 执行 MV 部分(SQLite 跳过);测试场景 setupTestDB 在
 //     internal/services/asset/reconciliation_test.go 已用 view 模拟,
 //
-//	本 migration 不影响 SQLite 测试路径
+//     本 migration 不影响 SQLite 测试路径
 func Migrate173ReconciliationSilenceMV(db *gorm.DB) error {
 	log.Println("Running migration 173: Phase 43 R2 reconciliation_normalized MV + last_resolved_* 字段")
 

@@ -24,7 +24,7 @@ func TestCacheKeyEquivalence(t *testing.T) {
 	constantCases := []struct {
 		name string // 常量名
 		want string // 原字面量快照
-		got string // 被测常量值
+		got  string // 被测常量值
 	}{
 		// notice
 		{"CacheKeyNoticeMyNotices", "notice:my_notices", CacheKeyNoticeMyNotices},

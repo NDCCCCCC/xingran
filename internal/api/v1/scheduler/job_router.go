@@ -17,6 +17,7 @@ import (
 //     start/stop 语义共用 edit 码，避免一端点双码歧义）
 //   - 删除/清空日志 → strict(monitor:job:remove)
 //   - 立即执行 → strict(monitor:job:run)
+//
 // 端点级中间件（对齐 vdi/vm_router.go 先例）；monitor:job:start/stop/export 码
 // 当前无独立端点，保持定义 + F 型播种为后续拆分预留。
 func SetupJobRouter(r *gin.RouterGroup, core *core.Core) {

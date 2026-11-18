@@ -11,6 +11,7 @@ import (
 // Migrate199FixSuggestionUniqueIndex Phase 46 R5: 修复建议 partial unique index
 //
 // 业务背景:
+//
 //   - D-B3: 1 对多版本化 — 同一 exception_id 可有多条历史建议
 //     (新建版本不删旧版本,旧版本 superseded_at 标记)
 //

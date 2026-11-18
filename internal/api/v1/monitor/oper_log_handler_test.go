@@ -11,10 +11,10 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/glebarez/sqlite"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 
 	"github.com/xingran-next/xingran-go-backend/internal/core"
@@ -105,8 +105,8 @@ func TestOperLog_List_Seeded(t *testing.T) {
 	mock := &mockOperLogService{
 		ListFunc: func(ctx context.Context, params monitorServices.OperLogListParams) (*monitorServices.PageResult, error) {
 			return &monitorServices.PageResult{
-				List:     []models.OperLog{{Title: "user module"}, {Title: "role module"}},
-				Total:    2, Current: 1, PageSize: 10,
+				List:  []models.OperLog{{Title: "user module"}, {Title: "role module"}},
+				Total: 2, Current: 1, PageSize: 10,
 			}, nil
 		},
 	}

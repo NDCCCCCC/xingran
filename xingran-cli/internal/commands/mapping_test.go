@@ -7,11 +7,11 @@ import (
 
 func TestMapEndpoint(t *testing.T) {
 	cases := []struct {
-		method, path                      string
-		wantModule                        string
-		wantRes                           []string
-		wantAction                        string
-		wantArgs                          int
+		method, path string
+		wantModule   string
+		wantRes      []string
+		wantAction   string
+		wantArgs     int
 	}{
 		{"POST", "/system/users/list", "system", []string{"user"}, "list", 0},
 		{"POST", "/system/users", "system", []string{"user"}, "create", 0},

@@ -142,9 +142,9 @@ func TestExcelService_ImportBuilding_Errors(t *testing.T) {
 	longRemark := strings.Repeat("长", 600)
 	rows := [][]string{
 		{"楼宇名称", "地址", "所属机构名称/编码", "层级", "状态", "备注"},
-		{"", "x", "D1", "", "", ""},        // 缺楼宇名称
+		{"", "x", "D1", "", "", ""},             // 缺楼宇名称
 		{"超长备注楼", "", "D1", "", "", longRemark}, // MaxLength 500 超限
-		{"幽灵机构楼", "", "NOPE", "", "", ""},  // 引用解析失败
+		{"幽灵机构楼", "", "NOPE", "", "", ""},       // 引用解析失败
 	}
 	result, err := svc.ImportData(ctx, "building", xlsxFileHeader(t, buildTestXLSX(t, "楼宇列表", rows), "bad.xlsx"), "u1")
 	require.NoError(t, err)
@@ -335,7 +335,7 @@ func TestExcelService_GeocodingHook(t *testing.T) {
 		{"address": ""},
 		{"address": "地址乙"}, // 走 fallback
 		{"address": "地址丁", "longitude": 1.0, "latitude": 2.0}, // 已有坐标跳过
-		{"address": "地址丙"}, // 解析失败
+		{"address": "地址丙"},                                    // 解析失败
 		{"name": "no-address"},
 	}
 	svc.batchGeocodeBuildings(ctx, records)
@@ -376,9 +376,9 @@ func TestExcelService_PostImportPrimaryDeviceHook(t *testing.T) {
 
 	ctx := context.Background()
 	records := []map[string]any{
-		{"name": "W1"},                                        // 无序列号 → 跳过
-		{"deviceSerial": "SN1", "floor_id": floorID, "name": "W1"}, // 成功
-		{"deviceSerial": "SN2", "floor_id": "", "name": ""},       // 缺定位信息
+		{"name": "W1"}, // 无序列号 → 跳过
+		{"deviceSerial": "SN1", "floor_id": floorID, "name": "W1"},    // 成功
+		{"deviceSerial": "SN2", "floor_id": "", "name": ""},           // 缺定位信息
 		{"deviceSerial": "SN3", "floor_id": floorID, "name": "ghost"}, // 工位未找到
 		{"deviceSerial": "SN4", "floor_id": floorID, "name": "W1"},    // 设备同步失败
 	}

@@ -55,17 +55,17 @@ func closedPort78(t *testing.T) int {
 func dummyConfig(port int) *models.ADConfig {
 	return &models.ADConfig{
 		ServerAddress: "127.0.0.1",
-		ServerPort:   port,
-		BaseDN:       "DC=example,DC=com",
-		DomainName:   "example.com",
+		ServerPort:    port,
+		BaseDN:        "DC=example,DC=com",
+		DomainName:    "example.com",
 		AdminUsername: "admin",
 		AdminPassword: "admin_password",
-		UseSSL:       false,
-		UseTLS:       false,
-		SyncEnabled:  true,
-		SyncInterval: 10,
-		Status:       models.ADConfigStatusEnabled,
-		MemberOUDN:   "OU=Users,DC=example,DC=com",
+		UseSSL:        false,
+		UseTLS:        false,
+		SyncEnabled:   true,
+		SyncInterval:  10,
+		Status:        models.ADConfigStatusEnabled,
+		MemberOUDN:    "OU=Users,DC=example,DC=com",
 	}
 }
 
@@ -299,11 +299,11 @@ func TestLC78_DialConnection_SSL_HandshakeFail(t *testing.T) {
 		// Windows: connect-ex 拒绝; Linux: TLS 握手失败
 		assert.True(t,
 			strings.Contains(errStr, "handshake") ||
-			strings.Contains(errStr, "tls") ||
-			strings.Contains(errStr, "first record") ||
-			strings.Contains(errStr, "refused") ||
-			strings.Contains(errStr, "connection refused") ||
-			strings.Contains(errStr, "No connection could be made"),
+				strings.Contains(errStr, "tls") ||
+				strings.Contains(errStr, "first record") ||
+				strings.Contains(errStr, "refused") ||
+				strings.Contains(errStr, "connection refused") ||
+				strings.Contains(errStr, "No connection could be made"),
 			"expect network or TLS error, got: %v", err)
 	}
 }
@@ -335,11 +335,11 @@ func TestLC78_DialConnection_TLS_StartTLSFail(t *testing.T) {
 		errStr := err.Error()
 		assert.True(t,
 			strings.Contains(errStr, "StartTLS") ||
-			strings.Contains(errStr, "extension") ||
-			strings.Contains(errStr, "first record") ||
-			strings.Contains(errStr, "refused") ||
-			strings.Contains(errStr, "connection refused") ||
-			strings.Contains(errStr, "No connection could be made"),
+				strings.Contains(errStr, "extension") ||
+				strings.Contains(errStr, "first record") ||
+				strings.Contains(errStr, "refused") ||
+				strings.Contains(errStr, "connection refused") ||
+				strings.Contains(errStr, "No connection could be made"),
 			"expect network or StartTLS error, got: %v", err)
 	}
 }

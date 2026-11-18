@@ -16,22 +16,23 @@ import (
 // 返回: PortClassification 端口分类结果
 //
 // 分类逻辑:
-//   1. 如果存在LLDP邻居 → IsUplink=true, Reason=lldp_neighbor
-//   2. 否则如果MAC数量超过阈值 → IsUplink=true, Reason=mac_threshold
-//   3. 否则 → IsUplink=false, Reason=access
+//  1. 如果存在LLDP邻居 → IsUplink=true, Reason=lldp_neighbor
+//  2. 否则如果MAC数量超过阈值 → IsUplink=true, Reason=mac_threshold
+//  3. 否则 → IsUplink=false, Reason=access
 //
 // 示例:
-//   // 存在LLDP邻居的上行端口
-//   result := ClassifyPort("GigabitEthernet0/1", lldpNeighbors, 150, 10)
-//   // result.IsUplink=true, Reason=lldp_neighbor
 //
-//   // MAC数量超阈值的端口
-//   result := ClassifyPort("GigabitEthernet0/2", lldpNeighbors, 50, 10)
-//   // result.IsUplink=true, Reason=mac_threshold
+//	// 存在LLDP邻居的上行端口
+//	result := ClassifyPort("GigabitEthernet0/1", lldpNeighbors, 150, 10)
+//	// result.IsUplink=true, Reason=lldp_neighbor
 //
-//   // 普通接入端口
-//   result := ClassifyPort("GigabitEthernet0/3", lldpNeighbors, 2, 10)
-//   // result.IsUplink=false, Reason=access
+//	// MAC数量超阈值的端口
+//	result := ClassifyPort("GigabitEthernet0/2", lldpNeighbors, 50, 10)
+//	// result.IsUplink=true, Reason=mac_threshold
+//
+//	// 普通接入端口
+//	result := ClassifyPort("GigabitEthernet0/3", lldpNeighbors, 2, 10)
+//	// result.IsUplink=false, Reason=access
 func ClassifyPort(
 	interfaceName string,
 	lldpNeighbors map[string]*models.LLDPNeighborInfo,

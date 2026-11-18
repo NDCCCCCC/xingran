@@ -26,15 +26,15 @@ var _ rpa.ExecutionService = (*mockExecutionService)(nil)
 type mockExecutionService struct {
 	rpa.ExecutionService
 
-	CreateFunc         func(ctx context.Context, taskID, taskName, triggeredBy string) (*rpamodels.Execution, error)
-	UpdateFunc         func(ctx context.Context, id string, updates map[string]interface{}) error
-	UpdateProgressFunc func(ctx context.Context, id string, current, total int, message string) error
-	AddLogFunc         func(ctx context.Context, id string, log string) error
-	CancelFunc         func(ctx context.Context, id string) error
-	ListFunc           func(ctx context.Context, params *rpa.ExecutionListParams) (*rpa.PageResult, error)
-	GetByIDFunc        func(ctx context.Context, id string) (*rpamodels.Execution, error)
+	CreateFunc          func(ctx context.Context, taskID, taskName, triggeredBy string) (*rpamodels.Execution, error)
+	UpdateFunc          func(ctx context.Context, id string, updates map[string]interface{}) error
+	UpdateProgressFunc  func(ctx context.Context, id string, current, total int, message string) error
+	AddLogFunc          func(ctx context.Context, id string, log string) error
+	CancelFunc          func(ctx context.Context, id string) error
+	ListFunc            func(ctx context.Context, params *rpa.ExecutionListParams) (*rpa.PageResult, error)
+	GetByIDFunc         func(ctx context.Context, id string) (*rpamodels.Execution, error)
 	PublishProgressFunc func(ctx context.Context, update *rpa.ProgressUpdate) error
-	StatisticsFunc     func(ctx context.Context) (*rpa.ExecutionStatisticsResult, error)
+	StatisticsFunc      func(ctx context.Context) (*rpa.ExecutionStatisticsResult, error)
 }
 
 func (m *mockExecutionService) Create(ctx context.Context, taskID, taskName, triggeredBy string) (*rpamodels.Execution, error) {

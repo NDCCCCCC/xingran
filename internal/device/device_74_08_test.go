@@ -268,11 +268,11 @@ func TestCountPhysicalEntitiesByClass(t *testing.T) {
 
 func TestGetEntityAttrs(t *testing.T) {
 	stub := &stubGetter{values: map[string]interface{}{
-		OidEntPhysicalSerialNum + ".5":     []byte(" SN-001 "),
-		OidEntPhysicalModelName + ".5":     "S5735-L48T4X-A",
-		OidEntPhysicalName + ".5":          "Board 5",
-		OidEntPhysicalClass + ".5":         int64(3),
-		OidEntPhysicalContainedIn + ".5":   int32(1),
+		OidEntPhysicalSerialNum + ".5":   []byte(" SN-001 "),
+		OidEntPhysicalModelName + ".5":   "S5735-L48T4X-A",
+		OidEntPhysicalName + ".5":        "Board 5",
+		OidEntPhysicalClass + ".5":       int64(3),
+		OidEntPhysicalContainedIn + ".5": int32(1),
 	}}
 	a, err := GetEntityAttrs(stub, 5)
 	require.NoError(t, err)

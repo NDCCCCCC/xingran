@@ -12,29 +12,29 @@ import (
 
 // HealthServer HTTP health check server
 type HealthServer struct {
-	worker   *Worker
-	server   *http.Server
-	logger   logger.Logger
+	worker *Worker
+	server *http.Server
+	logger logger.Logger
 }
 
 // HealthResponse Health check response
 type HealthResponse struct {
-	Status    string    `json:"status"`
-	WorkerID  string    `json:"worker_id"`
-	WorkerName string   `json:"worker_name"`
-	State     string    `json:"state"`
-	Timestamp time.Time `json:"timestamp"`
-	Uptime    string    `json:"uptime"`
-	Stats     WorkerStats `json:"stats"`
+	Status     string      `json:"status"`
+	WorkerID   string      `json:"worker_id"`
+	WorkerName string      `json:"worker_name"`
+	State      string      `json:"state"`
+	Timestamp  time.Time   `json:"timestamp"`
+	Uptime     string      `json:"uptime"`
+	Stats      WorkerStats `json:"stats"`
 }
 
 // WorkerStats Worker statistics
 type WorkerStats struct {
-	CurrentTasks  int `json:"current_tasks"`
-	MaxConcurrency int `json:"max_concurrency"`
-	TasksReceived int64 `json:"tasks_received"`
+	CurrentTasks   int   `json:"current_tasks"`
+	MaxConcurrency int   `json:"max_concurrency"`
+	TasksReceived  int64 `json:"tasks_received"`
 	TasksCompleted int64 `json:"tasks_completed"`
-	TasksFailed int64 `json:"tasks_failed"`
+	TasksFailed    int64 `json:"tasks_failed"`
 }
 
 // NewHealthServer Create health check server

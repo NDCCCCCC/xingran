@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/sirupsen/logrus"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/internal/services"
 	"github.com/xingran-next/xingran-go-backend/internal/services/system"
@@ -16,7 +17,6 @@ import (
 	"github.com/xingran-next/xingran-go-backend/internal/websocket"
 	"github.com/xingran-next/xingran-go-backend/pkg/cache"
 	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
-	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 )
 
@@ -111,9 +111,9 @@ const sysNoticePrefix = "[asset_reconciliation_critical]"
 //   - 由 sys_config:asset.reconciliation.workorder.assignee_role_map JSONB 字符串反序列化
 //
 // 反查流程:
-//   1. GetTemplate(conflictType) → AssigneeRoleKey(如 "asset_owner")
-//   2. roleMap["asset_owner"] → role_id(uuid 字符串)
-//   3. INNER JOIN sys_user_role ON ur.user_id=sys_user.id WHERE ur.role_id=? AND sys_user.status=0 LIMIT 1 → assigneeID
+//  1. GetTemplate(conflictType) → AssigneeRoleKey(如 "asset_owner")
+//  2. roleMap["asset_owner"] → role_id(uuid 字符串)
+//  3. INNER JOIN sys_user_role ON ur.user_id=sys_user.id WHERE ur.role_id=? AND sys_user.status=0 LIMIT 1 → assigneeID
 //
 // 软失败:JSONB 缺失或解析失败时,AssigneeID 为 nil,工单仍创建,等待人工分配。
 type AssigneeRoleMap map[string]string
@@ -140,6 +140,7 @@ type AssigneeRoleMap map[string]string
 //  7. title=fmt.Sprintf("[资产对账·%s类] 资产 %s (%s) %s",conflictType,asset_code,severity,detectedAt)
 //  8. description=descLines+"\n\n【原始数据】\n"+raw_snapshot+"\n\n## SLA: "+slaMin+"m"
 //  9. SELECT sys_user WHERE username='system' → systemSubmitterID
+//
 // 10. workorder.NewBaseService(s.db).Create(ctx,&CreateRequest{...}, systemSubmitterID)
 // 11. 失败 logrus.Errorf,return nil,err(D-A1-03 不写 SysNotice)
 // 12. 成功 s.db.Model(&rec).Update("workorder_id",wo.ID)
@@ -329,7 +330,8 @@ func (s *ReconciliationWorkorderService) CreateWorkorderFromException(ctx contex
 //   - detected_at: RFC3339
 //
 // 注意:NoticeHub.BroadcastToAll 内部 channel 有缓冲(256),不会阻塞调用方;
-//       仅在 hub 已关闭时 select panic(罕见,启动期 race)。
+//
+//	仅在 hub 已关闭时 select panic(罕见,启动期 race)。
 func (s *ReconciliationWorkorderService) broadcastCriticalException(ctx context.Context, rec *models.SysDataReconciliation) {
 	if s.noticeHub == nil {
 		return // 兼容非 production 环境
@@ -392,7 +394,8 @@ func (s *ReconciliationWorkorderService) broadcastCriticalException(ctx context.
 //   - severity: critical
 //
 // 注意:前端 useReconciliationWebSocket hook 只过滤 critical_* 2 类事件,
-//       high/medium/low 工单创建不推送(避免 dashboard 事件过载)。
+//
+//	high/medium/low 工单创建不推送(避免 dashboard 事件过载)。
 func (s *ReconciliationWorkorderService) broadcastCriticalWorkorder(ctx context.Context, rec *models.SysDataReconciliation, workorderID string, title string) {
 	if s.noticeHub == nil {
 		return
@@ -474,7 +477,7 @@ func (s *ReconciliationWorkorderService) publishCriticalSysNotice(ctx context.Co
 		NoticeType:    "2", // 2=警告(参见 models.Notice.NoticeType 字典)
 		NoticeContent: noticeContent,
 		Priority:      models.PriorityUrgent, // 紧急
-		TargetType:    models.TargetAll,     // 全部用户
+		TargetType:    models.TargetAll,      // 全部用户
 		IsMarkdown:    false,
 	}
 

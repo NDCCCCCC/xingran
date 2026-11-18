@@ -15,15 +15,15 @@ import (
 
 // APIClient HTTP API client
 type APIClient struct {
-	baseURL    string
-	token      string
+	baseURL string
+	token   string
 	// provisioningToken DEBT-03：预共享注册令牌，仅 Register 请求经
 	// X-Provisioning-Token 头发送；换发的 Worker Token 存 workerToken，
 	// 后续请求经 X-Worker-Token 头发送（后端 auth_required=true 时必需）。
 	provisioningToken string
 	workerToken       string
-	httpClient *http.Client
-	logger     logger.Logger
+	httpClient        *http.Client
+	logger            logger.Logger
 }
 
 // NewAPIClient create API client

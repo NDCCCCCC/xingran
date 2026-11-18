@@ -71,8 +71,8 @@ func applySkipSeverity(s string) string {
 // 行为:
 //   - WHERE is_active = 0 (Status Convention: 0=启用) AND deleted_at IS NULL
 //   - 逐条 net.ParseCIDR(rule.IPRange):
-//       * 解析失败 → logrus.Warnf 跳过(不阻塞检测,人工修复)
-//       * 解析成功 → append 到结果切片
+//   - 解析失败 → logrus.Warnf 跳过(不阻塞检测,人工修复)
+//   - 解析成功 → append 到结果切片
 //   - 返回 []compiledRule,DetectLayer3 循环内零 DB 查询
 //
 // 注意:此函数是包级函数(非 receiver),DetectLayer3 / MatchTest 都可调用。

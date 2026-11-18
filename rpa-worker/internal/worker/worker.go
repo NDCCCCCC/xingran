@@ -51,23 +51,23 @@ type Worker struct {
 	currentTasksMu   sync.Mutex
 
 	// Dynamic scaling fields
-	maxConcurrency      int
-	maxConcurrencyMu    sync.RWMutex
-	scaleCommandChan    chan scaleCommandWrapper
+	maxConcurrency   int
+	maxConcurrencyMu sync.RWMutex
+	scaleCommandChan chan scaleCommandWrapper
 
 	// Hybrid mode fields
-	taskSplitter        *executor.TaskSplitter
+	taskSplitter *executor.TaskSplitter
 
 	// Lifecycle
-	ctx              context.Context
-	cancel           context.CancelFunc
-	wg               sync.WaitGroup
-	shutdownSignal   chan struct{}
+	ctx            context.Context
+	cancel         context.CancelFunc
+	wg             sync.WaitGroup
+	shutdownSignal chan struct{}
 
 	// Statistics
-	tasksReceived    int64
-	tasksCompleted   int64
-	tasksFailed      int64
+	tasksReceived  int64
+	tasksCompleted int64
+	tasksFailed    int64
 }
 
 // scaleCommandWrapper wraps scale command with metadata
@@ -130,16 +130,16 @@ func New(cfg *config.Config) (*Worker, error) {
 	}
 
 	w := &Worker{
-		id:                workerID,
-		name:              cfg.Worker.Name,
-		config:            cfg,
-		logger:            log,
-		ctx:               ctx,
-		cancel:            cancel,
-		shutdownSignal:    make(chan struct{}),
-		state:             StateInitializing,
-		maxConcurrency:    initialMaxConcurrency,
-		scaleCommandChan:  make(chan scaleCommandWrapper, 10),
+		id:               workerID,
+		name:             cfg.Worker.Name,
+		config:           cfg,
+		logger:           log,
+		ctx:              ctx,
+		cancel:           cancel,
+		shutdownSignal:   make(chan struct{}),
+		state:            StateInitializing,
+		maxConcurrency:   initialMaxConcurrency,
+		scaleCommandChan: make(chan scaleCommandWrapper, 10),
 	}
 	if err := w.initComponents(); err != nil {
 		cancel()
@@ -263,13 +263,13 @@ func (w *Worker) register() error {
 	}
 
 	req := &types.WorkerRegisterRequest{
-		WorkerID:      w.id,
-		Name:          w.name,
-		Host:          getLocalIP(),
-		Port:          8080,
+		WorkerID:       w.id,
+		Name:           w.name,
+		Host:           getLocalIP(),
+		Port:           8080,
 		MaxConcurrency: w.getMaxConcurrency(),
-		Version:       w.config.Worker.Version,
-		Capabilities:  capabilities,
+		Version:        w.config.Worker.Version,
+		Capabilities:   capabilities,
 	}
 	_, err := w.apiClient.Register(w.ctx, req)
 	if err != nil {
@@ -517,7 +517,7 @@ func (w *Worker) scaleCommandListener() {
 						"worker_id":  w.id,
 						"command_id": cmd.CommandID,
 						"status":     "success",
-						"error":       "",
+						"error":      "",
 					}
 					if err != nil {
 						ackMsg["status"] = "failed"
@@ -663,12 +663,12 @@ func (w *Worker) getMaxConcurrency() int {
 // registerWithCapacity registers worker with specific capacity
 func (w *Worker) registerWithCapacity(capacity int) error {
 	req := &types.WorkerRegisterRequest{
-		WorkerID:      w.id,
-		Name:          w.name,
-		Port:          8080,
+		WorkerID:       w.id,
+		Name:           w.name,
+		Port:           8080,
 		MaxConcurrency: capacity,
-		Version:       w.config.Worker.Version,
-		Capabilities:  []string{"chromium", "auto-scaling"},
+		Version:        w.config.Worker.Version,
+		Capabilities:   []string{"chromium", "auto-scaling"},
 	}
 	_, err := w.apiClient.Register(w.ctx, req)
 	return err

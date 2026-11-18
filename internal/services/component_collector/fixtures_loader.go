@@ -53,7 +53,7 @@ func LoadFixture(name string) (string, error) {
 // WARNING 3 mitigation — do NOT hardcode the current count).
 //
 // Returns an error only if the samples directory cannot be located or
-//_glob fails (e.g. malformed pattern — impossible with a literal).
+// _glob fails (e.g. malformed pattern — impossible with a literal).
 func CountFixtures() (int, error) {
 	root, err := fixturesRoot()
 	if err != nil {

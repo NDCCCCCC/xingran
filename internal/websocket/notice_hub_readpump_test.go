@@ -193,10 +193,10 @@ func TestClient_ReadPump_HandlesUnexpectedClose(t *testing.T) {
 
 // TestReadPump_ConnectionWithoutPongCleanup exercises the production
 // ping/pong readDeadline path indirectly by verifying that:
-//   1. RegisterClient starts both writePump AND readPump goroutines
-//      (so a silent network drop is caught even if writePump isn't sending)
-//   2. Closing the client connection triggers readPump to exit and
-//      call UnregisterClient (which we've already verified above)
+//  1. RegisterClient starts both writePump AND readPump goroutines
+//     (so a silent network drop is caught even if writePump isn't sending)
+//  2. Closing the client connection triggers readPump to exit and
+//     call UnregisterClient (which we've already verified above)
 //
 // The actual production readDeadline is 110s; we cannot wait that long.
 // The two tests above already prove the unregister-on-disconnect path,

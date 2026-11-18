@@ -624,8 +624,8 @@ func scopeWriteResolveEffOrg(ctx context.Context, db *gorm.DB, entityType string
 	}
 
 	type fkOrg struct {
-		FK      string `gorm:"column:fk"`
-		EffOrg  string `gorm:"column:eff_org"`
+		FK     string `gorm:"column:fk"`
+		EffOrg string `gorm:"column:eff_org"`
 	}
 	var rows []fkOrg
 	var q *gorm.DB

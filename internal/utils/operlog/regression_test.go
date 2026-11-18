@@ -373,9 +373,9 @@ func TestExcludedPathsEarlyReturn(t *testing.T) {
 func TestPhase144_WebhookSecretsMasked(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
-		name       string
-		body       string
-		forbidden  []string
+		name      string
+		body      string
+		forbidden []string
 	}{
 		{
 			name:      "webhookUrl 键整值遮蔽（含 ?key= 查询凭据）",

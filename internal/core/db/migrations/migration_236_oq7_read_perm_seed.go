@@ -34,6 +34,7 @@ var actionPermissionFTypeReadCodes = []string{
 	"ops:walls:list",
 	"ops:doors:list",
 }
+
 // F_TYPE_SEED_END
 
 var actionPermissionSeedsRead = []actionPermissionSeed{

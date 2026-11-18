@@ -14,15 +14,15 @@ import (
 )
 
 type MenuPathInfo struct {
-	ID          string
-	MenuName    string
-	ParentID    *string
-	Path        string
-	Component   string
-	MenuType    string
-	Level       int
-	ParentPath  string
-	ParentName  string
+	ID         string
+	MenuName   string
+	ParentID   *string
+	Path       string
+	Component  string
+	MenuType   string
+	Level      int
+	ParentPath string
+	ParentName string
 }
 
 func main() {
@@ -220,4 +220,3 @@ func analyzePathPatterns(menus []MenuPathInfo) {
 		}
 	}
 }
-

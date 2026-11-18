@@ -16,10 +16,10 @@ import (
 )
 
 type seedPost struct {
-	Code     string
-	Name     string
-	Sort     int
-	Remark   string
+	Code   string
+	Name   string
+	Sort   int
+	Remark string
 }
 
 func main() {

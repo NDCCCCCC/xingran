@@ -45,14 +45,19 @@ type ADUserInfoForSync struct {
 // 策略表是文档也是实现约束：新增字段时先在此登记，再改统一的 helper。
 //
 // adPolicyADAuthoritative —— AD 权威覆盖：AD 有值就写，AD 为空也写（清空本地旧值）。
-//   适用：email / phone / mobile / title / ad_dn / ad_ou_dn / ad_config_id
-//   理由：联系与任职属性以域控为准；ad_dn/ad_ou_dn 是身份定位的唯一权威来源。
+//
+//	适用：email / phone / mobile / title / ad_dn / ad_ou_dn / ad_config_id
+//	理由：联系与任职属性以域控为准；ad_dn/ad_ou_dn 是身份定位的唯一权威来源。
+//
 // adPolicyFillIfLocalEmpty —— 仅当本地为空时用 AD 值填充。
-//   适用：nickname
-//   理由：本地昵称常是中文姓名，AD displayName 多为英文/拼音，覆盖会丢中文名。
+//
+//	适用：nickname
+//	理由：本地昵称常是中文姓名，AD displayName 多为英文/拼音，覆盖会丢中文名。
+//
 // adPolicyNeverOverwrite —— 永不覆盖（本地语义字段）。
-//   适用：password / employee_no / dept_name / 角色关联
-//   理由：这些字段承载本地管理语义，AD 侧不存在对应权威来源。
+//
+//	适用：password / employee_no / dept_name / 角色关联
+//	理由：这些字段承载本地管理语义，AD 侧不存在对应权威来源。
 //
 // 例外：dept_id 同样是"AD 权威"，但受 GUARD-01 保护 —— 本地正在往 AD 推送的
 // 变更（sys_ad_push_queue 里的 pending/failed update_user 行）不能被 AD 回写覆盖，
@@ -60,16 +65,16 @@ type ADUserInfoForSync struct {
 type adSyncPolicyType int
 
 const (
-	adPolicyADAuthoritative adSyncPolicyType = iota // AD 权威覆盖（含空值覆盖清空）
+	adPolicyADAuthoritative  adSyncPolicyType = iota // AD 权威覆盖（含空值覆盖清空）
 	adPolicyFillIfLocalEmpty                         // 仅本地为空时填充
 	adPolicyNeverOverwrite                           // 永不覆盖
 )
 
 // adFieldPolicy 单字段同步策略
 type adFieldPolicy struct {
-	Column string          // 数据库列名
+	Column string           // 数据库列名
 	Policy adSyncPolicyType // 覆盖策略
-	Reason string          // 策略理由（写进代码即文档）
+	Reason string           // 策略理由（写进代码即文档）
 }
 
 // adFieldPolicies AD → sys_user 字段同步策略表。
@@ -380,7 +385,7 @@ func derefString(p *string) string {
 	return *p
 }
 
-// normalizeDNKey 计算与 SQL 表达式 REPLACE(LOWER(ad_dn), ' ', '') 等价的匹配键。
+// normalizeDNKey 计算与 SQL 表达式 REPLACE(LOWER(ad_dn), ' ', ”) 等价的匹配键。
 //
 // 为什么在 NormalizeDN 之后还要"去掉全部空格"：AD DN 常见写法是
 // "CN=张, OU=IT , DC=Corp"（逗号后带空格），而库里存的可能是另一种空格/大小写组合。
@@ -405,12 +410,14 @@ type userIndex struct {
 //   - softByName:   软删除的同名用户（key = username）
 //
 // ⚠ byLocalName 必须包含 ad_username 非空的行：历史脏数据
-//   （username='bob' 且 ad_username='bob@corp'）若不进入索引，AD 侧 'bob' 会落 catNew
-//   并 INSERT username='bob' → 撞 sys_user.username 唯一索引 → 整个事务回滚 →
-//   AD 密码正确也进不了系统。
+//
+//	（username='bob' 且 ad_username='bob@corp'）若不进入索引，AD 侧 'bob' 会落 catNew
+//	并 INSERT username='bob' → 撞 sys_user.username 唯一索引 → 整个事务回滚 →
+//	AD 密码正确也进不了系统。
 //
 // ⚠ ad_dn 必须进入查找条件：DN 全局唯一，是最可靠的跨域判据。
-//   只按 ad_username 查会让多域同名用户互相串味（域 A 的 alice 改写域 B 的 alice 的 ad_dn）。
+//
+//	只按 ad_username 查会让多域同名用户互相串味（域 A 的 alice 改写域 B 的 alice 的 ad_dn）。
 //
 // 批量同步用此函数把 N 次逐用户查询压缩为 2 次（活跃+软删除），消除 N+1。
 // db 可传 tx（事务内）或 s.db.WithContext(ctx)（批量只读预查询）。

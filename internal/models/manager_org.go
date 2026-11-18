@@ -13,8 +13,8 @@ type ManagerOrg struct {
 	// 0=分公司 1=中支 2=支公司。
 	//
 	// 说明：仅用于展示与自动生成时的默认值推导，规则引擎不按该字段分支。
-	OrgType int `gorm:"default:1" json:"orgType"`
-	Enabled     bool    `gorm:"default:true" json:"enabled"`
+	OrgType int  `gorm:"default:1" json:"orgType"`
+	Enabled bool `gorm:"default:true" json:"enabled"`
 }
 
 func (ManagerOrg) TableName() string { return "sys_manager_org" }

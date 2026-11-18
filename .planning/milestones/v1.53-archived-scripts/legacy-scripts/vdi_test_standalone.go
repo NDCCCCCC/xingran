@@ -559,13 +559,13 @@ func (c *VDIAPIClient) CreateServer(resourceID, vtpID int, runPositionID, diskID
 
 	// 构建请求
 	reqBody := map[string]interface{}{
-		"resource": map[string]int{"id": resourceID},
-		"host":     map[string]string{"id": hostID},
+		"resource":     map[string]int{"id": resourceID},
+		"host":         map[string]string{"id": hostID},
 		"run_position": map[string]string{"id": finalRunPositionID},
-		"disk":     map[string]string{"id": diskID},
-		"storage":  map[string]string{"id": storageID},
-		"network":  map[string]string{"id": networkID},
-		"servers":  map[string]int{"count": count},
+		"disk":         map[string]string{"id": diskID},
+		"storage":      map[string]string{"id": storageID},
+		"network":      map[string]string{"id": networkID},
+		"servers":      map[string]int{"count": count},
 	}
 
 	fmt.Println("\n【创建参数】")

@@ -37,10 +37,10 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
+	"github.com/glebarez/sqlite"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 
 	"github.com/xingran-next/xingran-go-backend/internal/core"
@@ -502,18 +502,18 @@ func TestGetStatusStatistics_MultipleStatuses_CountsCorrect(t *testing.T) {
 	// 3 待处理 + 2 处理中 + 1 已完成
 	for i := 0; i < 3; i++ {
 		seedWorkOrder(t, db, map[string]interface{}{
-			"status": int(models.WorkOrderStatusPending),
+			"status":       int(models.WorkOrderStatusPending),
 			"submitter_id": submitterID,
 		})
 	}
 	for i := 0; i < 2; i++ {
 		seedWorkOrder(t, db, map[string]interface{}{
-			"status": int(models.WorkOrderStatusProcessing),
+			"status":       int(models.WorkOrderStatusProcessing),
 			"submitter_id": submitterID,
 		})
 	}
 	seedWorkOrder(t, db, map[string]interface{}{
-		"status": int(models.WorkOrderStatusCompleted),
+		"status":       int(models.WorkOrderStatusCompleted),
 		"submitter_id": submitterID,
 	})
 
@@ -1093,8 +1093,9 @@ func TestDeleteCategory_EmptyID_Returns400(t *testing.T) {
 
 // TC45: DeleteCategory - 成功
 // 注: glebarez sqlite 在 GORM Delete(value, pk) 语法下会偶发 token 解析问题
-//      (实测错误: "unrecognized token: '4ff4'")。
-//      这里用 raw SQL 预先删除,验证 handler 自身的成功路径 (id 非空 + service 无 err)
+//
+//	(实测错误: "unrecognized token: '4ff4'")。
+//	这里用 raw SQL 预先删除,验证 handler 自身的成功路径 (id 非空 + service 无 err)
 func TestDeleteCategory_Success(t *testing.T) {
 	db := setupTestDB(t)
 	catID := seedCategory(t, db, "要删除的")

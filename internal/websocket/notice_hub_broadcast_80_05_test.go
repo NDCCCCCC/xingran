@@ -37,7 +37,7 @@ import (
 // nhb8005Client 一对真 WS 连接:hub 侧(server conn,被 writePump 持有)+
 // 读侧(client conn,sink goroutine 从这里收帧)。
 type nhb8005Client struct {
-	userID  string
+	userID   string
 	readConn *websocket.Conn // 测试侧读帧
 }
 

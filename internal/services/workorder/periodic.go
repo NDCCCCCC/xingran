@@ -63,11 +63,11 @@ type PeriodicTemplateListRequest struct {
 
 // periodicTemplateAllowedSortFields 周期性工单模板可排序字段白名单。
 var periodicTemplateAllowedSortFields = map[string]string{
-	"title":       "template_name",
-	"isEnabled":   "is_enabled",
-	"cronExpr":    "cron_expression",
-	"createdAt":   "created_at",
-	"updatedAt":   "updated_at",
+	"title":     "template_name",
+	"isEnabled": "is_enabled",
+	"cronExpr":  "cron_expression",
+	"createdAt": "created_at",
+	"updatedAt": "updated_at",
 }
 
 // GetTemplateList 获取周期性工单模板列表

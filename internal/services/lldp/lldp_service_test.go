@@ -5,10 +5,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/xingran-next/xingran-go-backend/internal/models"
-	"github.com/xingran-next/xingran-go-backend/internal/services/portcollection"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
+	"github.com/xingran-next/xingran-go-backend/internal/services/portcollection"
 )
 
 // TestLLDPServiceCache 测试LLDP缓存功能
@@ -19,10 +19,10 @@ func TestLLDPServiceCache(t *testing.T) {
 	// 测试Set和Get
 	neighbors := map[string]*models.LLDPNeighborInfo{
 		"gi0/01": {
-			LocalInterface:   "GigabitEthernet0/0/1",
-			NeighborID:       "test-neighbor",
+			LocalInterface:    "GigabitEthernet0/0/1",
+			NeighborID:        "test-neighbor",
 			NeighborInterface: "eth0",
-			NeighborName:     "TestDevice",
+			NeighborName:      "TestDevice",
 		},
 	}
 
@@ -237,11 +237,11 @@ func BenchmarkNormalizeInterfaceName(b *testing.B) {
 // TestLLDPNeighborInfoStructure 测试LLDP邻居信息结构
 func TestLLDPNeighborInfoStructure(t *testing.T) {
 	neighbor := &models.LLDPNeighborInfo{
-		LocalInterface:   "GigabitEthernet0/0/1",
-		NeighborID:       "3815.sep12.eth0",
+		LocalInterface:    "GigabitEthernet0/0/1",
+		NeighborID:        "3815.sep12.eth0",
 		NeighborInterface: "eth0",
-		NeighborName:     "60P-28",
-		Capabilities:     "Router",
+		NeighborName:      "60P-28",
+		Capabilities:      "Router",
 	}
 
 	assert.Equal(t, "GigabitEthernet0/0/1", neighbor.LocalInterface)
@@ -284,18 +284,18 @@ func TestLLDPIntegrationScenario(t *testing.T) {
 	// 步骤1: 模拟发现LLDP邻居
 	neighbors := map[string]*models.LLDPNeighborInfo{
 		"gi0/01": {
-			LocalInterface:   "GigabitEthernet0/0/1",
-			NeighborID:       "3815.sep12.eth0",
+			LocalInterface:    "GigabitEthernet0/0/1",
+			NeighborID:        "3815.sep12.eth0",
 			NeighborInterface: "eth0",
-			NeighborName:     "60P-28",
-			Capabilities:     "Router",
+			NeighborName:      "60P-28",
+			Capabilities:      "Router",
 		},
 		"gi0/02": {
-			LocalInterface:   "GigabitEthernet0/0/2",
-			NeighborID:       "3815.sep13.eth0",
+			LocalInterface:    "GigabitEthernet0/0/2",
+			NeighborID:        "3815.sep13.eth0",
 			NeighborInterface: "eth0",
-			NeighborName:     "60P-29",
-			Capabilities:     "Bridge",
+			NeighborName:      "60P-29",
+			Capabilities:      "Bridge",
 		},
 	}
 

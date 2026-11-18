@@ -36,7 +36,7 @@ type fakeLDAPServer78 struct {
 	port       int
 	addr       string
 	bindCount  int
-	bindResult int   // LDAP result code (0=success)
+	bindResult int // LDAP result code (0=success)
 	entries    []*ldapSearchEntry
 	mu         sync.Mutex
 	closeOnce  sync.Once
@@ -44,7 +44,7 @@ type fakeLDAPServer78 struct {
 }
 
 type ldapSearchEntry struct {
-	dn   string
+	dn    string
 	attrs map[string][]string
 }
 
@@ -61,8 +61,8 @@ func newFakeLDAPServer(t *testing.T) *fakeLDAPServer78 {
 	return &fakeLDAPServer78{ln: ln, port: port, addr: ln.Addr().String()}
 }
 
-func (s *fakeLDAPServer78) Addr() string      { return s.addr }
-func (s *fakeLDAPServer78) Port() int         { return s.port }
+func (s *fakeLDAPServer78) Addr() string { return s.addr }
+func (s *fakeLDAPServer78) Port() int    { return s.port }
 func (s *fakeLDAPServer78) BindCount() int {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -130,10 +130,10 @@ func ldapMessage(msgID int64, appTag byte, content []byte) []byte {
 // buildBindResponse builds a BindResponse per RFC 4511.
 // BindResponse ::= [APPLICATION 1] SEQUENCE { resultCode, matchedDN, message }
 func buildBindResponse(msgID int64, resultCode int) []byte {
-	content := append(berInt(int64(resultCode)), berString("")...)       // resultCode
-	content = append(content, berString("")...)                            // matchedDN
-	content = append(content, berString("")...)                           // diagnosticMessage
-	return ldapMessage(msgID, 0x61, content)                           // 0x61 = APPLICATION 1
+	content := append(berInt(int64(resultCode)), berString("")...) // resultCode
+	content = append(content, berString("")...)                    // matchedDN
+	content = append(content, berString("")...)                    // diagnosticMessage
+	return ldapMessage(msgID, 0x61, content)                       // 0x61 = APPLICATION 1
 }
 
 // buildSearchResultEntry builds a SearchResultEntry per RFC 4511.
@@ -360,13 +360,13 @@ func TestLC78_Probe_BindAndSearch(t *testing.T) {
 	cfg := &models.ADConfig{
 		BaseModel:     models.BaseModel{ID: "probe-config"},
 		ServerAddress: "127.0.0.1",
-		ServerPort:   server.Port(),
-		BaseDN:       "DC=example,DC=com",
-		DomainName:   "example.com",
+		ServerPort:    server.Port(),
+		BaseDN:        "DC=example,DC=com",
+		DomainName:    "example.com",
 		AdminUsername: "admin",
 		AdminPassword: "admin_password",
-		UseSSL:       false,
-		UseTLS:       false,
+		UseSSL:        false,
+		UseTLS:        false,
 	}
 
 	c := NewLDAPClient(cfg)

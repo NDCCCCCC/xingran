@@ -5,8 +5,8 @@ import (
 	"errors"
 	"time"
 
-	"github.com/xingran-next/xingran-go-backend/pkg/constants"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
+	"github.com/xingran-next/xingran-go-backend/pkg/constants"
 	"gorm.io/gorm"
 )
 
@@ -68,7 +68,7 @@ type TrendPoint struct {
 // `DaysUnresolved` 由数据库 NOW() - detected_at 实时计算(EXTRACT DAY / JULIANDAY 兼容)。
 type ExceptionSummary struct {
 	ID             string    `json:"id"`
-	AssetCode      string    `json:"assetCode"`      // JOIN ops_asset.devicesn
+	AssetCode      string    `json:"assetCode"` // JOIN ops_asset.devicesn
 	ConflictType   string    `json:"conflictType"`
 	Severity       string    `json:"severity"`
 	DetectedAt     time.Time `json:"detectedAt"`
@@ -80,9 +80,9 @@ type ExceptionSummary struct {
 // R3 接入例外规则 CRUD 后由 ops 前端展示命中分布;
 // R1 exception_rule_id 全部为 NULL,返回空 slice 即可。
 type RuleStats struct {
-	RuleID      string `json:"ruleId"`
-	RuleName    string `json:"ruleName"`
-	MatchedCount int64 `json:"matchedCount"`
+	RuleID       string `json:"ruleId"`
+	RuleName     string `json:"ruleName"`
+	MatchedCount int64  `json:"matchedCount"`
 }
 
 // StatsFilter Statistics 端点通用过滤参数(R1 仅 days,future R3+ 扩展)

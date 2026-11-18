@@ -8,11 +8,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/glebarez/sqlite"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/internal/models/system/requests"
-	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 )
 
@@ -326,7 +326,7 @@ func TestCreateAPIKey(t *testing.T) {
 		assert.NotNil(t, key)
 		assert.Equal(t, 68, len(*key))      // rec_ + 64 hex chars
 		assert.Equal(t, "rec_", (*key)[:4]) // 检查前缀
-		assert.NotContains(t, *key, " ")     // 无空格
+		assert.NotContains(t, *key, " ")    // 无空格
 
 		// 验证数据库中的记录（SEC-01: 明文 key 不落库，按 KeyPrefix 反查 DB 行）
 		var apiKey models.APIKey
@@ -904,9 +904,9 @@ func TestListUsageLogs(t *testing.T) {
 		}
 
 		params := ListUsageLogsParams{
-			APIKeyID:  apiKey.ID,
-			Current:   1,
-			PageSize:  10,
+			APIKeyID: apiKey.ID,
+			Current:  1,
+			PageSize: 10,
 		}
 
 		result, err := service.ListUsageLogs(ctx, params)
@@ -1004,10 +1004,10 @@ func TestListUsageLogs(t *testing.T) {
 
 		success := true
 		params := ListUsageLogsParams{
-			APIKeyID:  apiKey.ID,
-			Current:   1,
-			PageSize:  10,
-			Success:   &success,
+			APIKeyID: apiKey.ID,
+			Current:  1,
+			PageSize: 10,
+			Success:  &success,
 		}
 
 		result, err := service.ListUsageLogs(ctx, params)
@@ -1040,9 +1040,9 @@ func TestListUsageLogs(t *testing.T) {
 		}
 
 		params := ListUsageLogsParams{
-			APIKeyID:  apiKey.ID,
-			Current:   1,
-			PageSize:  3,
+			APIKeyID: apiKey.ID,
+			Current:  1,
+			PageSize: 3,
 		}
 
 		result, err := service.ListUsageLogs(ctx, params)

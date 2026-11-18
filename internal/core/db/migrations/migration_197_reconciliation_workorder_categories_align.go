@@ -29,13 +29,14 @@ import (
 // 幂等: 先 SELECT 当前 description, 一致则跳过.
 //
 // 不修改: 字典 dict_label (M196 已修), detection engine logic,
-//         HealthBadge.tsx (已是权威文案), sys_dict_data 中相关 severity 字典.
+//
+//	HealthBadge.tsx (已是权威文案), sys_dict_data 中相关 severity 字典.
 func Migrate197ReconciliationWorkorderCategoriesAlign(db *gorm.DB) error {
 	log.Println("Running migration 197: 对齐 sys_workorder_category 对账-A/B/C/D/E/F 描述与 detection 真值")
 
 	type catUpdate struct {
-		name        string // category_name (对账-A类 / 对账-B类 / ...)
-		newDesc     string // 对齐 detection 后的中文描述
+		name    string // category_name (对账-A类 / 对账-B类 / ...)
+		newDesc string // 对齐 detection 后的中文描述
 	}
 	updates := []catUpdate{
 		{"对账-A类", "物理有/责任人有且一致 健康无需动作(R1 仅作 dashboard 统计,不入 sys_data_reconciliation)"},

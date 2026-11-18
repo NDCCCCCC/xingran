@@ -17,8 +17,8 @@ type VDIAPIMock struct {
 	callCount   map[string]int
 	callCountMu sync.Mutex
 	// 模拟数据库
-	vms         map[string]*VMInfo
-	vmsMu       sync.RWMutex
+	vms   map[string]*VMInfo
+	vmsMu sync.RWMutex
 }
 
 // NewVDIAPIMock 创建新的 VDI API Mock 服务器
@@ -114,15 +114,15 @@ func (m *VDIAPIMock) handleCreateVM(w http.ResponseWriter, r *http.Request) {
 	}
 
 	vm := &VMInfo{
-		VMID:        fmt.Sprintf("vm-%d", time.Now().UnixNano()),
-		VMName:      req.VMName,
-		IP:          req.IP,
-		MAC:         req.MAC,
-		Status:      "stopped",
-		VolumeID:    req.VolumeID,
-		ImageID:     req.ImageID,
+		VMID:         fmt.Sprintf("vm-%d", time.Now().UnixNano()),
+		VMName:       req.VMName,
+		IP:           req.IP,
+		MAC:          req.MAC,
+		Status:       "stopped",
+		VolumeID:     req.VolumeID,
+		ImageID:      req.ImageID,
 		DesktopGroup: req.DesktopGroup,
-		Comments:    req.Comments,
+		Comments:     req.Comments,
 	}
 
 	m.AddVM(vm)

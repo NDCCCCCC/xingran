@@ -13,8 +13,8 @@ import (
 	"github.com/xingran-next/xingran-go-backend/internal/core"
 	"github.com/xingran-next/xingran-go-backend/internal/services/rpa"
 	"github.com/xingran-next/xingran-go-backend/internal/utils/operlog"
-	"github.com/xingran-next/xingran-go-backend/pkg/middleware"
 	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
+	"github.com/xingran-next/xingran-go-backend/pkg/middleware"
 )
 
 // WorkerHandler Worker 处理器

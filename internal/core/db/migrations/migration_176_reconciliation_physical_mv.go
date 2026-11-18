@@ -41,18 +41,22 @@ ON CONFLICT (asset_id) DO UPDATE
 //   - R1/R2 物化视图 physical_user_id / physical_username 写死 NULL,无任何 MAC 反推
 //
 // 关键变更(D-R5-A2-01):
-//   1) declared 双源:
 //
-//      asset_user_id = COALESCE(NULLIF(a.user_id,''), user_id_by_name_and_dept, user_id_by_name)
-//      asset_username = sys_user.username(若 user_id 命中) ELSE a.nowuser_name
+//  1. declared 双源:
 //
-//   2) physical 真接入 reconciliation_physical_chain 视图
-//   3) ad.username 同步双源,避免 AD JOIN 链因 sys_user.username 缺失而断裂
+//     asset_user_id = COALESCE(NULLIF(a.user_id,”), user_id_by_name_and_dept, user_id_by_name)
+//     asset_username = sys_user.username(若 user_id 命中) ELSE a.nowuser_name
+//
+//  2. physical 真接入 reconciliation_physical_chain 视图
+//
+//  3. ad.username 同步双源,避免 AD JOIN 链因 sys_user.username 缺失而断裂
 //
 // 与 dropDependentMaterializedViews 关系:
+//
 //   - dropDependent 在 AutoMigrate 之前已 CASCADE DROP reconciliation_normalized,
 //
-//	migration_176 在 AutoMigrate 之后重建,无 ALTER 阻塞
+//     migration_176 在 AutoMigrate 之后重建,无 ALTER 阻塞
+//
 //   - 与现有 168/173 的 CREATE + 索引 sequence 完全一致
 //
 // 重名处理:
@@ -67,11 +71,15 @@ ON CONFLICT (asset_id) DO UPDATE
 //   - R4 HealthBadge contract 不变
 //
 // 历史 Type E 处理:
+//
 //   - 门控 UPDATE:仅在 ops_asset_physical 有数据(物理链路曾回填过)时执行,
 //
-//	说明 R5 已上线且物理链路已实际接入 → 历史 Type E 批量标记 resolved 是 R5 修复的必然后续步骤。
+//     说明 R5 已上线且物理链路已实际接入 → 历史 Type E 批量标记 resolved 是 R5 修复的必然后续步骤。
+//
 //   - ops_asset_physical 无数据 → 跳过清理,认为 Type E 可能是真实告警,让 DetectLayer3 自然重写。
+//
 //   - 每次执行以 applogger.Warnf 记录 RowsAffected(审计可见,非首次专用)。
+//
 //   - 部署后运维/UAT 用 POST /asset/reconciliation/refresh 手动触发。
 func Migrate176ReconciliationPhysicalMV(db *gorm.DB) error {
 	log.Println("Running migration 176: Phase 45 R5 reconciliation_normalized MV 双源 declared + 真物理链路")

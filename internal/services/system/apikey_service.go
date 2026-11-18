@@ -19,12 +19,12 @@ import (
 // apiKeyAllowedSortFields API密钥列表可排序字段白名单。
 // key=前端逻辑字段名(camelCase)，value=DB 列名(snake_case)。
 var apiKeyAllowedSortFields = map[string]string{
-	"name":        "name",
-	"createdAt":   "created_at",
-	"updatedAt":   "updated_at",
-	"isActive":    "is_active",
-	"expiresAt":   "expires_at",
-	"lastUsedAt":  "last_used_at",
+	"name":       "name",
+	"createdAt":  "created_at",
+	"updatedAt":  "updated_at",
+	"isActive":   "is_active",
+	"expiresAt":  "expires_at",
+	"lastUsedAt": "last_used_at",
 }
 
 // APIKeyService API密钥服务接口
@@ -54,10 +54,10 @@ func NewAPIKeyService(db *gorm.DB) APIKeyService {
 
 // 常量定义
 const (
-	KeyPrefix      = "rec_"            // 密钥前缀
-	KeyLength      = 64                // 密钥长度（十六进制字符数）
-	MaxKeysPerUser = 100               // 单用户最大密钥数
-	apiKeyByteLen  = 32                // API Key 字节长度（256-bit，对应 KeyLength=64 hex chars）
+	KeyPrefix      = "rec_" // 密钥前缀
+	KeyLength      = 64     // 密钥长度（十六进制字符数）
+	MaxKeysPerUser = 100    // 单用户最大密钥数
+	apiKeyByteLen  = 32     // API Key 字节长度（256-bit，对应 KeyLength=64 hex chars）
 )
 
 // API Key 作用域名称
@@ -443,20 +443,20 @@ func (s *apiKeyServiceImpl) ToggleAPIKeyStatus(ctx context.Context, id string) e
 
 // ListUsageLogsParams 使用日志查询参数
 type ListUsageLogsParams struct {
-	APIKeyID  string   // 密钥ID
-	Current   int      // 当前页
-	PageSize  int      // 每页数量
-	StartTime *string  // 开始时间
-	EndTime   *string  // 结束时间
-	Success   *bool    // 成功筛选
+	APIKeyID  string  // 密钥ID
+	Current   int     // 当前页
+	PageSize  int     // 每页数量
+	StartTime *string // 开始时间
+	EndTime   *string // 结束时间
+	Success   *bool   // 成功筛选
 }
 
 // UsageLogsPageResult 使用日志分页结果
 type UsageLogsPageResult struct {
 	List     []models.APIKeyUsageLog `json:"list"`
-	Total    int64                    `json:"total"`
-	Current  int                      `json:"current"`
-	PageSize int                      `json:"pageSize"`
+	Total    int64                   `json:"total"`
+	Current  int                     `json:"current"`
+	PageSize int                     `json:"pageSize"`
 }
 
 // GetOffset 计算分页偏移量

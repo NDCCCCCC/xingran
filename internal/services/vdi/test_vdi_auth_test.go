@@ -141,8 +141,8 @@ func TestVDIAPIAuthentication(t *testing.T) {
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
 
 		var result struct {
-			ErrorCode    int `json:"error_code"`
-			Data         struct {
+			ErrorCode int `json:"error_code"`
+			Data      struct {
 				Token struct {
 					TenantID  int    `json:"tenant_id"`
 					AuthToken string `json:"auth_token"`
