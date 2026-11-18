@@ -220,8 +220,9 @@ func fallbackToStdLogger() {
 // Returns a restore function that resets output to the original writer.
 // Initializes the logger if not yet initialized (so tests work without Init).
 // Usage:
-//   restore := SetTestBuffer(&buf)
-//   defer restore()
+//
+//	restore := SetTestBuffer(&buf)
+//	defer restore()
 func SetTestBuffer(buf *bytes.Buffer) func() {
 	l := GetLogger() // ensures log is initialized
 	origOut := l.Out

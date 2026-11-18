@@ -289,7 +289,10 @@ func TestJobService_List(t *testing.T) {
 	db := newJobTestDB(t)
 	svc := NewJobService(db, nil)
 
-	seed := []struct{ name, group string; status int }{
+	seed := []struct {
+		name, group string
+		status      int
+	}{
 		{"alpha-job", "g1", 0},
 		{"beta-job", "g1", 1},
 		{"gamma", "g2", 0},

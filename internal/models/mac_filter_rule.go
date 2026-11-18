@@ -9,17 +9,17 @@ import (
 
 // MACFilterRule MAC地址过滤规则模型
 type MACFilterRule struct {
-	ID               string      `gorm:"type:uuid;primary_key" json:"id"`
-	RuleName         string      `gorm:"size:100;not null" json:"ruleName"`
-	DeviceType       DeviceType  `gorm:"size:50;not null" json:"deviceType"`
+	ID               string       `gorm:"type:uuid;primary_key" json:"id"`
+	RuleName         string       `gorm:"size:100;not null" json:"ruleName"`
+	DeviceType       DeviceType   `gorm:"size:50;not null" json:"deviceType"`
 	Vendor           DeviceVendor `gorm:"size:50" json:"vendor,omitempty"` // 空字符串表示任意厂商
-	MACThreshold     int         `gorm:"not null;default:10" json:"macThreshold"`
-	EnableLLDPFilter bool        `gorm:"not null;default:true" json:"enableLLDPFilter"`
-	Priority         int         `gorm:"not null;default:0" json:"priority"`
-	IsSystem         bool        `gorm:"not null;default:false" json:"isSystem"`
-	Remark           string      `gorm:"type:text" json:"remark,omitempty"`
-	CreatedBy        string      `gorm:"size:100" json:"createdBy,omitempty"`
-	UpdatedBy        string      `gorm:"size:100" json:"updatedBy,omitempty"`
+	MACThreshold     int          `gorm:"not null;default:10" json:"macThreshold"`
+	EnableLLDPFilter bool         `gorm:"not null;default:true" json:"enableLLDPFilter"`
+	Priority         int          `gorm:"not null;default:0" json:"priority"`
+	IsSystem         bool         `gorm:"not null;default:false" json:"isSystem"`
+	Remark           string       `gorm:"type:text" json:"remark,omitempty"`
+	CreatedBy        string       `gorm:"size:100" json:"createdBy,omitempty"`
+	UpdatedBy        string       `gorm:"size:100" json:"updatedBy,omitempty"`
 	BaseModel
 }
 

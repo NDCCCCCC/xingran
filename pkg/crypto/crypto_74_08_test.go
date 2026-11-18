@@ -70,9 +70,9 @@ func TestDefaultNonceStorage(t *testing.T) {
 func TestPkcs7PadUnpad_Roundtrip(t *testing.T) {
 	for _, data := range [][]byte{
 		[]byte("a"),
-		[]byte("0123456789abcdef"),   // 正好一个块 → 追加整块填充
-		[]byte("0123456789abcde"),    // 15 字节 → 填 1
-		[]byte(""),                   // 空 → 整块填充
+		[]byte("0123456789abcdef"), // 正好一个块 → 追加整块填充
+		[]byte("0123456789abcde"),  // 15 字节 → 填 1
+		[]byte(""),                 // 空 → 整块填充
 		[]byte(strings.Repeat("x", 100)),
 	} {
 		padded := pkcs7Pad(data, 16)

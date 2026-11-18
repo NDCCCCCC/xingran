@@ -1,10 +1,11 @@
 // Package middleware 提供 v1.24 Phase 78（#16）严格权限中间件的回归测试。
 //
 // 背景：写操作权限此前存在**两个叠加病灶**——
-//  ① 组级 ANY-of：/system/users 组挂 [UserList, UserAdd, UserEdit, UserView]，
-//     只持 system:user:list 的用户调删除接口命中 UserList 分支 → 200 且真删除；
-//  ② 模块级降级：checkUserPermission 的 Step 3 把 system:user:remove 降级匹配到
-//     页面本体 system:user → 只读角色仍被放行。
+//
+//	① 组级 ANY-of：/system/users 组挂 [UserList, UserAdd, UserEdit, UserView]，
+//	   只持 system:user:list 的用户调删除接口命中 UserList 分支 → 200 且真删除；
+//	② 模块级降级：checkUserPermission 的 Step 3 把 system:user:remove 降级匹配到
+//	   页面本体 system:user → 只读角色仍被放行。
 //
 // 本文件锁定 RequireStrictPermissions / checkUserPermissionStrict 的语义：
 //   - 只做 Step 1 精确匹配（跳过 Step 2 F 型继承、Step 3 模块降级）
@@ -23,9 +24,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/xingran-next/xingran-go-backend/internal/core"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/xingran-next/xingran-go-backend/internal/core"
 	"gorm.io/gorm"
 )
 

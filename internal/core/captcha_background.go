@@ -294,7 +294,7 @@ func (s *CaptchaBackgroundService) preGenerateForConfig(ctx context.Context, sha
 			continue
 		}
 		itemKey := fmt.Sprintf("%s:%d", poolPrefix, (counter%int64(poolSize))+1)
-			_ = s.cache.Set(ctx, itemKey, string(data), 24*time.Hour)
+		_ = s.cache.Set(ctx, itemKey, string(data), 24*time.Hour)
 
 		counter++
 		idx++

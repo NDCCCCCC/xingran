@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/stretchr/testify/assert"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
 )
 
 // TestDetectLoginEvent 表驱动覆盖 quick 261016-ad-login-history 决策 D1 / 风险 3

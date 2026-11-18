@@ -9,9 +9,10 @@
 //   - 该工具对所有有历史的 deviceID 一次性跑 cleanup
 //
 // 用法:
-//   go run ./scripts/ops/mac_cleanup                     # 使用默认 config.yaml + .env
-//   go run ./scripts/ops/mac_cleanup -dry-run            # 只统计,不写 DB
-//   CONFIG_PATH=/path/to/config.yaml go run ./scripts/ops/mac_cleanup
+//
+//	go run ./scripts/ops/mac_cleanup                     # 使用默认 config.yaml + .env
+//	go run ./scripts/ops/mac_cleanup -dry-run            # 只统计,不写 DB
+//	CONFIG_PATH=/path/to/config.yaml go run ./scripts/ops/mac_cleanup
 //
 // 行为:
 //   - 加载 .env(同主程序 godotenv 模式)
@@ -22,9 +23,10 @@
 //   - 全量完成后退出码 0;遇错则退出码 1 并打印首个错误
 //
 // 回滚:
-//   merge 后的数据无法自动回滚 — 原始 flapping 行已被 DELETE。
-//   建议:跑 cleanup 前先在 DB 备份对应分区的快照,或确认已 flapping 序列
-//   对业务确实无意义再跑。
+//
+//	merge 后的数据无法自动回滚 — 原始 flapping 行已被 DELETE。
+//	建议:跑 cleanup 前先在 DB 备份对应分区的快照,或确认已 flapping 序列
+//	对业务确实无意义再跑。
 package main
 
 import (

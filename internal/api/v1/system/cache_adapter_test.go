@@ -61,16 +61,20 @@ func (m *memCache) MDelete(ctx context.Context, keys ...string) error {
 	}
 	return nil
 }
-func (m *memCache) Increment(ctx context.Context, key string) (int64, error)      { return 0, nil }
+func (m *memCache) Increment(ctx context.Context, key string) (int64, error) { return 0, nil }
 func (m *memCache) IncrementBy(ctx context.Context, key string, value int64) (int64, error) {
 	return 0, nil
 }
-func (m *memCache) Decrement(ctx context.Context, key string) (int64, error)      { return 0, nil }
+func (m *memCache) Decrement(ctx context.Context, key string) (int64, error) { return 0, nil }
 func (m *memCache) DecrementBy(ctx context.Context, key string, value int64) (int64, error) {
 	return 0, nil
 }
-func (m *memCache) Expire(ctx context.Context, key string, expiration time.Duration) error { return nil }
-func (m *memCache) TTL(ctx context.Context, key string) (time.Duration, error)              { return time.Minute, nil }
+func (m *memCache) Expire(ctx context.Context, key string, expiration time.Duration) error {
+	return nil
+}
+func (m *memCache) TTL(ctx context.Context, key string) (time.Duration, error) {
+	return time.Minute, nil
+}
 func (m *memCache) Keys(ctx context.Context, pattern string) ([]string, error) {
 	out := []string{}
 	for k := range m.data {
@@ -95,12 +99,12 @@ func (m *memCache) HSet(ctx context.Context, key string, field string, value int
 func (m *memCache) HGetAll(ctx context.Context, key string) (map[string]string, error) {
 	return map[string]string{}, nil
 }
-func (m *memCache) HDel(ctx context.Context, key string, fields ...string) error  { return nil }
-func (m *memCache) HKeys(ctx context.Context, key string) ([]string, error)       { return nil, nil }
+func (m *memCache) HDel(ctx context.Context, key string, fields ...string) error { return nil }
+func (m *memCache) HKeys(ctx context.Context, key string) ([]string, error)      { return nil, nil }
 func (m *memCache) SetInt(ctx context.Context, key string, value int, expiration time.Duration) error {
 	return nil
 }
-func (m *memCache) GetInt(ctx context.Context, key string) (int, error)          { return 0, nil }
+func (m *memCache) GetInt(ctx context.Context, key string) (int, error) { return 0, nil }
 func (m *memCache) SetJSON(ctx context.Context, key string, value interface{}, expiration time.Duration) error {
 	return nil
 }

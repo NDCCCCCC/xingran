@@ -7,8 +7,8 @@ import (
 	"strings"
 	"sync"
 
-	"gopkg.in/yaml.v3"
 	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
+	"gopkg.in/yaml.v3"
 )
 
 // APIMetadataConfig API 元数据配置。

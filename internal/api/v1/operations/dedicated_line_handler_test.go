@@ -17,14 +17,14 @@ import (
 
 // mockDedicatedLineService implements opsServices.DedicatedLineService.
 type mockDedicatedLineService struct {
-	CreateFunc                       func(ctx context.Context, l *opsModels.OpsDedicatedLine) error
-	UpdateFunc                       func(ctx context.Context, l *opsModels.OpsDedicatedLine) error
-	DeleteFunc                       func(ctx context.Context, id string) error
-	GetByIDFunc                      func(ctx context.Context, id string) (*opsModels.OpsDedicatedLine, error)
-	ListFunc                         func(ctx context.Context, req requests.DedicatedLineListRequest) (*opsServices.PageResult, error)
-	BatchDeleteFunc                  func(ctx context.Context, ids []string) error
-	StatisticsFunc                   func(ctx context.Context) (*opsServices.DedicatedLineStatisticsResult, error)
-	SearchDedicatedLineOptionsFunc   func(ctx context.Context, p map[string]interface{}) ([]opsServices.DropdownOption, error)
+	CreateFunc                     func(ctx context.Context, l *opsModels.OpsDedicatedLine) error
+	UpdateFunc                     func(ctx context.Context, l *opsModels.OpsDedicatedLine) error
+	DeleteFunc                     func(ctx context.Context, id string) error
+	GetByIDFunc                    func(ctx context.Context, id string) (*opsModels.OpsDedicatedLine, error)
+	ListFunc                       func(ctx context.Context, req requests.DedicatedLineListRequest) (*opsServices.PageResult, error)
+	BatchDeleteFunc                func(ctx context.Context, ids []string) error
+	StatisticsFunc                 func(ctx context.Context) (*opsServices.DedicatedLineStatisticsResult, error)
+	SearchDedicatedLineOptionsFunc func(ctx context.Context, p map[string]interface{}) ([]opsServices.DropdownOption, error)
 }
 
 func (m *mockDedicatedLineService) Create(ctx context.Context, l *opsModels.OpsDedicatedLine) error {

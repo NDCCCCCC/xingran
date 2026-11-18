@@ -16,11 +16,11 @@ import (
 
 // TaskSplitter 任务拆分器
 type TaskSplitter struct {
-	redisClient   *redis.Client
-	streamName    string
-	groupName     string
-	config        *config.HybridModeConfig
-	logger        logger.Logger
+	redisClient    *redis.Client
+	streamName     string
+	groupName      string
+	config         *config.HybridModeConfig
+	logger         logger.Logger
 	activeMonitors sync.Map // map[parentExecutionID]context.CancelFunc
 }
 
@@ -280,7 +280,7 @@ func (ts *TaskSplitter) createSubTask(
 	// 构建子任务脚本：Loop 之前的动作 + 嵌套动作
 	subTaskScript := make([]types.Action, 0, loopIndex+len(nestedActions))
 	subTaskScript = append(subTaskScript, parentTask.Script[:loopIndex]...) // Loop 之前的动作
-	subTaskScript = append(subTaskScript, nestedActions...)                // Loop 内的动作
+	subTaskScript = append(subTaskScript, nestedActions...)                 // Loop 内的动作
 
 	// 获取循环项变量名
 	itemName := "item"
@@ -315,20 +315,20 @@ func (ts *TaskSplitter) createSubTask(
 
 	return &types.SubTaskMessage{
 		TaskMessage: &types.TaskMessage{
-			ExecutionID:   subExecutionID,
-			TaskID:        parentTask.TaskID,
-			TaskName:      fmt.Sprintf("%s [SubTask %d/%d]", parentTask.TaskName, itemIndex+1, totalItems),
-			TargetURL:     parentTask.TargetURL,
-			Script:        subTaskScript,
-			Timeout:       ts.config.SubTaskTimeout,
-			MaxRetry:      ts.config.SubTaskRetryCount,
-			Variables:     subTaskVariables,
-			TriggeredBy:   parentTask.TriggeredBy,
-			TriggerType:   "subtask",
-			CredentialID:  parentTask.CredentialID,
-			SessionID:     parentTask.SessionID,
-			SessionData:   parentTask.SessionData,
-			CreatedAt:     time.Now(),
+			ExecutionID:  subExecutionID,
+			TaskID:       parentTask.TaskID,
+			TaskName:     fmt.Sprintf("%s [SubTask %d/%d]", parentTask.TaskName, itemIndex+1, totalItems),
+			TargetURL:    parentTask.TargetURL,
+			Script:       subTaskScript,
+			Timeout:      ts.config.SubTaskTimeout,
+			MaxRetry:     ts.config.SubTaskRetryCount,
+			Variables:    subTaskVariables,
+			TriggeredBy:  parentTask.TriggeredBy,
+			TriggerType:  "subtask",
+			CredentialID: parentTask.CredentialID,
+			SessionID:    parentTask.SessionID,
+			SessionData:  parentTask.SessionData,
+			CreatedAt:    time.Now(),
 		},
 		ParentExecutionID: parentTask.ExecutionID,
 		SubTaskIndex:      itemIndex,
@@ -395,12 +395,12 @@ func (ts *TaskSplitter) monitorSubTaskProgress(ctx context.Context, parentExecut
 
 	// 进度跟踪
 	var (
-		mu               sync.RWMutex
-		completedCount   int
-		successCount     int
-		failureCount     int
-		lastReportTime   time.Time
-		subTaskResults   = make(map[int]*types.SubTaskResult)
+		mu             sync.RWMutex
+		completedCount int
+		successCount   int
+		failureCount   int
+		lastReportTime time.Time
+		subTaskResults = make(map[int]*types.SubTaskResult)
 	)
 
 	// 结果通道
@@ -422,12 +422,12 @@ func (ts *TaskSplitter) monitorSubTaskProgress(ctx context.Context, parentExecut
 
 			// 解析进度消息
 			var progressMsg struct {
-				SubTaskIndex int                    `json:"subTaskIndex"`
+				SubTaskIndex int                   `json:"subTaskIndex"`
 				Status       types.ExecutionStatus `json:"status"`
-				Step         int                    `json:"step"`
-				Total        int                    `json:"total"`
-				Message      string                 `json:"message"`
-				Timestamp    time.Time              `json:"timestamp"`
+				Step         int                   `json:"step"`
+				Total        int                   `json:"total"`
+				Message      string                `json:"message"`
+				Timestamp    time.Time             `json:"timestamp"`
 			}
 
 			if err := json.Unmarshal([]byte(msg.Payload), &progressMsg); err != nil {

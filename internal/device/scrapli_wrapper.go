@@ -10,13 +10,13 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/scrapli/scrapligo/driver/network"
 	"github.com/scrapli/scrapligo/driver/opoptions"
 	"github.com/scrapli/scrapligo/driver/options"
 	"github.com/scrapli/scrapligo/platform"
 	"github.com/scrapli/scrapligo/transport"
 	"github.com/scrapli/scrapligo/util"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
 )
 
 // ConnectionState 连接状态

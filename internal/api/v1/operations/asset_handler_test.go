@@ -15,17 +15,17 @@ import (
 
 // mockAssetService implements opsServices.AssetService.
 type mockAssetService struct {
-	CreateFunc           func(ctx context.Context, a *models.Asset) error
-	UpdateFunc           func(ctx context.Context, a *models.Asset) error
-	DeleteFunc           func(ctx context.Context, id string) error
-	GetByIDFunc          func(ctx context.Context, id string) (*models.Asset, error)
-	GetByDeviceSNFunc    func(ctx context.Context, sn string) (*models.Asset, error)
-	ListFunc             func(ctx context.Context, p map[string]interface{}) (*opsServices.PageResult, error)
-	BatchDeleteFunc      func(ctx context.Context, ids []string) error
-	GetDeviceTypesFunc   func(ctx context.Context) ([]opsServices.DeviceTypeCount, error)
-	GetDeviceCatsFunc    func(ctx context.Context) ([]opsServices.DeviceTypeCount, error)
-	GetStatusValuesFunc  func(ctx context.Context) ([]opsServices.DeviceTypeCount, error)
-	StatisticsFunc       func(ctx context.Context) (*opsServices.AssetStatisticsResult, error)
+	CreateFunc          func(ctx context.Context, a *models.Asset) error
+	UpdateFunc          func(ctx context.Context, a *models.Asset) error
+	DeleteFunc          func(ctx context.Context, id string) error
+	GetByIDFunc         func(ctx context.Context, id string) (*models.Asset, error)
+	GetByDeviceSNFunc   func(ctx context.Context, sn string) (*models.Asset, error)
+	ListFunc            func(ctx context.Context, p map[string]interface{}) (*opsServices.PageResult, error)
+	BatchDeleteFunc     func(ctx context.Context, ids []string) error
+	GetDeviceTypesFunc  func(ctx context.Context) ([]opsServices.DeviceTypeCount, error)
+	GetDeviceCatsFunc   func(ctx context.Context) ([]opsServices.DeviceTypeCount, error)
+	GetStatusValuesFunc func(ctx context.Context) ([]opsServices.DeviceTypeCount, error)
+	StatisticsFunc      func(ctx context.Context) (*opsServices.AssetStatisticsResult, error)
 }
 
 func (m *mockAssetService) Create(ctx context.Context, a *models.Asset) error {

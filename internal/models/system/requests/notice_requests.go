@@ -3,9 +3,9 @@ package requests
 import (
 	"time"
 
-	"github.com/xingran-next/xingran-go-backend/pkg/constants"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/internal/services/base"
+	"github.com/xingran-next/xingran-go-backend/pkg/constants"
 )
 
 // NoticeListParams 通知公告列表查询参数
@@ -83,17 +83,17 @@ type NotificationChannelRequest struct {
 
 // NoticeUpdateRequest 更新通知公告请求
 type NoticeUpdateRequest struct {
-	NoticeTitle      *string                      `json:"noticeTitle"`
-	NoticeType       *string                      `json:"noticeType"`
-	NoticeContent    *string                      `json:"noticeContent"`
-	Priority         *models.NoticePriority       `json:"priority"`
-	Status           *int                         `json:"status"`
-	PublishTime      *time.Time                   `json:"publishTime"`
-	ClearPublishTime bool                         `json:"clearPublishTime"`
+	NoticeTitle      *string                `json:"noticeTitle"`
+	NoticeType       *string                `json:"noticeType"`
+	NoticeContent    *string                `json:"noticeContent"`
+	Priority         *models.NoticePriority `json:"priority"`
+	Status           *int                   `json:"status"`
+	PublishTime      *time.Time             `json:"publishTime"`
+	ClearPublishTime bool                   `json:"clearPublishTime"`
 	// PublishStatus 显式发布状态覆盖（Phase 34 WR-003 修复引入）
 	// 0=草稿 1=已发布 2=定时发布中 3=已撤回
 	PublishStatus *models.PublishStatus `json:"publishStatus,omitempty"`
 	// EndDate 周期性通知结束时间（Phase 34 WR-003 修复引入）
-	EndDate *time.Time `json:"endDate,omitempty"`
+	EndDate  *time.Time                   `json:"endDate,omitempty"`
 	Channels []NotificationChannelRequest `json:"channels"`
 }

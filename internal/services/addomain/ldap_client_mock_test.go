@@ -15,25 +15,25 @@ type mockLDAPClient struct {
 	closeErr   error
 
 	// 搜索（按方法分别返回）
-	searchOUsErr      error
-	searchOUsResult   []*ldap.Entry
-	searchGroupsErr   error
-	searchGroupsRes   []*ldap.Entry
-	searchUsersErr    error
-	searchUsersRes    []*ldap.Entry
+	searchOUsErr    error
+	searchOUsResult []*ldap.Entry
+	searchGroupsErr error
+	searchGroupsRes []*ldap.Entry
+	searchUsersErr  error
+	searchUsersRes  []*ldap.Entry
 	// searchUsersFn 非 nil 时优先于 searchUsersRes（多批次/函数式返回驱动，
 	// 76-03 walk/分页窄边界：驱动 service 层遍历，非 wire 级分页）
-	searchUsersFn     func() ([]*ldap.Entry, error)
+	searchUsersFn      func() ([]*ldap.Entry, error)
 	searchComputersErr error
 	searchComputersRes []*ldap.Entry
 
 	// 写操作
-	addMemberErr        error
-	removeMemberErr     error
-	addMembersErr       error
-	removeMembersErr    error
-	createGroupErr      error
-	deleteGroupErr      error
+	addMemberErr     error
+	removeMemberErr  error
+	addMembersErr    error
+	removeMembersErr error
+	createGroupErr   error
+	deleteGroupErr   error
 	// 域控审查 P0-1/P0-2 新增方法
 	getGroupMembersRes map[string][]string // groupDN → 成员 DN 列表
 	getGroupMembersErr error
@@ -44,16 +44,16 @@ type mockLDAPClient struct {
 	renameOUCalls      int
 	renameOULastDN     string
 	renameOULastName   string
-	updateUserAttrErr   error
-	moveUserErr         error
-	enableUserErr       error
-	disableUserErr      error
-	updateGroupAttrErr  error
-	createOUErr         error
-	dnExistsRes         bool
-	dnExistsErr         error
-	searchWithReqRes    *ldap.SearchResult
-	searchWithReqErr    error
+	updateUserAttrErr  error
+	moveUserErr        error
+	enableUserErr      error
+	disableUserErr     error
+	updateGroupAttrErr error
+	createOUErr        error
+	dnExistsRes        bool
+	dnExistsErr        error
+	searchWithReqRes   *ldap.SearchResult
+	searchWithReqErr   error
 
 	// 调用计数
 	connectCalls       int
@@ -69,9 +69,9 @@ type mockLDAPClient struct {
 	//   - moveUserCalls / moveUserTargets：断言"目标 OU 相同则不调 MoveUser"以及
 	//     "移到了哪个 OU"（moveUserTargets 按调用顺序记录每次的 newOUDN）
 	//   - disableUserCalls / updateUserAttrCalls：断言终态路径是否触达对应 LDAP 写操作
-	moveUserCalls       int
-	moveUserTargets     []string
-	disableUserCalls    int
+	moveUserCalls    int
+	moveUserTargets  []string
+	disableUserCalls int
 	// enableUserCalls 为 FIX-01 enable 排水用例新增（与 disableUserCalls 对称），
 	// 用于断言 drainRow 的 enable 分支确实触达 LDAPClientIface.EnableUser。
 	enableUserCalls     int

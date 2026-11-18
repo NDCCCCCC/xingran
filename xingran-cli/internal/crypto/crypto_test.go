@@ -120,7 +120,7 @@ func TestEncryptRequestRoundTrip(t *testing.T) {
 
 	cases := [][]byte{
 		[]byte(`{"username":"admin","password":"P@ssw0rd"}`),
-		[]byte(`{"list":[],"total":0}`), // 短 body（触发一个完整填充块）
+		[]byte(`{"list":[],"total":0}`),          // 短 body（触发一个完整填充块）
 		[]byte(strings.Repeat("中文国密测试数据-", 100)), // 多块 + UTF-8
 	}
 	for i, body := range cases {

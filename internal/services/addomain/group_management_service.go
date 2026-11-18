@@ -206,7 +206,6 @@ func (s *groupManagementService) AddMembers(ctx context.Context, groupID string,
 		return nil, fmt.Errorf("AD配置不存在")
 	}
 
-
 	// 4. 批量添加成员（Phase 38 Wave 1: 改走 FailoverClient 账号池故障切换）
 	userDNs := make([]string, 0, len(users))
 	for _, user := range users {
@@ -266,7 +265,6 @@ func (s *groupManagementService) RemoveMembers(ctx context.Context, groupID stri
 	if err := s.db.WithContext(ctx).Where("id = ?", group.ADConfigID).First(&config).Error; err != nil {
 		return nil, fmt.Errorf("AD配置不存在")
 	}
-
 
 	// 4. 批量移除成员（Phase 38 Wave 1: 改走 FailoverClient 账号池故障切换）
 	userDNs := make([]string, 0, len(users))

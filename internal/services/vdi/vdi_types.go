@@ -64,19 +64,19 @@ type BindUserRequest struct {
 
 // VMInfo 虚拟机信息
 type VMInfo struct {
-	VMID        string    `json:"vM_ID"`
-	VMName      string    `json:"vM_NAME"`
-	IP          string    `json:"ip"`
-	MAC         string    `json:"mac"`
-	Status      string    `json:"status"`
-	Username    string    `json:"username,omitempty"`
-	Password    string    `json:"password,omitempty"`
-	VolumeID    string    `json:"volumeId,omitempty"`
-	ImageID     string    `json:"imageId,omitempty"`
-	DesktopGroup string   `json:"desktopGroup,omitempty"`
-	Comments    string    `json:"comments,omitempty"`
-	CreatedAt   time.Time `json:"createdAt,omitempty"`
-	UpdatedAt   time.Time `json:"updatedAt,omitempty"`
+	VMID         string    `json:"vM_ID"`
+	VMName       string    `json:"vM_NAME"`
+	IP           string    `json:"ip"`
+	MAC          string    `json:"mac"`
+	Status       string    `json:"status"`
+	Username     string    `json:"username,omitempty"`
+	Password     string    `json:"password,omitempty"`
+	VolumeID     string    `json:"volumeId,omitempty"`
+	ImageID      string    `json:"imageId,omitempty"`
+	DesktopGroup string    `json:"desktopGroup,omitempty"`
+	Comments     string    `json:"comments,omitempty"`
+	CreatedAt    time.Time `json:"createdAt,omitempty"`
+	UpdatedAt    time.Time `json:"updatedAt,omitempty"`
 }
 
 // VMListResponse 虚拟机列表响应
@@ -88,9 +88,9 @@ type VMListResponse struct {
 
 // VMInfoResponse 虚拟机详情响应
 type VMInfoResponse struct {
-	Code    int     `json:"code"`
-	Message string  `json:"message"`
-	Data    VMInfo  `json:"data,omitempty"`
+	Code    int    `json:"code"`
+	Message string `json:"message"`
+	Data    VMInfo `json:"data,omitempty"`
 }
 
 // ============ VDI Client 扩展类型 ============
@@ -148,10 +148,10 @@ type VDIResourceGroup struct {
 
 // VDIResource VDI独享桌面资源
 type VDIResource struct {
-	ID     int    `json:"id"`
-	Name   string `json:"name"`
-	Note   string `json:"note"`
-	GrpID  int    `json:"grp_id"`
+	ID    int    `json:"id"`
+	Name  string `json:"name"`
+	Note  string `json:"note"`
+	GrpID int    `json:"grp_id"`
 }
 
 // VDIVMResource VDI虚拟机资源信息（完整）
@@ -200,7 +200,7 @@ type VDIVMResource struct {
 	IsClient            bool   `json:"isClient"`
 	GroupPolicyName     string `json:"group_policy_name"`
 	GroupPolicyID       string `json:"group_policy_id"`
-	IsEnableGroupPolicy bool `json:"is_enable_group_policy"`
+	IsEnableGroupPolicy bool   `json:"is_enable_group_policy"`
 	AreaID              string `json:"araeId"`
 	AreaName            string `json:"areaName"`
 	ApplyWsus           string `json:"apply_wsus"`
@@ -208,10 +208,10 @@ type VDIVMResource struct {
 
 // VDIResourceServersResponse VDI资源服务器响应
 type VDIResourceServersResponse struct {
-	ErrorCode    int             `json:"error_code"`
-	ErrorMessage string          `json:"error_message"`
+	ErrorCode    int    `json:"error_code"`
+	ErrorMessage string `json:"error_message"`
 	Data         struct {
-		TotalCount string           `json:"totalCount"`
+		TotalCount string          `json:"totalCount"`
 		Data       []VDIVMResource `json:"data"`
 	} `json:"data"`
 }
@@ -234,8 +234,8 @@ type VDIPlatform struct {
 
 // VDIPlatformsResponse VDI平台列表响应
 type VDIPlatformsResponse struct {
-	ErrorCode    int          `json:"error_code"`
-	ErrorMessage string       `json:"error_message"`
+	ErrorCode    int           `json:"error_code"`
+	ErrorMessage string        `json:"error_message"`
 	Data         []VDIPlatform `json:"data"`
 }
 
@@ -248,8 +248,8 @@ type RunPosition struct {
 
 // RunPositionResponse 运行位置响应
 type RunPositionResponse struct {
-	ErrorCode    int                      `json:"error_code"`
-	ErrorMessage string                   `json:"error_message"`
+	ErrorCode    int    `json:"error_code"`
+	ErrorMessage string `json:"error_message"`
 	Data         struct {
 		Run []RunPosition `json:"run"`
 	} `json:"data"`
@@ -268,8 +268,8 @@ type Storage struct {
 
 // StorageResponse 存储位置响应
 type StorageResponse struct {
-	ErrorCode    int                      `json:"error_code"`
-	ErrorMessage string                   `json:"error_message"`
+	ErrorCode    int    `json:"error_code"`
+	ErrorMessage string `json:"error_message"`
 	Data         struct {
 		Storages []Storage `json:"storages"`
 	} `json:"data"`
@@ -284,8 +284,8 @@ type Network struct {
 
 // NetworkResponse 网络接口响应
 type NetworkResponse struct {
-	ErrorCode    int                      `json:"error_code"`
-	ErrorMessage string                   `json:"error_message"`
+	ErrorCode    int    `json:"error_code"`
+	ErrorMessage string `json:"error_message"`
 	Data         struct {
 		Networks []Network `json:"networks"`
 	} `json:"data"`
@@ -293,13 +293,13 @@ type NetworkResponse struct {
 
 // CreateServerRequest 创建服务器请求（VDI独享桌面虚拟机）
 type CreateServerRequest struct {
-	Resource    ResourceInfo   `json:"resource"`
-	Host        HostInfo       `json:"host"`
-	RunPosition PositionInfo   `json:"run_position"`
-	Disk        DiskInfo       `json:"disk"`
-	Storage     StorageInfo    `json:"storage"`
-	Network     NetworkInfo    `json:"network"`
-	Servers     ServerCount    `json:"servers"`
+	Resource    ResourceInfo `json:"resource"`
+	Host        HostInfo     `json:"host"`
+	RunPosition PositionInfo `json:"run_position"`
+	Disk        DiskInfo     `json:"disk"`
+	Storage     StorageInfo  `json:"storage"`
+	Network     NetworkInfo  `json:"network"`
+	Servers     ServerCount  `json:"servers"`
 }
 
 // ResourceInfo 资源信息
@@ -339,8 +339,8 @@ type ServerCount struct {
 
 // CreateServerResponse 创建服务器响应
 type CreateServerResponse struct {
-	ErrorCode    int      `json:"error_code"`
-	ErrorMessage string   `json:"error_message"`
+	ErrorCode    int    `json:"error_code"`
+	ErrorMessage string `json:"error_message"`
 	Data         struct {
 		TaskID   int      `json:"task_id"`
 		ServerID []string `json:"server_id"`
@@ -357,8 +357,8 @@ type ServerGroup struct {
 
 // ServerGroupsResponse 虚拟机分组列表响应
 type ServerGroupsResponse struct {
-	ErrorCode    int          `json:"error_code"`
-	ErrorMessage string       `json:"error_message"`
+	ErrorCode    int    `json:"error_code"`
+	ErrorMessage string `json:"error_message"`
 	Data         struct {
 		List []ServerGroup `json:"list"`
 	} `json:"data"`
@@ -366,10 +366,10 @@ type ServerGroupsResponse struct {
 
 // MigrateServersRequest 移动虚拟机到其他分组请求
 type MigrateServersRequest struct {
-	VTPID     int      `json:"vtp_id"`
-	TargetDir string   `json:"target_dir"`
-	VMs       []int    `json:"vms"`
-	Action    string   `json:"action"` // 固定值: "migrate_vms"
+	VTPID     int    `json:"vtp_id"`
+	TargetDir string `json:"target_dir"`
+	VMs       []int  `json:"vms"`
+	Action    string `json:"action"` // 固定值: "migrate_vms"
 }
 
 // MigrateServersResponse 移动虚拟机响应

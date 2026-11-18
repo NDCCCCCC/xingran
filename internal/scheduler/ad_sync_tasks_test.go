@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/xingran-next/xingran-go-backend/pkg/constants"
 	"github.com/stretchr/testify/assert"
+	"github.com/xingran-next/xingran-go-backend/pkg/constants"
 )
 
 // TestADSyncScheduler_New 测试创建 AD 同步调度器

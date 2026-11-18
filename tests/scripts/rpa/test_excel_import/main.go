@@ -1,5 +1,5 @@
-
 //go:build ignore
+
 // 降级保留: 引用已废弃的 core.NewCore / db.CloseDB,修复需重构初始化逻辑并核对 operations 包 API,
 // 暂维持 ignore 不参与 go build。如需启用,改用 config.Load() + db.NewDatabase() 模式(参考 scripts/mac/cleanup)。
 

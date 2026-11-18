@@ -4,39 +4,39 @@ import "time"
 
 // TaskMessage 从 Redis 消费的任务消息
 type TaskMessage struct {
-	CreatedAt    time.Time         `json:"created_at"`
-	ExecutionID  string            `json:"execution_id"`
-	TaskID       string            `json:"task_id"`
-	TargetURL    string            `json:"target_url"`
-	Script       []Action          `json:"script"`
-	Variables    map[string]interface{} `json:"variables"`
-	Priority     int               `json:"priority"`
+	CreatedAt   time.Time              `json:"created_at"`
+	ExecutionID string                 `json:"execution_id"`
+	TaskID      string                 `json:"task_id"`
+	TargetURL   string                 `json:"target_url"`
+	Script      []Action               `json:"script"`
+	Variables   map[string]interface{} `json:"variables"`
+	Priority    int                    `json:"priority"`
 }
 
 // Action 单个脚本动作
 type Action struct {
-	ID           string                 `json:"id"`
-	Type         ActionType             `json:"type"`
-	Description  string                 `json:"description"`
-	Selector     string                 `json:"selector"`
-	Params       map[string]interface{} `json:"params"`
-	Timeout      int                    `json:"timeout"`
-	Retry        int                    `json:"retry"`
-	AIAssisted   bool                   `json:"ai_assisted"`
+	ID          string                 `json:"id"`
+	Type        ActionType             `json:"type"`
+	Description string                 `json:"description"`
+	Selector    string                 `json:"selector"`
+	Params      map[string]interface{} `json:"params"`
+	Timeout     int                    `json:"timeout"`
+	Retry       int                    `json:"retry"`
+	AIAssisted  bool                   `json:"ai_assisted"`
 }
 
 // ActionType 动作类型
 type ActionType string
 
 const (
-	ActionNavigate  ActionType = "navigate"
-	ActionClick     ActionType = "click"
-	ActionFill      ActionType = "fill"
-	ActionSelect    ActionType = "select"
-	ActionWait      ActionType = "wait"
+	ActionNavigate   ActionType = "navigate"
+	ActionClick      ActionType = "click"
+	ActionFill       ActionType = "fill"
+	ActionSelect     ActionType = "select"
+	ActionWait       ActionType = "wait"
 	ActionScreenshot ActionType = "screenshot"
-	ActionWaitFor   ActionType = "wait_for"
-	ActionExtract   ActionType = "extract"
+	ActionWaitFor    ActionType = "wait_for"
+	ActionExtract    ActionType = "extract"
 )
 
 // ExecutionStatus 执行状态
@@ -52,16 +52,16 @@ const (
 
 // ExecutionResult 执行结果
 type ExecutionResult struct {
-	ExecutionID  string          `json:"execution_id"`
-	TaskID       string          `json:"task_id"`
-	Status       ExecutionStatus `json:"status"`
-	ErrorMessage string          `json:"error_message,omitempty"`
-	Step         int             `json:"step"`
-	Total        int             `json:"total"`
-	StartedAt    time.Time       `json:"started_at"`
-	CompletedAt  time.Time       `json:"completed_at,omitempty"`
-	Duration     time.Duration   `json:"duration,omitempty"`
-	Screenshot   string          `json:"screenshot,omitempty"`
+	ExecutionID  string                 `json:"execution_id"`
+	TaskID       string                 `json:"task_id"`
+	Status       ExecutionStatus        `json:"status"`
+	ErrorMessage string                 `json:"error_message,omitempty"`
+	Step         int                    `json:"step"`
+	Total        int                    `json:"total"`
+	StartedAt    time.Time              `json:"started_at"`
+	CompletedAt  time.Time              `json:"completed_at,omitempty"`
+	Duration     time.Duration          `json:"duration,omitempty"`
+	Screenshot   string                 `json:"screenshot,omitempty"`
 	Output       map[string]interface{} `json:"output,omitempty"`
 }
 
@@ -81,19 +81,19 @@ type ProgressReport struct {
 
 // WorkerRegisterRequest Worker 注册请求
 type WorkerRegisterRequest struct {
-	WorkerID      string   `json:"worker_id"`
-	Name          string   `json:"name"`
-	Port          int      `json:"port"`
-	MaxConcurrency int     `json:"max_concurrency"`
-	Version       string   `json:"version"`
-	Capabilities  []string `json:"capabilities"`
+	WorkerID       string   `json:"worker_id"`
+	Name           string   `json:"name"`
+	Port           int      `json:"port"`
+	MaxConcurrency int      `json:"max_concurrency"`
+	Version        string   `json:"version"`
+	Capabilities   []string `json:"capabilities"`
 }
 
 // WorkerRegisterResponse Worker 注册响应
 type WorkerRegisterResponse struct {
-	WorkerID  string `json:"worker_id"`
-	Token     string `json:"token"`
-	Config    string `json:"config"`
+	WorkerID string `json:"worker_id"`
+	Token    string `json:"token"`
+	Config   string `json:"config"`
 }
 
 // WorkerHeartbeatRequest Worker 心跳请求

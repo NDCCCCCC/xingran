@@ -16,7 +16,7 @@ type Logger interface {
 	Warn(msg string, fields ...Field)
 	Error(msg string, fields ...Field)
 	Fatal(msg string, fields ...Field)
-	
+
 	With(fields ...Field) Logger
 	Sync() error
 }

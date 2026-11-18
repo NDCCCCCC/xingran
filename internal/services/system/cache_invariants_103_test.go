@@ -104,7 +104,7 @@ func scanFiles103(t *testing.T) map[string]string {
 }
 
 // isClosureGetOrSet103 判断 CallExpr 是否为 interface{} 闭包式 GetOrSet 调用
-//（口径复用 cacheImplResidue92：selector .GetOrSet + FuncLit 实参签名
+// （口径复用 cacheImplResidue92：selector .GetOrSet + FuncLit 实参签名
 // (interface{}, error) / (any, error)）。
 func isClosureGetOrSet103(call *ast.CallExpr) bool {
 	sel, ok := call.Fun.(*ast.SelectorExpr)
@@ -154,8 +154,10 @@ func isCacheReadCall103(call *ast.CallExpr) bool {
 // 用函数域内位置序而非行数窗口（实证校准：selector_learner 原形态 Get@170 与
 // Set@227 相隔 57 行，中间夹整个 DB 查询主体，行数窗口必然漏检）。
 // 覆盖两种已知手写形态：
-//   a) cache.Get → json.Unmarshal → cache.Set(json.Marshal(...))   (selector_learner 原形态)
-//   b) cache.GetJSON → … → cache.SetJSON / cache.Set(json.Marshal)  (reconciliation 原形态)
+//
+//	a) cache.Get → json.Unmarshal → cache.Set(json.Marshal(...))   (selector_learner 原形态)
+//	b) cache.GetJSON → … → cache.SetJSON / cache.Set(json.Marshal)  (reconciliation 原形态)
+//
 // 返回 "文件名:行号" 列表（行号为 cache.Get 命中行）。
 func cacheAsideResidue103(t *testing.T, path string) []string {
 	t.Helper()
@@ -248,7 +250,7 @@ func TestNoInterfaceGetOrSetResidue103(t *testing.T) {
 
 // TestNoHandwrittenCacheAside D-103-18：手写 cache-aside 标志性序列检测。
 // 收敛面 4 文件必须 == 0（硬失败档）；同域其余文件 warning 计数
-//（api_endpoint_service / dashboard_service / widget_data_fetcher 等既有站点
+// （api_endpoint_service / dashboard_service / widget_data_fetcher 等既有站点
 // 是 v1.31+ 迁移候选，不在 Phase 103 范围）。
 func TestNoHandwrittenCacheAside(t *testing.T) {
 	files := scanFiles103(t)

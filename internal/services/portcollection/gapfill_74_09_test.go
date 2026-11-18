@@ -270,7 +270,7 @@ func TestQueryService_GetList_Filters(t *testing.T) {
 	assert.Equal(t, int64(1), total)
 
 	_, total, err = svc.GetList(ctx, &ListRequest{
-		BaseListRequest:      base.BaseListRequest{Current: 1, PageSize: 10},
+		BaseListRequest:     base.BaseListRequest{Current: 1, PageSize: 10},
 		PortSecurityEnabled: &tru,
 	})
 	require.NoError(t, err)

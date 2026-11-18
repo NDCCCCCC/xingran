@@ -20,27 +20,27 @@ type FilterRuleService interface {
 
 // CreateFilterRuleRequest 创建过滤规则请求
 type CreateFilterRuleRequest struct {
-	RuleName        string             `json:"ruleName" binding:"required"`
-	DeviceType      models.DeviceType  `json:"deviceType" binding:"required"`
-	Vendor          models.DeviceVendor `json:"vendor"`
-	MACThreshold    int                `json:"macThreshold" binding:"required,min=0"`
-	EnableLLDPFilter bool              `json:"enableLLDPFilter"`
-	Priority        int                `json:"priority" binding:"required,min=0"`
-	Remark          string             `json:"remark"`
-	CreatedBy       string             `json:"-"`
+	RuleName         string              `json:"ruleName" binding:"required"`
+	DeviceType       models.DeviceType   `json:"deviceType" binding:"required"`
+	Vendor           models.DeviceVendor `json:"vendor"`
+	MACThreshold     int                 `json:"macThreshold" binding:"required,min=0"`
+	EnableLLDPFilter bool                `json:"enableLLDPFilter"`
+	Priority         int                 `json:"priority" binding:"required,min=0"`
+	Remark           string              `json:"remark"`
+	CreatedBy        string              `json:"-"`
 }
 
 // UpdateFilterRuleRequest 更新过滤规则请求
 type UpdateFilterRuleRequest struct {
-	ID              string
-	RuleName        string
-	DeviceType      models.DeviceType
-	Vendor          models.DeviceVendor
-	MACThreshold    int
+	ID               string
+	RuleName         string
+	DeviceType       models.DeviceType
+	Vendor           models.DeviceVendor
+	MACThreshold     int
 	EnableLLDPFilter bool
-	Priority        int
-	Remark          string
-	UpdatedBy       string
+	Priority         int
+	Remark           string
+	UpdatedBy        string
 }
 
 // ListFilterRulesParams 查询过滤规则列表参数
@@ -140,14 +140,14 @@ func (s *filterRuleService) Update(ctx context.Context, id string, req *UpdateFi
 
 	// 构建更新数据
 	updates := map[string]interface{}{
-		"rule_name":           req.RuleName,
-		"device_type":         req.DeviceType,
-		"vendor":              req.Vendor,
-		"mac_threshold":       req.MACThreshold,
-		"enable_lldp_filter":  req.EnableLLDPFilter,
-		"priority":            req.Priority,
-		"remark":              req.Remark,
-		"updated_by":          req.UpdatedBy,
+		"rule_name":          req.RuleName,
+		"device_type":        req.DeviceType,
+		"vendor":             req.Vendor,
+		"mac_threshold":      req.MACThreshold,
+		"enable_lldp_filter": req.EnableLLDPFilter,
+		"priority":           req.Priority,
+		"remark":             req.Remark,
+		"updated_by":         req.UpdatedBy,
 	}
 
 	if err := s.db.WithContext(ctx).Model(&rule).Updates(updates).Error; err != nil {

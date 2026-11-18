@@ -69,7 +69,7 @@ func TestBuildingFloorCount_BasicAggregation(t *testing.T) {
 }
 
 // TestBuildingFloorCount_SoftDeleteExcluded 软删楼层不计入统计
-//（Model(&operations.OpsFloor{}) 自动附加 deleted_at IS NULL）。
+// （Model(&operations.OpsFloor{}) 自动附加 deleted_at IS NULL）。
 func TestBuildingFloorCount_SoftDeleteExcluded(t *testing.T) {
 	db := newFloor91TestDB(t)
 	svc := NewBuildingService(db)

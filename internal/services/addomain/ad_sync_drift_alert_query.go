@@ -43,18 +43,18 @@ const adDriftKeyBaselineKeyAlias = "ad_sync.drift_alert.baseline_key"
 
 // DriftAlertStatus 告警通道运行状态（GET /status 响应）。
 type DriftAlertStatus struct {
-	Enabled           bool   `json:"enabled"`
-	Tolerance         int    `json:"tolerance"`
-	ThrottleMinutes   int    `json:"throttleMinutes"`
-	NoticeEnabled     bool   `json:"noticeEnabled"`
-	WSEnabled         bool   `json:"wsEnabled"`
-	WebhookEnabled    bool   `json:"webhookEnabled"`
-	WebhookConfigID   string `json:"webhookConfigId"`
-	Baseline          string `json:"baseline"`
-	BaselineKey       string `json:"baselineKey"`
-	LastAlertAt       string `json:"lastAlertAt"`
-	LastAlertDrifted  bool   `json:"lastAlertDrifted"`
-	AlertCount        int    `json:"alertCount"`
+	Enabled          bool   `json:"enabled"`
+	Tolerance        int    `json:"tolerance"`
+	ThrottleMinutes  int    `json:"throttleMinutes"`
+	NoticeEnabled    bool   `json:"noticeEnabled"`
+	WSEnabled        bool   `json:"wsEnabled"`
+	WebhookEnabled   bool   `json:"webhookEnabled"`
+	WebhookConfigID  string `json:"webhookConfigId"`
+	Baseline         string `json:"baseline"`
+	BaselineKey      string `json:"baselineKey"`
+	LastAlertAt      string `json:"lastAlertAt"`
+	LastAlertDrifted bool   `json:"lastAlertDrifted"`
+	AlertCount       int    `json:"alertCount"`
 }
 
 // DriftAlertConfigView 9 个旋钮的当前值（GET /config 响应）。

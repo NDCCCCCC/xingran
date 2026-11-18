@@ -17,11 +17,11 @@ import (
 
 // mockCache is a test double for cache.Cache that allows per-method injection.
 type mockCache struct {
-	getFn        func(ctx context.Context, key string) (string, error)
-	incrementFn  func(ctx context.Context, key string) (int64, error)
-	deleteFn     func(ctx context.Context, key string) error
-	setFn        func(ctx context.Context, key string, value interface{}, expiration time.Duration) error
-	existsFn     func(ctx context.Context, key string) (bool, error)
+	getFn       func(ctx context.Context, key string) (string, error)
+	incrementFn func(ctx context.Context, key string) (int64, error)
+	deleteFn    func(ctx context.Context, key string) error
+	setFn       func(ctx context.Context, key string, value interface{}, expiration time.Duration) error
+	existsFn    func(ctx context.Context, key string) (bool, error)
 }
 
 func (m *mockCache) Get(ctx context.Context, key string) (string, error) {
@@ -59,28 +59,44 @@ func (m *mockCache) Exists(ctx context.Context, key string) (bool, error) {
 	return false, nil
 }
 
-func (m *mockCache) Close() error                             { return nil }
+func (m *mockCache) Close() error                                         { return nil }
 func (m *mockCache) Keys(ctx context.Context, p string) ([]string, error) { return nil, nil }
-func (m *mockCache) FlushDB(ctx context.Context) error        { return nil }
-func (m *mockCache) Expire(ctx context.Context, key string, expiration time.Duration) error { return nil }
+func (m *mockCache) FlushDB(ctx context.Context) error                    { return nil }
+func (m *mockCache) Expire(ctx context.Context, key string, expiration time.Duration) error {
+	return nil
+}
 func (m *mockCache) TTL(ctx context.Context, key string) (time.Duration, error) { return 0, nil }
-func (m *mockCache) IncrementBy(ctx context.Context, key string, value int64) (int64, error) { return 0, nil }
+func (m *mockCache) IncrementBy(ctx context.Context, key string, value int64) (int64, error) {
+	return 0, nil
+}
 func (m *mockCache) Decrement(ctx context.Context, key string) (int64, error) { return 0, nil }
-func (m *mockCache) DecrementBy(ctx context.Context, key string, value int64) (int64, error) { return 0, nil }
+func (m *mockCache) DecrementBy(ctx context.Context, key string, value int64) (int64, error) {
+	return 0, nil
+}
 func (m *mockCache) MGet(ctx context.Context, keys ...string) ([]string, error) { return nil, nil }
-func (m *mockCache) MSet(ctx context.Context, pairs ...interface{}) error { return nil }
-func (m *mockCache) MDelete(ctx context.Context, keys ...string) error { return nil }
-func (m *mockCache) MGetJSON(ctx context.Context, keys ...string) (map[string]interface{}, error) { return nil, nil }
-func (m *mockCache) SetInt(ctx context.Context, key string, value int, expiration time.Duration) error { return nil }
-func (m *mockCache) GetInt(ctx context.Context, key string) (int, error)                             { return 0, nil }
-func (m *mockCache) SetJSON(ctx context.Context, key string, value interface{}, expiration time.Duration) error { return nil }
-func (m *mockCache) GetJSON(ctx context.Context, key string, dest interface{}) error                 { return nil }
-func (m *mockCache) MSetJSON(ctx context.Context, data map[string]interface{}, expiration time.Duration) error { return nil }
-func (m *mockCache) HGet(ctx context.Context, key, field string) (string, error)           { return "", nil }
-func (m *mockCache) HSet(ctx context.Context, key, field string, value interface{}) error   { return nil }
-func (m *mockCache) HGetAll(ctx context.Context, key string) (map[string]string, error)   { return nil, nil }
-func (m *mockCache) HDel(ctx context.Context, key string, fields ...string) error          { return nil }
-func (m *mockCache) HKeys(ctx context.Context, key string) ([]string, error)              { return nil, nil }
+func (m *mockCache) MSet(ctx context.Context, pairs ...interface{}) error       { return nil }
+func (m *mockCache) MDelete(ctx context.Context, keys ...string) error          { return nil }
+func (m *mockCache) MGetJSON(ctx context.Context, keys ...string) (map[string]interface{}, error) {
+	return nil, nil
+}
+func (m *mockCache) SetInt(ctx context.Context, key string, value int, expiration time.Duration) error {
+	return nil
+}
+func (m *mockCache) GetInt(ctx context.Context, key string) (int, error) { return 0, nil }
+func (m *mockCache) SetJSON(ctx context.Context, key string, value interface{}, expiration time.Duration) error {
+	return nil
+}
+func (m *mockCache) GetJSON(ctx context.Context, key string, dest interface{}) error { return nil }
+func (m *mockCache) MSetJSON(ctx context.Context, data map[string]interface{}, expiration time.Duration) error {
+	return nil
+}
+func (m *mockCache) HGet(ctx context.Context, key, field string) (string, error)          { return "", nil }
+func (m *mockCache) HSet(ctx context.Context, key, field string, value interface{}) error { return nil }
+func (m *mockCache) HGetAll(ctx context.Context, key string) (map[string]string, error) {
+	return nil, nil
+}
+func (m *mockCache) HDel(ctx context.Context, key string, fields ...string) error { return nil }
+func (m *mockCache) HKeys(ctx context.Context, key string) ([]string, error)      { return nil, nil }
 
 // Compile-time check: mockCache must satisfy cache.Cache
 var _ cache.Cache = (*mockCache)(nil)
@@ -95,13 +111,16 @@ var _ cache.Cache = (*mockCache)(nil)
 // does NOT expose Increment infrastructure details to the client.
 //
 // Baseline:    captcha.go:379,439,445 used  _, _ = s.cache.Increment(...)
-//              which silently ignored failures.  No SECURITY warn was emitted.
+//
+//	which silently ignored failures.  No SECURITY warn was emitted.
 //
 // After:       Phase 111 CAP-01 logs a [SECURITY] warn on Increment failure
-//              AND verification remains fail-closed.  This test PASSES.
+//
+//	AND verification remains fail-closed.  This test PASSES.
 //
 // Extended:     GUARD-08 now also asserts [SECURITY] warn log was emitted
-//              using applogger output capture.
+//
+//	using applogger output capture.
 func TestCaptcha_Increment_Failure_FailsClosed(t *testing.T) {
 	captchaID := "test-captcha-id"
 

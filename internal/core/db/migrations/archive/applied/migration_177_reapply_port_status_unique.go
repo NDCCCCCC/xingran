@@ -1,6 +1,5 @@
 //go:build archive_skip
 
-
 package migrations
 
 import (
@@ -21,13 +20,13 @@ import (
 //     ops_info_points→port_status→sys_device_mac_address 反查链间歇性失败
 //
 // 修复策略:
-//   1. 把每组 (device_id, interface_name) 多行合并为一行(保留 collected_at 最新;
-//      若有 ops_info_points 引用其中任一行,优先保留被引用的那行,避免悬挂引用)
-//   2. 把 infoPoint.port_id 重新指向合并后保留的 UUID
-//   3. 删除被合并的旧行
-//   4. 添加 UNIQUE (device_id, interface_name) 约束
-//   5. 给 models.DevicePortStatus 加 uniqueIndex:uniq_device_interface tag,
-//      确保后续 AutoMigrate 走 ADD path 而非 DROP+ADD
+//  1. 把每组 (device_id, interface_name) 多行合并为一行(保留 collected_at 最新;
+//     若有 ops_info_points 引用其中任一行,优先保留被引用的那行,避免悬挂引用)
+//  2. 把 infoPoint.port_id 重新指向合并后保留的 UUID
+//  3. 删除被合并的旧行
+//  4. 添加 UNIQUE (device_id, interface_name) 约束
+//  5. 给 models.DevicePortStatus 加 uniqueIndex:uniq_device_interface tag,
+//     确保后续 AutoMigrate 走 ADD path 而非 DROP+ADD
 func Migrate177ReapplyPortStatusUnique(db *gorm.DB) error {
 	log.Println("Running migration 177: Reapply sys_device_port_status unique constraint")
 

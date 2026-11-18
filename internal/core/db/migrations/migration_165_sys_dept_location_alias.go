@@ -26,8 +26,8 @@ import (
 // 1. CREATE TABLE sys_dept_location_alias(7 列 + 软删除)
 //   - 7 列表: id / dept_id / location_id / scope / remark / created_at / updated_at / deleted_at
 //     (BaseModel 嵌入 + Scope/Remark 共 4 个业务字段,加上 BaseModel 的 7 字段,
-//      实际列数 = BaseModel 7 + 业务 4 = 11; 此处 "7 列" 指模型表内核心业务列数,
-//      以 must_haves 描述一致即可,实际列结构以 GORM AutoMigrate 为准)
+//     实际列数 = BaseModel 7 + 业务 4 = 11; 此处 "7 列" 指模型表内核心业务列数,
+//     以 must_haves 描述一致即可,实际列结构以 GORM AutoMigrate 为准)
 //
 // 2. INDEX on location_id: 普通索引,用于反向查询 "哪些 sys_dept 映射到该 location_id"
 //   - D-05 决策要求 "1 INDEX on location_id",此处通过 GORM AutoMigrate 的
@@ -113,9 +113,9 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_sys_dept_location_alias_dept_scope
 			MenuName: btn.name,
 			ParentID: &parentMenu.ID,
 			Path:     &emptyPath,
-			MenuType: "F",  // 按钮
-			Visible:  0,    // 隐藏 — 不在菜单树显示
-			Status:   0,    // 正常
+			MenuType: "F", // 按钮
+			Visible:  0,   // 隐藏 — 不在菜单树显示
+			Status:   0,   // 正常
 			Perms:    &btnPerms,
 			Icon:     &icon,
 			OrderNum: 30, // 排在其他按钮之后

@@ -21,9 +21,9 @@ import (
 type behavior int
 
 const (
-	behaviorNormal     behavior = iota // respond with the matching table entry
-	behaviorErrorStatus                // respond with Error != NoError
-	behaviorDrop                       // silently swallow the request (triggers client timeout/retry)
+	behaviorNormal      behavior = iota // respond with the matching table entry
+	behaviorErrorStatus                 // respond with Error != NoError
+	behaviorDrop                        // silently swallow the request (triggers client timeout/retry)
 )
 
 // fakeSNMPServer78 is a process-local UDP SNMP responder.
@@ -33,9 +33,9 @@ const (
 // network targets are strictly 127.0.0.1.
 type fakeSNMPServer78 struct {
 	pc       *net.UDPConn
-	table    []gosnmp.SnmpPDU        // ordered OID->value entries for Walk/GetNext
-	reqCount int64                   // atomic; number of requests received
-	behavior behavior                // injectable behavior
+	table    []gosnmp.SnmpPDU // ordered OID->value entries for Walk/GetNext
+	reqCount int64            // atomic; number of requests received
+	behavior behavior         // injectable behavior
 }
 
 // newFakeSNMPServer78 creates a listening UDP server backed by table.

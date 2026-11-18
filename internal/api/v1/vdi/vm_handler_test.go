@@ -28,19 +28,19 @@ var _ vdiServices.VMService = (*mockVMService)(nil)
 type mockVMService struct {
 	vdiServices.VMService
 
-	ListResourceGroupsFunc      func(ctx context.Context, vdiServerID string) ([]vdiServices.VDIResourceGroupDTO, error)
-	ListResourcesFunc           func(ctx context.Context, vdiServerID string, groupID string) ([]vdiServices.VDIResourceDTO, error)
-	CreateVMFunc                func(ctx context.Context, req *vdiServices.CreateVMServiceRequest) (*vdiServices.VDIVMDTO, error)
-	GetVMFunc                   func(ctx context.Context, id string) (*vdiServices.VDIVMDTO, error)
-	ListVMsFunc                 func(ctx context.Context, req *vdiServices.ListVMRequest, userID string, dataScope models.DataScope) (*vdiServices.PageResult, error)
-	UpdateVMFunc                func(ctx context.Context, id string, req *vdiServices.UpdateVMRequest) error
-	DeleteVMFunc                func(ctx context.Context, ids []string) error
-	OperateVMFunc               func(ctx context.Context, req *vdiServices.VMOperateRequest) error
-	BindUserFunc                func(ctx context.Context, vmID string, req *vdiServices.BindUserServiceRequest) error
-	UnbindUserFunc              func(ctx context.Context, vmID string) error
-	SyncVMFromVDIFunc           func(ctx context.Context, vmID string) error
-	SyncAllVMsFunc              func(ctx context.Context, serverID string) error
-	SyncVMsFromVDIByServerFunc  func(ctx context.Context, server *models.VDIServer) error
+	ListResourceGroupsFunc     func(ctx context.Context, vdiServerID string) ([]vdiServices.VDIResourceGroupDTO, error)
+	ListResourcesFunc          func(ctx context.Context, vdiServerID string, groupID string) ([]vdiServices.VDIResourceDTO, error)
+	CreateVMFunc               func(ctx context.Context, req *vdiServices.CreateVMServiceRequest) (*vdiServices.VDIVMDTO, error)
+	GetVMFunc                  func(ctx context.Context, id string) (*vdiServices.VDIVMDTO, error)
+	ListVMsFunc                func(ctx context.Context, req *vdiServices.ListVMRequest, userID string, dataScope models.DataScope) (*vdiServices.PageResult, error)
+	UpdateVMFunc               func(ctx context.Context, id string, req *vdiServices.UpdateVMRequest) error
+	DeleteVMFunc               func(ctx context.Context, ids []string) error
+	OperateVMFunc              func(ctx context.Context, req *vdiServices.VMOperateRequest) error
+	BindUserFunc               func(ctx context.Context, vmID string, req *vdiServices.BindUserServiceRequest) error
+	UnbindUserFunc             func(ctx context.Context, vmID string) error
+	SyncVMFromVDIFunc          func(ctx context.Context, vmID string) error
+	SyncAllVMsFunc             func(ctx context.Context, serverID string) error
+	SyncVMsFromVDIByServerFunc func(ctx context.Context, server *models.VDIServer) error
 }
 
 func (m *mockVMService) ListResourceGroups(ctx context.Context, vdiServerID string) ([]vdiServices.VDIResourceGroupDTO, error) {

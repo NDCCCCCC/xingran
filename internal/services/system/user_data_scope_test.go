@@ -110,11 +110,11 @@ func TestUserServiceList_DataScope(t *testing.T) {
 	ctx := context.Background()
 
 	cases := []struct {
-		name       string
-		scope      models.DataScope
-		userID     string
-		wantNames  []string
-		wantTotal  int64
+		name      string
+		scope     models.DataScope
+		userID    string
+		wantNames []string
+		wantTotal int64
 	}{
 		{name: "Dept(3) 本部门 → 仅 A 部 2 人", scope: models.DataScopeDept, userID: "uA1",
 			wantNames: []string{"alice1", "alice2"}, wantTotal: 2},

@@ -32,33 +32,33 @@ type mockDutyService struct {
 	dutyServices.DutyCacheService
 
 	// Pool methods
-	CreateDutyPoolFunc         func(ctx context.Context, req *services.DutyPoolCreateRequest, creatorID string) (*models.DutyPool, error)
-	GetDutyPoolListFunc        func(ctx context.Context, req *services.DutyPoolListRequest) ([]models.DutyPool, int64, error)
-	GetDutyPoolStatisticsFunc  func(ctx context.Context) (*services.DutyPoolStatistics, error)
-	GetDutyPoolByIDFunc        func(ctx context.Context, poolID string) (*models.DutyPool, error)
-	UpdateDutyPoolFunc         func(ctx context.Context, req *services.DutyPoolUpdateRequest, updaterID string) error
-	DeleteDutyPoolFunc         func(ctx context.Context, poolID string) error
+	CreateDutyPoolFunc        func(ctx context.Context, req *services.DutyPoolCreateRequest, creatorID string) (*models.DutyPool, error)
+	GetDutyPoolListFunc       func(ctx context.Context, req *services.DutyPoolListRequest) ([]models.DutyPool, int64, error)
+	GetDutyPoolStatisticsFunc func(ctx context.Context) (*services.DutyPoolStatistics, error)
+	GetDutyPoolByIDFunc       func(ctx context.Context, poolID string) (*models.DutyPool, error)
+	UpdateDutyPoolFunc        func(ctx context.Context, req *services.DutyPoolUpdateRequest, updaterID string) error
+	DeleteDutyPoolFunc        func(ctx context.Context, poolID string) error
 
 	// Schedule methods
-	GenerateScheduleFunc        func(ctx context.Context, req *services.GenerateScheduleRequest, creatorID string) (int, error)
-	GetDutyScheduleListFunc     func(ctx context.Context, req *services.DutyScheduleListRequest) ([]models.DutySchedule, int64, error)
-	GetTodayDutyFunc            func(ctx context.Context) ([]services.TodayDutyMember, error)
-	GetMonthlyDutyScheduleFunc  func(ctx context.Context, year, month int) (map[string][]services.TodayDutyMember, error)
-	SwapDutyFunc                func(ctx context.Context, req *services.SwapDutyRequest, operatorID string) error
-	ManualDutyFunc              func(ctx context.Context, req *services.ManualDutyRequest, creatorID string) error
-	DeleteDutyScheduleFunc      func(ctx context.Context, scheduleID string) error
+	GenerateScheduleFunc         func(ctx context.Context, req *services.GenerateScheduleRequest, creatorID string) (int, error)
+	GetDutyScheduleListFunc      func(ctx context.Context, req *services.DutyScheduleListRequest) ([]models.DutySchedule, int64, error)
+	GetTodayDutyFunc             func(ctx context.Context) ([]services.TodayDutyMember, error)
+	GetMonthlyDutyScheduleFunc   func(ctx context.Context, year, month int) (map[string][]services.TodayDutyMember, error)
+	SwapDutyFunc                 func(ctx context.Context, req *services.SwapDutyRequest, operatorID string) error
+	ManualDutyFunc               func(ctx context.Context, req *services.ManualDutyRequest, creatorID string) error
+	DeleteDutyScheduleFunc       func(ctx context.Context, scheduleID string) error
 	BatchDeleteDutySchedulesFunc func(ctx context.Context, scheduleIDs []string) error
 
 	// My stats
 	GetMyDutyStatsFunc func(ctx context.Context, userID string) (*services.MyDutyStats, error)
 
 	// Holiday methods
-	CreateHolidayFunc          func(ctx context.Context, holiday *models.Holiday, creatorID string) error
-	GetHolidayListFunc         func(ctx context.Context, year int) ([]models.Holiday, error)
-	UpdateHolidayFunc          func(ctx context.Context, holiday *models.Holiday, updaterID string) error
-	DeleteHolidayFunc          func(ctx context.Context, holidayID string) error
-	GetHolidayYearsFunc        func(ctx context.Context) ([]int, error)
-	BatchCreateHolidaysFunc    func(ctx context.Context, holidays []models.Holiday, creatorID string) error
+	CreateHolidayFunc       func(ctx context.Context, holiday *models.Holiday, creatorID string) error
+	GetHolidayListFunc      func(ctx context.Context, year int) ([]models.Holiday, error)
+	UpdateHolidayFunc       func(ctx context.Context, holiday *models.Holiday, updaterID string) error
+	DeleteHolidayFunc       func(ctx context.Context, holidayID string) error
+	GetHolidayYearsFunc     func(ctx context.Context) ([]int, error)
+	BatchCreateHolidaysFunc func(ctx context.Context, holidays []models.Holiday, creatorID string) error
 
 	// Config methods
 	GetDutyConfigFunc    func(ctx context.Context) (*models.DutyConfig, error)
@@ -66,10 +66,10 @@ type mockDutyService struct {
 
 	// Cache invalidation (kept for completeness; not exercised by handlers)
 	InvalidateTodayDutyCacheFunc       func(ctx context.Context) error
-	InvalidateMonthlyScheduleCacheFunc  func(ctx context.Context, year, month int) error
-	InvalidateAllScheduleCacheFunc      func(ctx context.Context) error
-	InvalidateHolidayCacheFunc          func(ctx context.Context, year int) error
-	InvalidateAllHolidayCacheFunc       func(ctx context.Context) error
+	InvalidateMonthlyScheduleCacheFunc func(ctx context.Context, year, month int) error
+	InvalidateAllScheduleCacheFunc     func(ctx context.Context) error
+	InvalidateHolidayCacheFunc         func(ctx context.Context, year int) error
+	InvalidateAllHolidayCacheFunc      func(ctx context.Context) error
 }
 
 // ==================== Pool method overrides ====================

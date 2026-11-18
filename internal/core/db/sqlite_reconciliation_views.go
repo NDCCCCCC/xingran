@@ -89,12 +89,12 @@ func sqliteIfaceFoldCaseSQL(col string) string {
 END`, col)
 }
 
-// sqliteMACNormSQL 等价 PG LOWER(REGEXP_REPLACE(x, '[.:\-]', '', 'g'))(MAC 去分隔符+小写)。
+// sqliteMACNormSQL 等价 PG LOWER(REGEXP_REPLACE(x, '[.:\-]', ”, 'g'))(MAC 去分隔符+小写)。
 func sqliteMACNormSQL(col string) string {
 	return fmt.Sprintf("LOWER(REPLACE(REPLACE(REPLACE(%s, '.', ''), ':', ''), '-', ''))", col)
 }
 
-// sqliteLowerStripSQL 等价 PG LOWER(REGEXP_REPLACE(x, '\s+', '', 'g')) 的近似
+// sqliteLowerStripSQL 等价 PG LOWER(REGEXP_REPLACE(x, '\s+', ”, 'g')) 的近似
 // (仅去空格;接口名实际不含其他空白,偏差已在文件头注释记录)。
 func sqliteLowerStripSQL(col string) string {
 	return fmt.Sprintf("LOWER(REPLACE(COALESCE(%s, ''), ' ', ''))", col)
@@ -104,8 +104,10 @@ func sqliteLowerStripSQL(col string) string {
 // GORM ALTER TABLE(sys_data_reconciliation 加 recon_category 列)在 sqlite 下走
 // __temp → RENAME 路径,而 RENAME 会因 reconciliation_normalized 视图持有
 // schema-level 引用而失败:
-//   "SQL logic error: error in view reconciliation_normalized:
-//    no such table: main.sys_data_reconciliation"
+//
+//	"SQL logic error: error in view reconciliation_normalized:
+//	 no such table: main.sys_data_reconciliation"
+//
 // 必须先 DROP 视图让 ALTER 路径无依赖完成,AutoMigrate 之后再调
 // ensureSQLiteReconciliationViews 重建。
 //

@@ -296,7 +296,8 @@ func closeDB(t *testing.T, db *gorm.DB) {
 //
 // extractDNs:输入 []*ldap.Entry,逐条取 entry.DN 拼接。空切片/多条两形态。
 // safeAttr:基于 utils.SanitizeAndTruncate,length 截断与非法字符清洗行为已由
-//   sanitize_test.go 覆盖;此处只做 smoke 断言(签名存在 + 长度限制生效)。
+//
+//	sanitize_test.go 覆盖;此处只做 smoke 断言(签名存在 + 长度限制生效)。
 func TestSync78_ExtractDNs_And_SafeAttr(t *testing.T) {
 	// extractDNs 空切片
 	assert.Empty(t, extractDNs(nil))
@@ -388,12 +389,12 @@ func TestSync78_CategorizeOUs_CreateVsUpdate(t *testing.T) {
 	entries := []*ldap.Entry{
 		// 已存在 — 应进 update map
 		entry78("OU=Existing,DC=example,DC=com", map[string][]string{
-			"ou":         {"Existing"},
+			"ou":          {"Existing"},
 			"description": {"NewDesc"},
 		}),
 		// 新建 1 — 应进 create slice
 		entry78("OU=NewOne,DC=example,DC=com", map[string][]string{
-			"ou":         {"NewOne"},
+			"ou":          {"NewOne"},
 			"description": {"NewOneDesc"},
 		}),
 		// 新建 2 — 属性缺失,默认值验证
@@ -585,16 +586,16 @@ func TestSync78_ParseGroupTypeFromLDAP_Table(t *testing.T) {
 		wantType  models.ADGroupType
 	}{
 		// 6 标准组合:Security/Distribution × Global/Local/Universal
-		{"global_security", "-2147483646", models.ADGroupScopeGlobal, models.ADGroupTypeSecurity},     // 0x80000002
-		{"local_security", "-2147483644", models.ADGroupScopeLocal, models.ADGroupTypeSecurity},       // 0x80000004
+		{"global_security", "-2147483646", models.ADGroupScopeGlobal, models.ADGroupTypeSecurity},       // 0x80000002
+		{"local_security", "-2147483644", models.ADGroupScopeLocal, models.ADGroupTypeSecurity},         // 0x80000004
 		{"universal_security", "-2147483640", models.ADGroupScopeUniversal, models.ADGroupTypeSecurity}, // 0x80000008
-		{"global_distribution", "2", models.ADGroupScopeGlobal, models.ADGroupTypeDistribution},       // 0x00000002
-		{"local_distribution", "4", models.ADGroupScopeLocal, models.ADGroupTypeDistribution},         // 0x00000004
-		{"universal_distribution", "8", models.ADGroupScopeUniversal, models.ADGroupTypeDistribution}, // 0x00000008
+		{"global_distribution", "2", models.ADGroupScopeGlobal, models.ADGroupTypeDistribution},         // 0x00000002
+		{"local_distribution", "4", models.ADGroupScopeLocal, models.ADGroupTypeDistribution},           // 0x00000004
+		{"universal_distribution", "8", models.ADGroupScopeUniversal, models.ADGroupTypeDistribution},   // 0x00000008
 		// 边界/兜底
-		{"empty_string", "", models.ADGroupScopeGlobal, models.ADGroupTypeSecurity}, // sync.go:702-704
+		{"empty_string", "", models.ADGroupScopeGlobal, models.ADGroupTypeSecurity},        // sync.go:702-704
 		{"unknown_scope", "16", models.ADGroupScopeGlobal, models.ADGroupTypeDistribution}, // 16 & 0x0FFFFFFF=16 不在 case 中,default → Global;但 high bit=0 → Distribution
-		{"non_numeric", "abc", models.ADGroupScopeGlobal, models.ADGroupTypeSecurity}, // parseIntOrDefault → -2147483646
+		{"non_numeric", "abc", models.ADGroupScopeGlobal, models.ADGroupTypeSecurity},      // parseIntOrDefault → -2147483646
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -634,17 +635,17 @@ func TestSync78_SyncGroups_CreateAndUpdate(t *testing.T) {
 	entries := []*ldap.Entry{
 		// 既有 — 应被更新
 		entry78("CN=ExistingGroup,OU=Groups,DC=example,DC=com", map[string][]string{
-			"cn":         {"ExistingGroup"},
+			"cn":          {"ExistingGroup"},
 			"description": {"UpdatedDesc"},
-			"groupType":  {"-2147483644"}, // LocalSecurity
-			"member":     {"CN=u1,DC=example,DC=com", "CN=u2,DC=example,DC=com", "CN=u3,DC=example,DC=com"},
+			"groupType":   {"-2147483644"}, // LocalSecurity
+			"member":      {"CN=u1,DC=example,DC=com", "CN=u2,DC=example,DC=com", "CN=u3,DC=example,DC=com"},
 		}),
 		// 新建 1 — 带 3 个 member 验证 member_count=3
 		entry78("CN=NewGroup1,OU=Groups,DC=example,DC=com", map[string][]string{
-			"cn":         {"NewGroup1"},
+			"cn":          {"NewGroup1"},
 			"description": {"NG1Desc"},
-			"groupType":  {"-2147483646"}, // GlobalSecurity
-			"member":     {"CN=a,DC=example,DC=com", "CN=b,DC=example,DC=com", "CN=c,DC=example,DC=com"},
+			"groupType":   {"-2147483646"}, // GlobalSecurity
+			"member":      {"CN=a,DC=example,DC=com", "CN=b,DC=example,DC=com", "CN=c,DC=example,DC=com"},
 		}),
 		// 新建 2 — 缺 member 属性 → member_count=0;缺 description → ""
 		entry78("CN=NewGroup2,OU=Groups,DC=example,DC=com", map[string][]string{
@@ -858,24 +859,24 @@ func TestSync78_SyncUsers_CreateNew(t *testing.T) {
 	entries := []*ldap.Entry{
 		// u1:正常用户(uac=512 → IsEnabled=true)
 		entry78("CN=u1,OU=Staff,DC=example,DC=com", map[string][]string{
-			"sAMAccountName":   {"u1"},
-			"displayName":      {"User One"},
-			"mail":             {"u1@example.com"},
-			"telephoneNumber":  {"010-1234"},
-			"mobile":           {"13800000001"},
-			"title":            {"Engineer"},
-			"department":       {"IT"},
-			"company":          {"ExampleCorp"},
-			"description":      {"Desc 1"},
+			"sAMAccountName":     {"u1"},
+			"displayName":        {"User One"},
+			"mail":               {"u1@example.com"},
+			"telephoneNumber":    {"010-1234"},
+			"mobile":             {"13800000001"},
+			"title":              {"Engineer"},
+			"department":         {"IT"},
+			"company":            {"ExampleCorp"},
+			"description":        {"Desc 1"},
 			"userAccountControl": {"512"},
-			"memberOf":         {"CN=G1,DC=example,DC=com"},
-			"lastLogon":        {uacFileTime},
-			"pwdLastSet":       {uacFileTime},
+			"memberOf":           {"CN=G1,DC=example,DC=com"},
+			"lastLogon":          {uacFileTime},
+			"pwdLastSet":         {uacFileTime},
 		}),
 		// u2:禁用账户(uac=514 → IsEnabled=false)
 		entry78("CN=u2,OU=Staff,DC=example,DC=com", map[string][]string{
-			"sAMAccountName":   {"u2"},
-			"displayName":      {"User Two"},
+			"sAMAccountName":     {"u2"},
+			"displayName":        {"User Two"},
 			"userAccountControl": {"514"},
 		}),
 		// u3:多个 memberOf → member_of 字段以 ";" 拼接
@@ -956,9 +957,9 @@ func TestSync78_SyncUsers_UpdateExisting(t *testing.T) {
 	// entry 含新 display_name
 	entries := []*ldap.Entry{
 		entry78("CN=u1,OU=Staff,DC=example,DC=com", map[string][]string{
-			"sAMAccountName": {"u1"},
-			"displayName":    {"NewName"},
-			"mail":           {"new@example.com"},
+			"sAMAccountName":     {"u1"},
+			"displayName":        {"NewName"},
+			"mail":               {"new@example.com"},
 			"userAccountControl": {"512"},
 		}),
 	}
@@ -1466,7 +1467,7 @@ func TestSync78_SyncDataByID_ConfigNotFound(t *testing.T) {
 	// 2) 预置 status != Enabled 配置(disabled)
 	disabledCfg := &models.ADConfig{
 		ConfigName: "disabled-cfg",
-		Status:    models.ADConfigStatusDisabled,
+		Status:     models.ADConfigStatusDisabled,
 	}
 	disabledCfg.ID = uuid.NewString()
 	require.NoError(t, db.Create(disabledCfg).Error)
@@ -1589,7 +1590,7 @@ func TestSync78_SyncDataInternal_AllAccountsDialFail(t *testing.T) {
 	// 10s 硬超时(connect to closed local port 通常 <1s 失败)
 	done := make(chan struct{})
 	var (
-		res any
+		res  any
 		err2 error
 	)
 	go func() {

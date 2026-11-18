@@ -24,39 +24,84 @@ type mockCacheCore struct {
 	flushCalled  bool
 }
 
-func (m *mockCacheCore) Get(ctx context.Context, key string) (string, error) { m.getCalled = true; return "v", nil }
-func (m *mockCacheCore) Set(ctx context.Context, key string, value interface{}, ttl time.Duration) error { m.setCalled = true; return nil }
-func (m *mockCacheCore) Delete(ctx context.Context, key string) error { m.deleteCalled = true; return nil }
-func (m *mockCacheCore) Exists(ctx context.Context, key string) (bool, error) { m.existsCalled = true; return true, nil }
-func (m *mockCacheCore) Expire(ctx context.Context, key string, ttl time.Duration) error { m.expireCalled = true; return nil }
-func (m *mockCacheCore) TTL(ctx context.Context, key string) (time.Duration, error) { m.ttlCalled = true; return 60 * time.Second, nil }
-func (m *mockCacheCore) Keys(ctx context.Context, pattern string) ([]string, error) { m.keysCalled = true; return []string{"k1"}, nil }
-func (m *mockCacheCore) FlushDB(ctx context.Context) error { m.flushCalled = true; return nil }
-func (m *mockCacheCore) Close() error { return nil }
+func (m *mockCacheCore) Get(ctx context.Context, key string) (string, error) {
+	m.getCalled = true
+	return "v", nil
+}
+func (m *mockCacheCore) Set(ctx context.Context, key string, value interface{}, ttl time.Duration) error {
+	m.setCalled = true
+	return nil
+}
+func (m *mockCacheCore) Delete(ctx context.Context, key string) error {
+	m.deleteCalled = true
+	return nil
+}
+func (m *mockCacheCore) Exists(ctx context.Context, key string) (bool, error) {
+	m.existsCalled = true
+	return true, nil
+}
+func (m *mockCacheCore) Expire(ctx context.Context, key string, ttl time.Duration) error {
+	m.expireCalled = true
+	return nil
+}
+func (m *mockCacheCore) TTL(ctx context.Context, key string) (time.Duration, error) {
+	m.ttlCalled = true
+	return 60 * time.Second, nil
+}
+func (m *mockCacheCore) Keys(ctx context.Context, pattern string) ([]string, error) {
+	m.keysCalled = true
+	return []string{"k1"}, nil
+}
+func (m *mockCacheCore) FlushDB(ctx context.Context) error                          { m.flushCalled = true; return nil }
+func (m *mockCacheCore) Close() error                                               { return nil }
 func (m *mockCacheCore) MGet(ctx context.Context, keys ...string) ([]string, error) { return nil, nil }
-func (m *mockCacheCore) MSet(ctx context.Context, pairs ...interface{}) error { return nil }
-func (m *mockCacheCore) MDelete(ctx context.Context, keys ...string) error { return nil }
-func (m *mockCacheCore) Increment(ctx context.Context, key string) (int64, error) { return 0, nil }
-func (m *mockCacheCore) IncrementBy(ctx context.Context, key string, value int64) (int64, error) { return 0, nil }
+func (m *mockCacheCore) MSet(ctx context.Context, pairs ...interface{}) error       { return nil }
+func (m *mockCacheCore) MDelete(ctx context.Context, keys ...string) error          { return nil }
+func (m *mockCacheCore) Increment(ctx context.Context, key string) (int64, error)   { return 0, nil }
+func (m *mockCacheCore) IncrementBy(ctx context.Context, key string, value int64) (int64, error) {
+	return 0, nil
+}
 func (m *mockCacheCore) Decrement(ctx context.Context, key string) (int64, error) { return 0, nil }
-func (m *mockCacheCore) DecrementBy(ctx context.Context, key string, value int64) (int64, error) { return 0, nil }
-func (m *mockCacheCore) MGetJSON(ctx context.Context, keys ...string) (map[string]interface{}, error) { return nil, nil }
-func (m *mockCacheCore) MSetJSON(ctx context.Context, data map[string]interface{}, expiration time.Duration) error { return nil }
+func (m *mockCacheCore) DecrementBy(ctx context.Context, key string, value int64) (int64, error) {
+	return 0, nil
+}
+func (m *mockCacheCore) MGetJSON(ctx context.Context, keys ...string) (map[string]interface{}, error) {
+	return nil, nil
+}
+func (m *mockCacheCore) MSetJSON(ctx context.Context, data map[string]interface{}, expiration time.Duration) error {
+	return nil
+}
 func (m *mockCacheCore) HGet(ctx context.Context, key, field string) (string, error) { return "", nil }
-func (m *mockCacheCore) HSet(ctx context.Context, key, field string, value interface{}) error { return nil }
-func (m *mockCacheCore) HGetAll(ctx context.Context, key string) (map[string]string, error) { return nil, nil }
+func (m *mockCacheCore) HSet(ctx context.Context, key, field string, value interface{}) error {
+	return nil
+}
+func (m *mockCacheCore) HGetAll(ctx context.Context, key string) (map[string]string, error) {
+	return nil, nil
+}
 func (m *mockCacheCore) HDel(ctx context.Context, key string, fields ...string) error { return nil }
-func (m *mockCacheCore) HKeys(ctx context.Context, key string) ([]string, error) { return nil, nil }
-func (m *mockCacheCore) SetInt(ctx context.Context, key string, value int, expiration time.Duration) error { return nil }
+func (m *mockCacheCore) HKeys(ctx context.Context, key string) ([]string, error)      { return nil, nil }
+func (m *mockCacheCore) SetInt(ctx context.Context, key string, value int, expiration time.Duration) error {
+	return nil
+}
 func (m *mockCacheCore) GetInt(ctx context.Context, key string) (int, error) { return 0, nil }
-func (m *mockCacheCore) SetJSON(ctx context.Context, key string, value interface{}, expiration time.Duration) error { return nil }
+func (m *mockCacheCore) SetJSON(ctx context.Context, key string, value interface{}, expiration time.Duration) error {
+	return nil
+}
 func (m *mockCacheCore) GetJSON(ctx context.Context, key string, dest interface{}) error { return nil }
 
 // 扩展方法,模拟 L2 / DirectRedis
-func (m *mockCacheCore) DirectRedisKeys(ctx context.Context, pattern string) ([]string, error) { return []string{"r1", "r2"}, nil }
-func (m *mockCacheCore) DirectRedisGet(ctx context.Context, key string) (string, error) { return "r-val", nil }
-func (m *mockCacheCore) DirectRedisTTL(ctx context.Context, key string) (time.Duration, error) { return 30 * time.Second, nil }
-func (m *mockCacheCore) KeysByLevel(ctx context.Context, pattern string, level string) ([]string, error) { return []string{"l1:" + level}, nil }
+func (m *mockCacheCore) DirectRedisKeys(ctx context.Context, pattern string) ([]string, error) {
+	return []string{"r1", "r2"}, nil
+}
+func (m *mockCacheCore) DirectRedisGet(ctx context.Context, key string) (string, error) {
+	return "r-val", nil
+}
+func (m *mockCacheCore) DirectRedisTTL(ctx context.Context, key string) (time.Duration, error) {
+	return 30 * time.Second, nil
+}
+func (m *mockCacheCore) KeysByLevel(ctx context.Context, pattern string, level string) ([]string, error) {
+	return []string{"l1:" + level}, nil
+}
 
 var _ cache.Cache = (*mockCacheCore)(nil)
 

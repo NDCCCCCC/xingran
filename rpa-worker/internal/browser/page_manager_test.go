@@ -17,10 +17,10 @@ import (
 // nopLogger 实现 logger.Logger，仅计数，不做真实 IO。
 type nopLogger struct{}
 
-func (nopLogger) Debug(string, ...logger.Field) {}
-func (nopLogger) Info(string, ...logger.Field)  {}
-func (nopLogger) Warn(string, ...logger.Field)  {}
-func (nopLogger) Error(string, ...logger.Field) {}
+func (nopLogger) Debug(string, ...logger.Field)        {}
+func (nopLogger) Info(string, ...logger.Field)         {}
+func (nopLogger) Warn(string, ...logger.Field)         {}
+func (nopLogger) Error(string, ...logger.Field)        {}
 func (n nopLogger) With(...logger.Field) logger.Logger { return n }
 func (nopLogger) Sync() error                          { return nil }
 
@@ -29,26 +29,26 @@ type stubPage struct {
 	evalFn func(script string) (interface{}, error)
 }
 
-func (s *stubPage) Goto(string) error                     { return nil }
-func (s *stubPage) Close() error                          { return nil }
-func (s *stubPage) Screenshot() ([]byte, error)           { return nil, nil }
-func (s *stubPage) Click(string) error                    { return nil }
-func (s *stubPage) Fill(string, string) error             { return nil }
-func (s *stubPage) Select(string, string) error           { return nil }
-func (s *stubPage) WaitFor(string, time.Duration) error   { return nil }
+func (s *stubPage) Goto(string) error                   { return nil }
+func (s *stubPage) Close() error                        { return nil }
+func (s *stubPage) Screenshot() ([]byte, error)         { return nil, nil }
+func (s *stubPage) Click(string) error                  { return nil }
+func (s *stubPage) Fill(string, string) error           { return nil }
+func (s *stubPage) Select(string, string) error         { return nil }
+func (s *stubPage) WaitFor(string, time.Duration) error { return nil }
 func (s *stubPage) Evaluate(script string) (interface{}, error) {
 	if s.evalFn != nil {
 		return s.evalFn(script)
 	}
 	return "", nil
 }
-func (s *stubPage) GetText(string) (string, error)         { return "", nil }
-func (s *stubPage) GetValue(string) (string, error)        { return "", nil }
-func (s *stubPage) GetHTML(string) (string, error)         { return "", nil }
+func (s *stubPage) GetText(string) (string, error)              { return "", nil }
+func (s *stubPage) GetValue(string) (string, error)             { return "", nil }
+func (s *stubPage) GetHTML(string) (string, error)              { return "", nil }
 func (s *stubPage) GetAttribute(string, string) (string, error) { return "", nil }
-func (s *stubPage) ScrollDown(int) error                   { return nil }
-func (s *stubPage) ScrollUp(int) error                     { return nil }
-func (s *stubPage) ScrollToElement(string) error           { return nil }
+func (s *stubPage) ScrollDown(int) error                        { return nil }
+func (s *stubPage) ScrollUp(int) error                          { return nil }
+func (s *stubPage) ScrollToElement(string) error                { return nil }
 
 // withFastPoll 把轮询间隔临时缩短，避免超时用例真的等 100ms。
 func withFastPoll(t *testing.T, d time.Duration) {

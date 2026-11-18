@@ -522,8 +522,9 @@ func (e *ADPushEnqueuer) EnqueueDisable(tx *gorm.DB, userIDs []string) error {
 // ⚠ 不做 F-01 压制：压制只发生在 disable 打 update_user 上，update 与 update 之间不存在压制关系。
 //
 // ⚠ 唯一调用方是 api/v1/system/user_import_handler.go 的 enqueueImportUsersToAD，
-//   它自开短事务（ExcelService 的 Transaction 已提交）—— 这是 outbox-lite
-//   「同生共死」不变量的**一处已接受例外**，详见调用点注释。
+//
+//	它自开短事务（ExcelService 的 Transaction 已提交）—— 这是 outbox-lite
+//	「同生共死」不变量的**一处已接受例外**，详见调用点注释。
 func (e *ADPushEnqueuer) EnqueueUpdateBatch(tx *gorm.DB, userIDs []string) error {
 	if len(userIDs) == 0 {
 		return nil

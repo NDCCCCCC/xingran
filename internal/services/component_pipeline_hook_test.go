@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/stretchr/testify/require"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
 )
 
 // commandSpy records every command issued and returns a canned response
@@ -63,7 +63,7 @@ func TestCollectComponentInfoHuaweiTwoStepPipeline(t *testing.T) {
 func TestCollectComponentInfoRuijieTwoStepPipeline(t *testing.T) {
 	spy := &commandSpy{
 		responses: map[string]string{
-			"show interfaces status":   ruijieStatusUp,
+			"show interfaces status":     ruijieStatusUp,
 			"show interface transceiver": ruijieTransceiver,
 		},
 	}

@@ -117,7 +117,8 @@ func (h *UserHandler) buildExcelService() *opsServices.ExcelService {
 // enqueueImportUsersToAD 导入后批量入队（D-01，替代已删除的导入后直推方法）。
 //
 // ⚠ 注释刻意不写出被删方法名的字面：SC6 的残留证据由 grep 静态证伪断言承担
-//   （该 grep 的期望值是 0），注释自指会让这条断言失去意义。
+//
+//	（该 grep 的期望值是 0），注释自指会让这条断言失去意义。
 //
 // AffectedKeys 是 **username** 列表 → 先 Pluck 转 userID（Pluck 逻辑从被删的直推方法
 // 原样平移），并预过滤 ad_dn 非空（导入新增的本地用户无 ad_dn，

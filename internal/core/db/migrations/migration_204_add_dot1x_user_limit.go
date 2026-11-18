@@ -14,8 +14,8 @@ import (
 //   - 锐捷 RGOS 在同一 interface view 下 dot1x port-control auto 与
 //     dot1x default-user-limit N 是两条独立但耦合的命令。
 //   - 设备行为不对称:
-//     * no dot1x port-control auto 自动清除 default-user-limit (disable 路径无影响)
-//     * dot1x port-control auto 不自动恢复 default-user-limit (enable 必须显式恢复 N)
+//   - no dot1x port-control auto 自动清除 default-user-limit (disable 路径无影响)
+//   - dot1x port-control auto 不自动恢复 default-user-limit (enable 必须显式恢复 N)
 //   - 旧 renderRuijieDot1xEnable 硬编码 `default-user-limit 1`,非 1 端口被错置为 1。
 //
 // 解决:

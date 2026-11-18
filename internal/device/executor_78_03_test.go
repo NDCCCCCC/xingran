@@ -160,9 +160,12 @@ func TestEX78_ExecuteWithRetry_CtxCancelDuringDelay(t *testing.T) {
 // -----------------------------------------------------------------------------
 // TestEX78_ExecuteWithRetry_PanicRecovered — two sub-cases:
 // (a) EnablePanicRecovery=true: nil-deref in SendCommand is converted to
-//     "命令执行 panic" error.
+//
+//	"命令执行 panic" error.
+//
 // (b) EnablePanicRecovery=false: panic escapes (D-78-03c: intentional
-//     production invariant, not a bug).
+//
+//	production invariant, not a bug).
 //
 // We construct the pc structs directly with wrapper=nil so we trigger the
 // nil-deref without needing seedPool78 (which requires a non-nil wrapper).
@@ -367,6 +370,7 @@ func (*executorSentinelError) Error() string { return "executor-sentinel-error-7
 //   - pool.GetDevice hit / miss
 //   - all 5 vendor-switch arms selected
 //   - Submit failure surfaces directly ("任务调度器未启用")
+//
 // -----------------------------------------------------------------------------
 func TestEX78_GetConfig_VendorMatrix(t *testing.T) {
 	const deviceID = "dev-getconfig-huawei"

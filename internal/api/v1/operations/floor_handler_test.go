@@ -18,15 +18,15 @@ import (
 
 // mockFloorService implements opsServices.FloorService for handler tests.
 type mockFloorService struct {
-	CreateFunc              func(ctx context.Context, floor *opsModels.OpsFloor) error
-	UpdateFunc              func(ctx context.Context, floor *opsModels.OpsFloor) error
-	DeleteFunc              func(ctx context.Context, id string) error
-	GetByIDFunc             func(ctx context.Context, id string) (*opsModels.OpsFloor, error)
-	ListFunc                func(ctx context.Context, params map[string]interface{}) (*opsServices.PageResult, error)
-	GetTreeFunc             func(ctx context.Context) ([]opsServices.FloorTreeNode, error)
-	BatchDeleteFunc         func(ctx context.Context, ids []string) error
-	StatisticsFunc          func(ctx context.Context) (*opsServices.FloorStatisticsResult, error)
-	SearchFloorOptionsFunc  func(ctx context.Context, params map[string]interface{}) ([]opsServices.DropdownOption, error)
+	CreateFunc             func(ctx context.Context, floor *opsModels.OpsFloor) error
+	UpdateFunc             func(ctx context.Context, floor *opsModels.OpsFloor) error
+	DeleteFunc             func(ctx context.Context, id string) error
+	GetByIDFunc            func(ctx context.Context, id string) (*opsModels.OpsFloor, error)
+	ListFunc               func(ctx context.Context, params map[string]interface{}) (*opsServices.PageResult, error)
+	GetTreeFunc            func(ctx context.Context) ([]opsServices.FloorTreeNode, error)
+	BatchDeleteFunc        func(ctx context.Context, ids []string) error
+	StatisticsFunc         func(ctx context.Context) (*opsServices.FloorStatisticsResult, error)
+	SearchFloorOptionsFunc func(ctx context.Context, params map[string]interface{}) ([]opsServices.DropdownOption, error)
 }
 
 func (m *mockFloorService) Create(ctx context.Context, f *opsModels.OpsFloor) error {
@@ -448,7 +448,7 @@ func TestFloorHandler_SearchFloorOptions_ResponseShape(t *testing.T) {
 	r := newFloorRouter(h)
 	w := httpDo(r, http.MethodPost, "/floors/search-options", `{}`)
 	var resp struct {
-		Code int                        `json:"code"`
+		Code int                          `json:"code"`
 		Data []opsServices.DropdownOption `json:"data"`
 	}
 	assert.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))

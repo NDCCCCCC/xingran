@@ -4,8 +4,8 @@
 package main
 
 import (
-	"fmt"
 	"context"
+	"fmt"
 
 	"github.com/joho/godotenv"
 	"os"

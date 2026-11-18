@@ -275,7 +275,7 @@ func TestVMService_ListVMs(t *testing.T) {
 	assert.Equal(t, int64(3), page.Total)
 
 	// 非法 userID → 1=0
-	page, err = svc.ListVMs(ctx, &ListVMRequest{},"not-a-uuid", models.DataScopeSelf)
+	page, err = svc.ListVMs(ctx, &ListVMRequest{}, "not-a-uuid", models.DataScopeSelf)
 	require.NoError(t, err)
 	assert.Zero(t, page.Total)
 

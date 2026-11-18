@@ -10,12 +10,13 @@ import (
 // 里的"全称"统一折叠到"短名大写"形式。
 //
 // 折叠映射(2026-07-01 port-mac-format-unify):
-//   GigabitEthernet0/0/1   -> GE0/0/1
-//   TenGigE1/0/1           -> XGE1/0/1
-//   TwentyFiveGigE1/1      -> TWE1/1
-//   HundredGigE1/49        -> HGE1/49
-//   FortyGigE1/1           -> FOE1/1
-//   FastEthernet0/1        -> FE0/1
+//
+//	GigabitEthernet0/0/1   -> GE0/0/1
+//	TenGigE1/0/1           -> XGE1/0/1
+//	TwentyFiveGigE1/1      -> TWE1/1
+//	HundredGigE1/49        -> HGE1/49
+//	FortyGigE1/1           -> FOE1/1
+//	FastEthernet0/1        -> FE0/1
 //
 // 唯一键冲突处理: sys_device_port_status 上有 (device_id, interface_name) 唯一约束
 // (migration_177 reapplied)。如果某 device 已有 "GE0/0/1" 而现在要写
@@ -39,10 +40,10 @@ func Migrate186NormalizePortStatusInterfaceName(db *gorm.DB) error {
 	//    注意:PG REGEXP_REPLACE 不支持 lookahead/lookbehind 累加,
 	//    这里前缀是固定字符串,直接用锚定匹配最稳
 	type rowUpdate struct {
-		ID            string
-		DeviceID      string
-		OldIface      string
-		NewIface      string
+		ID       string
+		DeviceID string
+		OldIface string
+		NewIface string
 	}
 
 	// 拉出需要折叠的行(GigabitEthernet / TenGigE / TwentyFiveGigE / HundredGigE

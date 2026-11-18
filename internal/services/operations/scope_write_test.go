@@ -10,8 +10,8 @@ import (
 	"github.com/glebarez/sqlite"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	apperrors "github.com/xingran-next/xingran-go-backend/pkg/errors"
 	"github.com/xingran-next/xingran-go-backend/pkg/datascope"
+	apperrors "github.com/xingran-next/xingran-go-backend/pkg/errors"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 )

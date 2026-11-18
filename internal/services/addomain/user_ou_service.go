@@ -149,7 +149,7 @@ func (s *UserOUService) restoreDeletedUserWithADInfo(ctx context.Context, userna
 				Exec("INSERT INTO sys_user_role (user_id, role_id) VALUES (?, ?)", user.ID, defaultRole.ID).Error; err != nil {
 				applogger.Warnf("分配默认角色失败: %v", err)
 				// 不阻断流程
-				}
+			}
 		}
 	}
 

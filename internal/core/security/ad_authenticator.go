@@ -11,9 +11,9 @@ import (
 
 	"github.com/go-ldap/ldap/v3"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
-	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"github.com/xingran-next/xingran-go-backend/internal/services/addomain"
 	"github.com/xingran-next/xingran-go-backend/pkg/ldaputils"
+	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"gorm.io/gorm"
 )
 
@@ -30,11 +30,11 @@ func logADTLSInsecureSkipOnce() {
 // 使用LDAP绑定验证实现AD域控账号认证
 type ADAuthenticator struct {
 	db          *gorm.DB
-	dbName      string                       // 用于日志
-	configID    string                       // 默认AD配置ID
-	userSyncer  UserSyncer                   // 用户同步服务（可选，为nil时不同步）
-	sm4Cipher   addomain.PasswordCipher      // SM4加密器（用于解密AD管理员密码）
-	accountPool addomain.AccountPool         // Phase 36: 账号池（可选，注入后启用多账号故障切换）
+	dbName      string                  // 用于日志
+	configID    string                  // 默认AD配置ID
+	userSyncer  UserSyncer              // 用户同步服务（可选，为nil时不同步）
+	sm4Cipher   addomain.PasswordCipher // SM4加密器（用于解密AD管理员密码）
+	accountPool addomain.AccountPool    // Phase 36: 账号池（可选，注入后启用多账号故障切换）
 }
 
 // NewADAuthenticator 创建AD认证器
@@ -219,7 +219,7 @@ func (a *ADAuthenticator) dialConnection(config *models.ADConfig, address string
 	insecureSkip := strings.EqualFold(os.Getenv("AD_AUTH_TLS_INSECURE_SKIP_VERIFY"), "true")
 	tlsConfig := &tls.Config{
 		InsecureSkipVerify: insecureSkip,
-		MinVersion:        tls.VersionTLS12,
+		MinVersion:         tls.VersionTLS12,
 	}
 	if insecureSkip {
 		// 仅在启用时记录一次安全告警（避免每次连接都告警污染日志，但不能完全静默）

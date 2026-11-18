@@ -1,6 +1,5 @@
 //go:build archive_skip
 
-
 package migrations
 
 import (
@@ -33,11 +32,12 @@ import (
 //   - 非 PostgreSQL 方言跳过。
 //
 // 回滚 (需人工执行; 重新加列后由 AutoMigrate 维护):
-//   ALTER TABLE ops_info_points ADD COLUMN IF NOT EXISTS building_id varchar(64);
-//   ALTER TABLE ops_info_points ADD COLUMN IF NOT EXISTS building_name varchar(100);
-//   ALTER TABLE ops_info_points ADD COLUMN IF NOT EXISTS floor_name varchar(100);
-//   ALTER TABLE ops_info_points ADD COLUMN IF NOT EXISTS workstation_name varchar(100);
-//   (加列后值为空; workstation_name 如需回填, 参见 populateRedundantFields 逻辑)
+//
+//	ALTER TABLE ops_info_points ADD COLUMN IF NOT EXISTS building_id varchar(64);
+//	ALTER TABLE ops_info_points ADD COLUMN IF NOT EXISTS building_name varchar(100);
+//	ALTER TABLE ops_info_points ADD COLUMN IF NOT EXISTS floor_name varchar(100);
+//	ALTER TABLE ops_info_points ADD COLUMN IF NOT EXISTS workstation_name varchar(100);
+//	(加列后值为空; workstation_name 如需回填, 参见 populateRedundantFields 逻辑)
 func Migrate191DropInfoPointsRedundantColumns(db *gorm.DB) error {
 	log.Println("Running migration 190: 删除 ops_info_points 冗余列 (building_id/building_name/floor_name/workstation_name)")
 

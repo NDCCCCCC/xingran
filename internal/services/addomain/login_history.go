@@ -54,15 +54,15 @@ func detectLoginEvent(oldLL, newLL *time.Time) (models.ADLoginEventType, bool) {
 
 // pendingLoginEvent 单条待写入的登录事件(同步过程内存收集,批量 flush)
 type pendingLoginEvent struct {
-	computerKey  string                 // toCreate 路径用: configID + "/" + computerName(batchCreate 回填 ID 后解析)
-	computerID   string                 // toUpdate 路径直接带 ID
-	configID     string                 // 所属AD配置(快照)
-	computerName string                 // 计算机名快照
+	computerKey  string                  // toCreate 路径用: configID + "/" + computerName(batchCreate 回填 ID 后解析)
+	computerID   string                  // toUpdate 路径直接带 ID
+	configID     string                  // 所属AD配置(快照)
+	computerName string                  // 计算机名快照
 	eventType    models.ADLoginEventType // initial / login
-	loginTime    time.Time              // 登录时间(AD lastLogon 值)
-	loginUser    string                 // 登录用户(description parts[1])
-	ipAddress    string                 // IP 地址(description parts[2])
-	detectedAt   time.Time              // 检测时间(同步时刻)
+	loginTime    time.Time               // 登录时间(AD lastLogon 值)
+	loginUser    string                  // 登录用户(description parts[1])
+	ipAddress    string                  // IP 地址(description parts[2])
+	detectedAt   time.Time               // 检测时间(同步时刻)
 }
 
 // Flush 将收集到的登录事件批量写入 sys_ad_login_history。

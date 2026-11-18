@@ -78,7 +78,7 @@ func newMiniCore8004(t *testing.T) (*core.Core, *gorm.DB) {
 	// userSyncer 可为 nil(GetAuthenticator 内部 nil 保护),只初始化 AccountPool。
 	authFactory := security.NewAuthStrategyFactory(gormDB, pwdMgr)
 	accountPool := addomain.NewAccountPool(gormDB, nil) // nil redisPubSub
-	authFactory.SetUserSyncer(nil)                       // userSyncer 可为 nil,GetAuthenticator 内部 nil 保护
+	authFactory.SetUserSyncer(nil)                      // userSyncer 可为 nil,GetAuthenticator 内部 nil 保护
 	authFactory.SetAccountPool(accountPool)
 
 	c := &core.Core{
@@ -195,9 +195,9 @@ func seedTestUser8004(t *testing.T, db *gorm.DB) *models.User {
 
 // TestRtr8004_SetupRouter_FullAssembly 全量 SetupRouter 装配测试。
 // 验证:
-//   1. SetupRouter 不 panic(已达 Conclusion A 前提)。
-//   2. 路由表已挂载( Routes() 非空)。
-//   3. spot-check 请求走通。
+//  1. SetupRouter 不 panic(已达 Conclusion A 前提)。
+//  2. 路由表已挂载( Routes() 非空)。
+//  3. spot-check 请求走通。
 func TestRtr8004_SetupRouter_FullAssembly(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping full assembly in -short mode")

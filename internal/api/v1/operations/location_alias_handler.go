@@ -16,10 +16,10 @@ import (
 // LocationAliasHandler 工位部门 ↔ 物理位置部门 映射(别名)handler
 //
 // 4 个端点 (REQ-39-03):
-//  - POST /ops/location-alias/list      分页查询(含 sys_dept JOIN)
-//  - POST /ops/location-alias           新建
-//  - POST /ops/location-alias/:id/update 更新
-//  - POST /ops/location-alias/:id/delete 删除
+//   - POST /ops/location-alias/list      分页查询(含 sys_dept JOIN)
+//   - POST /ops/location-alias           新建
+//   - POST /ops/location-alias/:id/update 更新
+//   - POST /ops/location-alias/:id/delete 删除
 //
 // 3 个写方法(Create/Update/Delete)遵循 CLAUDE.md operlog 约定,模块名用 "工位管理"
 // (与 workstation_handler.go 一致 — 工位部门下拉 union 是工位域功能)。

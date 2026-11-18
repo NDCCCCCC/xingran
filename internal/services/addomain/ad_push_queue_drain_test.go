@@ -719,7 +719,8 @@ func TestPhase58_Drain_PoolFailureDoesNotArmTerminalState(t *testing.T) {
 // 可恢复故障，返回值必须满足 errors.Is(err, ErrAllAccountsDialFailed)。
 //
 // ⚠ 同时锁定它**不**满足 ErrAllAccountsUnavailable：两者对管理员的处置动作不同
-//   （加账号/查熔断 vs 查网络与域控），Phase 78 三条既有用例正锁定这一区分。
+//
+//	（加账号/查熔断 vs 查网络与域控），Phase 78 三条既有用例正锁定这一区分。
 //
 // 反向半边同样重要：账号拨通了、只是业务操作全失败时**不得**带任何池侧哨兵 ——
 // code 32 之类必须原样上抛到 handlePushError 的不可恢复分支。
@@ -772,7 +773,8 @@ func TestPhase58_Failover_AllDialFailureWrapsPoolSentinel(t *testing.T) {
 // 且仍在活跃谓词内可被下轮拾取。
 //
 // ⚠ 这是本条修复的核心可观测后果：修复前这条用例会得到 status=dead，
-//   一批行被永久终结（dead 行不被任何后续编辑复活）。
+//
+//	一批行被永久终结（dead 行不被任何后续编辑复活）。
 func TestPhase58_Drain_AllDialFailureNeverKillsBatch(t *testing.T) {
 	db := setupDrainTestDB(t)
 	const cfgID = "cfg-1"

@@ -13,12 +13,13 @@ const (
 // Mapping 将 API 路径映射为三级命令（module/resource/action）。
 //
 // 规则（按 lead 约定）：
-//   POST /system/users/list          → system user list
-//   POST /system/users               → system user create
-//   POST /system/users/:id           → system user get
-//   POST /system/users/:id/update    → system user update
-//   POST /system/users/:id/delete    → system user delete
-//   POST /system/users/:id/<verb>    → system user <verb>
+//
+//	POST /system/users/list          → system user list
+//	POST /system/users               → system user create
+//	POST /system/users/:id           → system user get
+//	POST /system/users/:id/update    → system user update
+//	POST /system/users/:id/delete    → system user delete
+//	POST /system/users/:id/<verb>    → system user <verb>
 //
 // 资源名去复数（尾缀 s）；不规则路径经 OverrideMap 白名单修正。
 type Mapping struct {

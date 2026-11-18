@@ -17,14 +17,14 @@ import (
 
 // mockInfoPointService implements opsServices.InfoPointService.
 type mockInfoPointService struct {
-	CreateFunc                   func(ctx context.Context, p *opsModels.OpsInfoPoint) error
-	UpdateFunc                   func(ctx context.Context, p *opsModels.OpsInfoPoint) error
-	DeleteFunc                   func(ctx context.Context, id string) error
-	GetByIDFunc                  func(ctx context.Context, id string) (*opsModels.OpsInfoPoint, error)
-	ListFunc                     func(ctx context.Context, req requests.InfoPointListRequest) (*opsServices.PageResult, error)
-	BatchDeleteFunc              func(ctx context.Context, ids []string) error
-	StatisticsFunc               func(ctx context.Context) (*opsServices.InfoPointStatisticsResult, error)
-	SearchInfoPointOptionsFunc   func(ctx context.Context, p map[string]interface{}) ([]opsServices.DropdownOption, error)
+	CreateFunc                 func(ctx context.Context, p *opsModels.OpsInfoPoint) error
+	UpdateFunc                 func(ctx context.Context, p *opsModels.OpsInfoPoint) error
+	DeleteFunc                 func(ctx context.Context, id string) error
+	GetByIDFunc                func(ctx context.Context, id string) (*opsModels.OpsInfoPoint, error)
+	ListFunc                   func(ctx context.Context, req requests.InfoPointListRequest) (*opsServices.PageResult, error)
+	BatchDeleteFunc            func(ctx context.Context, ids []string) error
+	StatisticsFunc             func(ctx context.Context) (*opsServices.InfoPointStatisticsResult, error)
+	SearchInfoPointOptionsFunc func(ctx context.Context, p map[string]interface{}) ([]opsServices.DropdownOption, error)
 }
 
 func (m *mockInfoPointService) Create(ctx context.Context, p *opsModels.OpsInfoPoint) error {

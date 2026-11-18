@@ -15,17 +15,20 @@
 //   - DELETE: 其他 appeared / 所有 disappeared
 //
 // 用法:
-//   go run ./scripts/ops/mac_purge_meaningless -dry-run           # 只统计,不写 DB
-//   go run ./scripts/ops/mac_purge_meaningless                   # 真跑(自动备份)
-//   go run ./scripts/ops/mac_purge_meaningless -dry-run -verbose # 详细统计
+//
+//	go run ./scripts/ops/mac_purge_meaningless -dry-run           # 只统计,不写 DB
+//	go run ./scripts/ops/mac_purge_meaningless                   # 真跑(自动备份)
+//	go run ./scripts/ops/mac_purge_meaningless -dry-run -verbose # 详细统计
 //
 // 备份:
-//   执行前自动创建 sys_device_mac_history_purge_backup_YYYYMMDD_HHMMSS,
-//   包含所有当前行,可用于回滚。
+//
+//	执行前自动创建 sys_device_mac_history_purge_backup_YYYYMMDD_HHMMSS,
+//	包含所有当前行,可用于回滚。
 //
 // 回滚:
-//   pg_restore / 手工 INSERT INTO sys_device_mac_history SELECT * FROM backup
-//   注意备份表不含分区(普通表),需手工处理 first_seen 落对应分区。
+//
+//	pg_restore / 手工 INSERT INTO sys_device_mac_history SELECT * FROM backup
+//	注意备份表不含分区(普通表),需手工处理 first_seen 落对应分区。
 package main
 
 import (

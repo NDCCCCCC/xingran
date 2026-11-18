@@ -12,9 +12,9 @@ import (
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/internal/services/base"
 	"github.com/xingran-next/xingran-go-backend/pkg/constants"
+	apperrors "github.com/xingran-next/xingran-go-backend/pkg/errors"
 	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"github.com/xingran-next/xingran-go-backend/pkg/query"
-	apperrors "github.com/xingran-next/xingran-go-backend/pkg/errors"
 	"gorm.io/gorm"
 )
 

@@ -1025,14 +1025,14 @@ func TestCacheService_GetCacheMonitor_L2WithVersionAndUptime(t *testing.T) {
 	svc := newTestCacheService(newCacheTestDB(t), full, nil)
 	full.On("GetStats", mock.Anything).Return(map[string]interface{}{
 		"l2": map[string]interface{}{
-			"keyspace_hits":     int64(40),
-			"keyspace_misses":   int64(10),
-			"hit_rate":          0.8,
-			"used_memory":       int64(1024),
-			"key_count":         int64(20),
+			"keyspace_hits":       int64(40),
+			"keyspace_misses":     int64(10),
+			"hit_rate":            0.8,
+			"used_memory":         int64(1024),
+			"key_count":           int64(20),
 			"total_system_memory": int64(4096),
-			"redis_version":     "7.4.0",
-			"uptime_in_seconds": int64(120),
+			"redis_version":       "7.4.0",
+			"uptime_in_seconds":   int64(120),
 		},
 	}, nil)
 
@@ -1250,13 +1250,13 @@ func TestNormalizeCacheKeyForService(t *testing.T) {
 	cases := []struct {
 		in, want string
 	}{
-		{"xingran:user:1", "user:1"},                // 前缀正确剥离
+		{"xingran:user:1", "user:1"}, // 前缀正确剥离
 		{"xingran:cache:dept:tree:select", "cache:dept:tree:select"},
-		{"user:1", "user:1"},                         // 无前缀键原样透传
-		{"xingran", "xingran"},                       // 无冒号不剥离
-		{"xingran:", ""},                             // 精确前缀剥离
-		{"xingr", "xingr"},                           // 短键原样返回
-		{"", ""},                                     // 空字符串边界
+		{"user:1", "user:1"},   // 无前缀键原样透传
+		{"xingran", "xingran"}, // 无冒号不剥离
+		{"xingran:", ""},       // 精确前缀剥离
+		{"xingr", "xingr"},     // 短键原样返回
+		{"", ""},               // 空字符串边界
 	}
 	for _, tc := range cases {
 		assert.Equal(t, tc.want, normalizeCacheKeyForService(tc.in), "input=%q", tc.in)

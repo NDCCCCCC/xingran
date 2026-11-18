@@ -17,11 +17,11 @@ import (
 
 // mockLocationAliasService implements opsServices.LocationAliasService.
 type mockLocationAliasService struct {
-	ListFunc   func(ctx context.Context, pageNum, pageSize int) (*opsServices.PageResult, error)
+	ListFunc    func(ctx context.Context, pageNum, pageSize int) (*opsServices.PageResult, error)
 	GetByIDFunc func(ctx context.Context, id string) (*models.SysDeptLocationAlias, error)
-	CreateFunc func(ctx context.Context, req *opsServices.LocationAliasCreateRequest) (*models.SysDeptLocationAlias, error)
-	UpdateFunc func(ctx context.Context, id string, req *opsServices.LocationAliasUpdateRequest) error
-	DeleteFunc func(ctx context.Context, id string) error
+	CreateFunc  func(ctx context.Context, req *opsServices.LocationAliasCreateRequest) (*models.SysDeptLocationAlias, error)
+	UpdateFunc  func(ctx context.Context, id string, req *opsServices.LocationAliasUpdateRequest) error
+	DeleteFunc  func(ctx context.Context, id string) error
 }
 
 func (m *mockLocationAliasService) List(ctx context.Context, pageNum, pageSize int) (*opsServices.PageResult, error) {
@@ -180,14 +180,14 @@ func TestLocationAliasHandler_WithCore_NilSafe(t *testing.T) {
 
 // mockRoomDeviceService implements opsServices.RoomDeviceService.
 type mockRoomDeviceService struct {
-	CreateFunc    func(ctx context.Context, d *opsModels.OpsRoomDevice) error
-	UpdateFunc    func(ctx context.Context, d *opsModels.OpsRoomDevice) error
-	DeleteFunc    func(ctx context.Context, id string) error
-	GetByIDFunc   func(ctx context.Context, id string) (*opsModels.OpsRoomDevice, error)
-	ListFunc      func(ctx context.Context, req requests.RoomDeviceListRequest) (*opsServices.PageResult, error)
+	CreateFunc      func(ctx context.Context, d *opsModels.OpsRoomDevice) error
+	UpdateFunc      func(ctx context.Context, d *opsModels.OpsRoomDevice) error
+	DeleteFunc      func(ctx context.Context, id string) error
+	GetByIDFunc     func(ctx context.Context, id string) (*opsModels.OpsRoomDevice, error)
+	ListFunc        func(ctx context.Context, req requests.RoomDeviceListRequest) (*opsServices.PageResult, error)
 	BatchDeleteFunc func(ctx context.Context, ids []string) error
-	StatisticsFunc func(ctx context.Context) (*opsServices.RoomDeviceStatisticsResult, error)
-	SearchFunc    func(ctx context.Context, p map[string]interface{}) ([]opsServices.DropdownOption, error)
+	StatisticsFunc  func(ctx context.Context) (*opsServices.RoomDeviceStatisticsResult, error)
+	SearchFunc      func(ctx context.Context, p map[string]interface{}) ([]opsServices.DropdownOption, error)
 }
 
 func (m *mockRoomDeviceService) Create(ctx context.Context, d *opsModels.OpsRoomDevice) error {

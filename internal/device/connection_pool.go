@@ -15,7 +15,7 @@ import (
 
 // 网络设备连接默认端口与超时（避免散落的硬编码数字字面量）
 const (
-	defaultSSHPort   = 22
+	defaultSSHPort    = 22
 	defaultTelnetPort = 23
 
 	// deviceConnectionTimeout 设备连接池建立连接超时

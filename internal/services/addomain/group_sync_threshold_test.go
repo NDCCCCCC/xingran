@@ -8,13 +8,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-ldap/ldap/v3"
-	"github.com/xingran-next/xingran-go-backend/internal/models"
-	"github.com/stretchr/testify/assert"
 	"github.com/glebarez/sqlite"
+	"github.com/go-ldap/ldap/v3"
+	"github.com/stretchr/testify/assert"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
-
 	// Pure-Go SQLite driver
 )
 

@@ -23,8 +23,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/glebarez/sqlite"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
@@ -177,8 +177,8 @@ func TestGrp78_GetList_FilterSortPage(t *testing.T) {
 	ouDN := "OU=Groups,DC=example,DC=com"
 	groups, _, err = svc.GetList(ctx, &GroupListRequest{
 		BaseListRequest: base.BaseListRequest{Current: 1, PageSize: 100},
-		ConfigID:      configID,
-		OUDN:         &ouDN,
+		ConfigID:        configID,
+		OUDN:            &ouDN,
 	})
 	require.NoError(t, err)
 	assert.GreaterOrEqual(t, len(groups), 2)
@@ -187,8 +187,8 @@ func TestGrp78_GetList_FilterSortPage(t *testing.T) {
 	grpName := "Group1"
 	groups, _, err = svc.GetList(ctx, &GroupListRequest{
 		BaseListRequest: base.BaseListRequest{Current: 1, PageSize: 100},
-		ConfigID:      configID,
-		GroupName:    &grpName,
+		ConfigID:        configID,
+		GroupName:       &grpName,
 	})
 	require.NoError(t, err)
 	assert.Equal(t, 1, len(groups))

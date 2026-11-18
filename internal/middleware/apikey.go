@@ -305,9 +305,9 @@ func RequireScope(requiredScope string) gin.HandlerFunc {
 //   - 命中后 scopes 检查接受三种形式(union 语义):
 //     ① admin 通配 — admin 含所有权限
 //     ② 细粒度 PermissionCode — D-06 InheritPerms=true 路径下 User 权限代码
-//        合并入 scopes,例如 "system:user:list"
+//     合并入 scopes,例如 "system:user:list"
 //     ③ 粗粒度 scope(read/write) — D-13 非 InheritPerms 路径下 API Key 自带
-//        scope 通过 getRequiredScope(action) 映射(view→read, edit→write)
+//     scope 通过 getRequiredScope(action) 映射(view→read, edit→write)
 //   - 不命中 → 403 "资源权限不足: <permCode>"
 func RequireAPIKeyResourcePermission(resource string, action string) gin.HandlerFunc {
 	return func(c *gin.Context) {

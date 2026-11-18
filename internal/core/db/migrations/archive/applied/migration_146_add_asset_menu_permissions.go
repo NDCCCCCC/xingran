@@ -1,6 +1,5 @@
 //go:build archive_skip
 
-
 package migrations
 
 import (
@@ -65,16 +64,16 @@ func Migrate146AddAssetMenuPermissions(db *gorm.DB) error {
 		emptyIcon := ""
 
 		buttonMenu := &models.Menu{
-			MenuName:  btn.name,
-			ParentID:  &assetMenu.ID,
-			OrderNum:  btn.order,
-			Path:      &emptyPath,
-			MenuType:  "F", // F = 按钮权限
-			Visible:   0,
-			Status:    0,
-			Perms:     &btn.perms,
-			Icon:      &emptyIcon,
-			Remark:    btn.remark,
+			MenuName: btn.name,
+			ParentID: &assetMenu.ID,
+			OrderNum: btn.order,
+			Path:     &emptyPath,
+			MenuType: "F", // F = 按钮权限
+			Visible:  0,
+			Status:   0,
+			Perms:    &btn.perms,
+			Icon:     &emptyIcon,
+			Remark:   btn.remark,
 		}
 
 		if err := db.Create(buttonMenu).Error; err != nil {

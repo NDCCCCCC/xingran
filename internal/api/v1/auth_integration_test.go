@@ -129,9 +129,9 @@ func TestIntegration_LoginRequest_Parsing(t *testing.T) {
 
 	t.Run("EncryptedPassword", func(t *testing.T) {
 		body := map[string]interface{}{
-			"username":           "testuser",
-			"password":           "encrypted_data",
-			"encryptedPassword":  true,
+			"username":          "testuser",
+			"password":          "encrypted_data",
+			"encryptedPassword": true,
 		}
 		bodyBytes, _ := json.Marshal(body)
 
@@ -322,12 +322,12 @@ func TestIntegration_LoginRequest_AllFields(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	body := map[string]interface{}{
-		"username":           "admin",
-		"password":           "encrypted_password_hex",
-		"authMode":           "hybrid",
-		"encryptedPassword":  true,
-		"captcha":            "1234",
-		"captchaId":          "captcha-uuid-123",
+		"username":          "admin",
+		"password":          "encrypted_password_hex",
+		"authMode":          "hybrid",
+		"encryptedPassword": true,
+		"captcha":           "1234",
+		"captchaId":         "captcha-uuid-123",
 	}
 	bodyBytes, _ := json.Marshal(body)
 
@@ -525,10 +525,10 @@ func TestIntegration_LoginRequest_ExtraFields(t *testing.T) {
 
 	// Extra fields should be ignored (Go's JSON decoder ignores unknown fields)
 	body := map[string]interface{}{
-		"username":      "testuser",
-		"password":      "testpass",
-		"authMode":      "local",
-		"unknownField":  "should be ignored",
+		"username":     "testuser",
+		"password":     "testpass",
+		"authMode":     "local",
+		"unknownField": "should be ignored",
 	}
 	bodyBytes, _ := json.Marshal(body)
 

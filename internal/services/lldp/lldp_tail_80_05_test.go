@@ -32,7 +32,7 @@ func TestLdp8005_ClassifyPort_Table(t *testing.T) {
 	// fullToShort 映射;非小写全拼)。
 	lldpNeighbors := map[string]*models.LLDPNeighborInfo{
 		"GE0/1": {
-			NeighborName: neighbor,
+			NeighborName:   neighbor,
 			LocalInterface: iface,
 		},
 	}

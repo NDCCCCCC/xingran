@@ -77,11 +77,11 @@ type RPAProgressMessage struct {
 // NewNoticeHub 创建通知中心
 func NewNoticeHub() *NoticeHub {
 	h := &NoticeHub{
-		clients:   make(map[string]*Client),
-		broadcast: make(chan NoticeMessage, noticeHubBufferSize),
-		register:  make(chan *Client, noticeHubBufferSize),
+		clients:    make(map[string]*Client),
+		broadcast:  make(chan NoticeMessage, noticeHubBufferSize),
+		register:   make(chan *Client, noticeHubBufferSize),
 		unregister: make(chan *Client, noticeHubBufferSize),
-		stop:      make(chan struct{}),
+		stop:       make(chan struct{}),
 	}
 	// 初始化对象池，预分配容量减少后续分配
 	h.toDeletePool.New = func() interface{} {
@@ -258,17 +258,17 @@ func (h *NoticeHub) BroadcastRPAProgress(message RPAProgressMessage) {
 // NoticeMessage.Content，Type 透传消息自身类型 port_write_progress /
 // port_write_completed），前端按 type 分流。
 type PortWriteProgressMessage struct {
-	Type          string `json:"type"`                 // port_write_progress | port_write_completed
-	BatchID       string `json:"batchId"`              // 与 HTTP 响应 BatchResult.batchId 同值
+	Type          string `json:"type"`    // port_write_progress | port_write_completed
+	BatchID       string `json:"batchId"` // 与 HTTP 响应 BatchResult.batchId 同值
 	DeviceID      string `json:"deviceId"`
 	Action        string `json:"action"`
-	PortID        string `json:"portId,omitempty"`     // completed 事件为空
+	PortID        string `json:"portId,omitempty"` // completed 事件为空
 	InterfaceName string `json:"interfaceName,omitempty"`
-	Index         int    `json:"index"`                // 1-based 当前端口序号（completed 为总数）
+	Index         int    `json:"index"` // 1-based 当前端口序号（completed 为总数）
 	Total         int    `json:"total"`
-	Status        string `json:"status"`               // succeeded | failed | skipped；completed 为批次汇总
-	Message       string `json:"message,omitempty"`    // 失败原因 / fail-fast 说明
-	Summary       string `json:"summary,omitempty"`    // completed：{"succeeded":N,"failed":N,"skipped":N}
+	Status        string `json:"status"`            // succeeded | failed | skipped；completed 为批次汇总
+	Message       string `json:"message,omitempty"` // 失败原因 / fail-fast 说明
+	Summary       string `json:"summary,omitempty"` // completed：{"succeeded":N,"failed":N,"skipped":N}
 	Timestamp     int64  `json:"timestamp"`
 }
 

@@ -408,6 +408,7 @@ func (s *workstationDeviceService) GetPhysicalDevices(ctx context.Context, works
 
 	return devices, nil
 }
+
 // GetPhysicalDevicesWithDiagnosis 实时查询物理链路设备 + 空因诊断（DBG-07 / #7）。
 //
 // 契约：
@@ -1958,6 +1959,7 @@ func (s *workstationDeviceService) GetPhysicalDevicesByWorkstations(
 		total, len(workstationIDs))
 	return result, nil
 }
+
 // ===========================================================================
 // Phase 148 / DIALECT-02：物理链路「共享召回 + Go 层合并」（方案 ②）
 // ===========================================================================
@@ -2502,7 +2504,7 @@ func physicalJoinKey(normIface, deviceID string) string {
 	return normIface + "\x00" + deviceID
 }
 
-// physicalDedupKey 对齐 PG 的 COALESCE(a.devicesn, COALESCE(mac.mac, hist.mac, ''))。
+// physicalDedupKey 对齐 PG 的 COALESCE(a.devicesn, COALESCE(mac.mac, hist.mac, ”))。
 func physicalDedupKey(r physicalRecallRow) string {
 	if r.DeviceSerial != nil && *r.DeviceSerial != "" {
 		return *r.DeviceSerial

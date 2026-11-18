@@ -4,13 +4,13 @@
 // Per D-08, the collector uses single GET (not GetBulk — Huawei S8700
 // rejects GetBulk). The two-step strategy:
 //
-//   1. CountPhysicalEntitiesByClass — one Walk on oidEntPhysicalClass
-//      filtered by the caller-supplied class set (chassis/module/fan/
-//      powerSupply/etc.) collects the set of relevant entity indices.
-//      This bounds the subsequent GET loop and avoids pulling ~600
-//      sensor rows on Ruijie.
-//   2. GetEntityAttrs — for each index, five single GETs retrieve
-//      Serial / Model / Name / Class / ContainedIn.
+//  1. CountPhysicalEntitiesByClass — one Walk on oidEntPhysicalClass
+//     filtered by the caller-supplied class set (chassis/module/fan/
+//     powerSupply/etc.) collects the set of relevant entity indices.
+//     This bounds the subsequent GET loop and avoids pulling ~600
+//     sensor rows on Ruijie.
+//  2. GetEntityAttrs — for each index, five single GETs retrieve
+//     Serial / Model / Name / Class / ContainedIn.
 //
 // The helpers type-switch on the interface{} returned by SNMPClient.Get
 // (gosnmp values may arrive as string, int64 or other). parseSNMPValue

@@ -38,29 +38,29 @@ import (
 
 // mockDashboardService satisfies system.DashboardService via per-method *Func fields.
 type mockDashboardService struct {
-	GetDashboardsFunc                 func(ctx context.Context, params system.DashboardListParams) (*system.DashboardListResponse, error)
-	GetAccessibleDashboardsFunc       func(ctx context.Context, params system.DashboardListParams, userID, userDeptID, dataScope string) (*system.DashboardListResponse, error)
-	GetDashboardFunc                  func(ctx context.Context, id string) (*models.Dashboard, error)
-	GetAccessibleDefaultDashboardFunc func(ctx context.Context, userID, userDeptID, dataScope string) (*models.Dashboard, error)
-	CreateDashboardFunc               func(ctx context.Context, userID string, req system.CreateDashboardRequest) (*models.Dashboard, error)
+	GetDashboardsFunc                  func(ctx context.Context, params system.DashboardListParams) (*system.DashboardListResponse, error)
+	GetAccessibleDashboardsFunc        func(ctx context.Context, params system.DashboardListParams, userID, userDeptID, dataScope string) (*system.DashboardListResponse, error)
+	GetDashboardFunc                   func(ctx context.Context, id string) (*models.Dashboard, error)
+	GetAccessibleDefaultDashboardFunc  func(ctx context.Context, userID, userDeptID, dataScope string) (*models.Dashboard, error)
+	CreateDashboardFunc                func(ctx context.Context, userID string, req system.CreateDashboardRequest) (*models.Dashboard, error)
 	CreateDashboardWithPermissionsFunc func(ctx context.Context, userID, userDeptID, dataScope string, isAdmin bool, req system.CreateDashboardRequest) (*models.Dashboard, error)
-	UpdateDashboardFunc               func(ctx context.Context, userID, id string, req system.UpdateDashboardRequest) error
-	DeleteDashboardFunc               func(ctx context.Context, userID, id string) error
-	DuplicateDashboardFunc            func(ctx context.Context, userID, id string) (*models.Dashboard, error)
-	SetDefaultDashboardFunc           func(ctx context.Context, userID, id string) error
-	GetTemplatesFunc                  func(ctx context.Context, scope *string) ([]models.Dashboard, error)
-	CreateFromTemplateFunc            func(ctx context.Context, userID, templateID, name string) (*models.Dashboard, error)
-	GetVersionsFunc                   func(ctx context.Context, dashboardID string) ([]models.DashboardVersion, error)
-	CreateVersionFunc                 func(ctx context.Context, userID, dashboardID, comment string) (*models.DashboardVersion, error)
-	RestoreVersionFunc                func(ctx context.Context, userID, dashboardID, versionID string) error
-	ExportDashboardFunc               func(ctx context.Context, id string) (string, error)
-	ImportDashboardFunc               func(ctx context.Context, userID, config string) (*models.Dashboard, error)
-	GetWidgetDataFunc                 func(ctx context.Context, widgetID, apiEndpoint string, params map[string]interface{}) (interface{}, error)
-	GetBatchWidgetDataFunc            func(ctx context.Context, widgetIDs []string, bypassCache bool) (map[string]system.WidgetDataResult, error)
-	GetUserAccessibleEndpointsFunc    func(ctx context.Context, userID string) ([]systemServices.CategoryEndpoints, error)
-	ValidateEndpointFunc              func(route, method string) (*systemServices.EndpointDetail, error)
-	InvalidateUserCacheFunc           func(ctx context.Context, userID string)
-	FilterEndpointsByWidgetTypeFunc   func(categories []systemServices.CategoryEndpoints, widgetType string) []systemServices.CategoryEndpoints
+	UpdateDashboardFunc                func(ctx context.Context, userID, id string, req system.UpdateDashboardRequest) error
+	DeleteDashboardFunc                func(ctx context.Context, userID, id string) error
+	DuplicateDashboardFunc             func(ctx context.Context, userID, id string) (*models.Dashboard, error)
+	SetDefaultDashboardFunc            func(ctx context.Context, userID, id string) error
+	GetTemplatesFunc                   func(ctx context.Context, scope *string) ([]models.Dashboard, error)
+	CreateFromTemplateFunc             func(ctx context.Context, userID, templateID, name string) (*models.Dashboard, error)
+	GetVersionsFunc                    func(ctx context.Context, dashboardID string) ([]models.DashboardVersion, error)
+	CreateVersionFunc                  func(ctx context.Context, userID, dashboardID, comment string) (*models.DashboardVersion, error)
+	RestoreVersionFunc                 func(ctx context.Context, userID, dashboardID, versionID string) error
+	ExportDashboardFunc                func(ctx context.Context, id string) (string, error)
+	ImportDashboardFunc                func(ctx context.Context, userID, config string) (*models.Dashboard, error)
+	GetWidgetDataFunc                  func(ctx context.Context, widgetID, apiEndpoint string, params map[string]interface{}) (interface{}, error)
+	GetBatchWidgetDataFunc             func(ctx context.Context, widgetIDs []string, bypassCache bool) (map[string]system.WidgetDataResult, error)
+	GetUserAccessibleEndpointsFunc     func(ctx context.Context, userID string) ([]systemServices.CategoryEndpoints, error)
+	ValidateEndpointFunc               func(route, method string) (*systemServices.EndpointDetail, error)
+	InvalidateUserCacheFunc            func(ctx context.Context, userID string)
+	FilterEndpointsByWidgetTypeFunc    func(categories []systemServices.CategoryEndpoints, widgetType string) []systemServices.CategoryEndpoints
 }
 
 func (m *mockDashboardService) GetDashboards(ctx context.Context, params system.DashboardListParams) (*system.DashboardListResponse, error) {

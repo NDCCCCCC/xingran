@@ -9,8 +9,8 @@ import (
 	"github.com/robfig/cron/v3"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/internal/services/addomain"
-	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 	pkgconstants "github.com/xingran-next/xingran-go-backend/pkg/constants"
+	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"golang.org/x/sync/semaphore"
 	"gorm.io/gorm"
 )
@@ -37,8 +37,8 @@ type ADSyncScheduler struct {
 var (
 	globalADSyncScheduler     *ADSyncScheduler
 	globalADSyncSchedulerOnce sync.Once
-	globalADSM4Cipher        addomain.PasswordCipher // 全局AD域SM4加密器
-	globalADSM4CipherMu      sync.RWMutex
+	globalADSM4Cipher         addomain.PasswordCipher // 全局AD域SM4加密器
+	globalADSM4CipherMu       sync.RWMutex
 )
 
 // ADSyncTimeout is imported from pkg/constants/timeouts.go
@@ -85,7 +85,7 @@ func RegisterADSyncTasks(scheduler *Scheduler) {
 // RegisterADAccountPoolTasks Phase 36: 注册 AD 账号池维护定时任务
 //
 // 任务：
-//   1. recover_breakers - 每 5 分钟恢复已过期熔断的账号（Issue 4/11/17）
+//  1. recover_breakers - 每 5 分钟恢复已过期熔断的账号（Issue 4/11/17）
 func RegisterADAccountPoolTasks(scheduler *Scheduler) {
 	scheduler.RegisterTask("ad_account_pool_recover_breakers", func(ctx context.Context, params map[string]interface{}) error {
 		return executeADAccountPoolRecoverBreakersTask(ctx, params)
@@ -95,10 +95,10 @@ func RegisterADAccountPoolTasks(scheduler *Scheduler) {
 // executeADAccountPoolRecoverBreakersTask 执行恢复过期熔断账号任务
 //
 // 流程：
-//   1. 调 AccountPool.RecoverExpiredBreakers（事务 + 写 DB）
-//   2. 内部自动 InvalidateCache 本地缓存
-//   3. 内部自动通过 Redis pub/sub 广播（如果启用）
-//   4. 记录日志
+//  1. 调 AccountPool.RecoverExpiredBreakers（事务 + 写 DB）
+//  2. 内部自动 InvalidateCache 本地缓存
+//  3. 内部自动通过 Redis pub/sub 广播（如果启用）
+//  4. 记录日志
 //
 // 频率：建议每 5 分钟（与 BreakerRecoveryCron 常量一致）
 func executeADAccountPoolRecoverBreakersTask(ctx context.Context, params map[string]interface{}) error {
@@ -550,11 +550,12 @@ func (s *ADSyncScheduler) getPool() addomain.AccountPool {
 
 // getPoolLocked 是 getPool 的锁内版本：若 StartADSyncScheduler 未执行（pool 为 nil），
 // 则惰性初始化并写回字段，避免所有 caller 各自 NewAccountPool 造成 Pitfall 4
-//（独立缓存 → 熔断后账号仍被选中）。
+// （独立缓存 → 熔断后账号仍被选中）。
 //
 // ⚠ 调用方必须已持有 s.mu。Go 的 Mutex 不可重入，已持锁时调 getPool() 会自死锁 ——
-//   Start() 就是这种场景（它在整个函数期间持 s.mu），故排水器在 Start() 内取池时
-//   必须走本函数。
+//
+//	Start() 就是这种场景（它在整个函数期间持 s.mu），故排水器在 Start() 内取池时
+//	必须走本函数。
 func (s *ADSyncScheduler) getPoolLocked() addomain.AccountPool {
 	if s.pool == nil {
 		// 惰性初始化（兜底 StartADSyncScheduler 未设置 pool 的极端场景）

@@ -17,8 +17,9 @@ type TokenStore interface {
 }
 
 // 环境变量（企业环境下 %USERPROFILE% 可能被 EDR/杀软拦截写入，提供自定义位置）：
-//   XINGRAN_TOKEN_FILE 完整 token 文件路径（优先级最高）
-//   XINGRAN_HOME       存放 tokens.json 的目录
+//
+//	XINGRAN_TOKEN_FILE 完整 token 文件路径（优先级最高）
+//	XINGRAN_HOME       存放 tokens.json 的目录
 const (
 	EnvTokenFile = "XINGRAN_TOKEN_FILE"
 	EnvHome      = "XINGRAN_HOME"

@@ -24,9 +24,9 @@ func NewGroupService(db *gorm.DB, pool AccountPool) *GroupService {
 
 // adGroupAllowedSortFields AD用户组可排序字段白名单(对应 sys_ad_group 表列名)。
 var adGroupAllowedSortFields = map[string]string{
-	"groupName":    "group_name",
-	"memberCount":  "member_count",
-	"ouDn":         "ou_dn",
+	"groupName":   "group_name",
+	"memberCount": "member_count",
+	"ouDn":        "ou_dn",
 }
 
 // GroupListRequest 用户组列表请求

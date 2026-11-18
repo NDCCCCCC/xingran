@@ -22,11 +22,11 @@ import (
 // ============================================================================
 
 type constructorCase struct {
-	name           string
-	constructor    func() *AppError
-	expectedCode   ErrorCode
+	name                string
+	constructor         func() *AppError
+	expectedCode        ErrorCode
 	expectedMsgNonEmpty bool
-	skip           bool
+	skip                bool
 }
 
 // constructorTestCases 全部 ~100 个 errors.go 构造器(按代码顺序盘点)。
@@ -359,7 +359,7 @@ func TestApe8004_TypeAssert_Helpers(t *testing.T) {
 	// GetErrorCode。
 	assert.Equal(t, CodeUserNotFound, GetErrorCode(appErr))
 	assert.Equal(t, CodeServerError, GetErrorCode(plainErr)) // 回退 CodeServerError。
-	assert.Equal(t, CodeSuccess, GetErrorCode(nil))            // nil → CodeSuccess。
+	assert.Equal(t, CodeSuccess, GetErrorCode(nil))          // nil → CodeSuccess。
 }
 
 // TestApe8004_ErrorAndUnwrap Error() 格式化 + Unwrap 链。

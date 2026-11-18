@@ -1,6 +1,5 @@
 //go:build archive_skip
 
-
 package migrations
 
 import (

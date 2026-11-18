@@ -4,9 +4,9 @@ import (
 	"encoding/base64"
 	"testing"
 
-	"github.com/xingran-next/xingran-go-backend/pkg/crypto"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/xingran-next/xingran-go-backend/pkg/crypto"
 )
 
 func TestExtractRDN(t *testing.T) {

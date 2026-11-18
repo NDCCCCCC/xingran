@@ -215,11 +215,11 @@ func TestWorker_IsAvailable(t *testing.T) {
 func TestWorker_CapabilitiesJSON(t *testing.T) {
 	w := &Worker{}
 	caps := WorkerCapability{
-		BrowserTypes:   []string{"chrome", "firefox"},
-		Headless:      true,
-		MaxTimeout:     300,
-		SupportsAI:     true,
-		AITypes:        []string{"gpt-4"},
+		BrowserTypes: []string{"chrome", "firefox"},
+		Headless:     true,
+		MaxTimeout:   300,
+		SupportsAI:   true,
+		AITypes:      []string{"gpt-4"},
 	}
 	require.NoError(t, w.SetCapabilities(caps))
 	got, err := w.GetCapabilities()

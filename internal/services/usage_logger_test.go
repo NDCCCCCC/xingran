@@ -8,10 +8,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/glebarez/sqlite"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
-	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 )
 
@@ -214,7 +214,7 @@ func TestAsyncLogging(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("并发日志记录", func(t *testing.T) {
-		numGoroutines := 10 // 减少并发数量
+		numGoroutines := 10   // 减少并发数量
 		logsPerGoroutine := 5 // 减少每个goroutine的日志数
 
 		done := make(chan bool, numGoroutines)

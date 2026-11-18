@@ -148,7 +148,7 @@ func TestCheckActionSupport_EmptyReasonFallback(t *testing.T) {
 		modelRules: []modelCapabilityRule{
 			{
 				matchModelSubstr: []string{"testbox"},
-				unsupported:       map[PortAction]string{PortSecMaxMac: ""},
+				unsupported:      map[PortAction]string{PortSecMaxMac: ""},
 			},
 		},
 	}
@@ -176,8 +176,8 @@ func TestCheckActionSupport_UnsupportedWinsOverSupported(t *testing.T) {
 		modelRules: []modelCapabilityRule{
 			{
 				matchModelSubstr: []string{"testbox"},
-				unsupported:       map[PortAction]string{PortSecMaxMac: "真机不支持（优先级更高）"},
-				supported:         map[PortAction]string{PortSecMaxMac: "真机支持（应被忽略）"},
+				unsupported:      map[PortAction]string{PortSecMaxMac: "真机不支持（优先级更高）"},
+				supported:        map[PortAction]string{PortSecMaxMac: "真机支持（应被忽略）"},
 			},
 		},
 	}

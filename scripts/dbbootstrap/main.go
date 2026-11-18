@@ -1,5 +1,6 @@
 // DB 引导工具:绕过 GORM AutoMigrate hang,直接用 pgx 连 Supabase 跑 DDL。
-//   go run ./scripts/dbbootstrap
+//
+//	go run ./scripts/dbbootstrap
 package main
 
 import (

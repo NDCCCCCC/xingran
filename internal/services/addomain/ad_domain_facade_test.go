@@ -22,8 +22,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 
-	base "github.com/xingran-next/xingran-go-backend/internal/services/base"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
+	base "github.com/xingran-next/xingran-go-backend/internal/services/base"
 )
 
 func setupFacadeTestDB(t *testing.T) *gorm.DB {

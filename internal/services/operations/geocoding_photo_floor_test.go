@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
-	pkgcache "github.com/xingran-next/xingran-go-backend/pkg/cache"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	pkgcache "github.com/xingran-next/xingran-go-backend/pkg/cache"
 	"gorm.io/gorm"
 
 	operationsmodels "github.com/xingran-next/xingran-go-backend/internal/models/operations"
@@ -107,7 +107,7 @@ func TestGeocodingService_Geocode_Errors(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			rt := &fakeGeocodeTransport{fallback: tc.body}
 			s := newGeocodeSvc(rt, nil)
-			_, _, e := s.Geocode(ctx, "addr-" + tc.name)
+			_, _, e := s.Geocode(ctx, "addr-"+tc.name)
 			require.Error(t, e)
 			assert.Contains(t, e.Error(), tc.wantErr)
 			assert.Equal(t, uint64(1), s.GetStats().CacheMisses)

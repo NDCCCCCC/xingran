@@ -51,9 +51,9 @@ func CreateMACHistoryTable(db *gorm.DB) error {
 	// 2. 创建当前月份和未来2个月的分区
 	now := time.Now()
 	monthsToCreate := []time.Time{
-		now,                      // 当前月
-		now.AddDate(0, 1, 0),      // 下个月
-		now.AddDate(0, 2, 0),      // 再下个月
+		now,                  // 当前月
+		now.AddDate(0, 1, 0), // 下个月
+		now.AddDate(0, 2, 0), // 再下个月
 	}
 
 	for _, month := range monthsToCreate {

@@ -26,8 +26,8 @@ import (
 )
 
 type stubTokenService struct {
-	provOK    bool
-	claims    *rpa.WorkerClaims
+	provOK      bool
+	claims      *rpa.WorkerClaims
 	validateErr error
 }
 

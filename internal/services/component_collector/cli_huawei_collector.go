@@ -12,8 +12,8 @@ import (
 //
 //   - display device esn                — chassis ESN cross-verification
 //   - display device elabel brief       — chassis ESN fallback (V600R024C00+)
-//                                         + per-slot/per-board/per-fan/per-power SN
-//                                         (D-12: replaces deferred ENTITY-MIB board path)
+//   - per-slot/per-board/per-fan/per-power SN
+//     (D-12: replaces deferred ENTITY-MIB board path)
 //   - display interface status          — D-10 up-interface pre-filter
 //   - display interface transceiver     — optical-module SN + DDM
 //
@@ -106,7 +106,9 @@ func (h *HuaweiCliCollector) ParseDisplayDeviceEsn(raw string) ([]Component, err
 //   - table header row (SLOTID literal "SlotID") → silently skipped
 //
 // Pitfall: the textual table header line
-//   `SlotID     Sub    Type                     SN                       P/N`
+//
+//	`SlotID     Sub    Type                     SN                       P/N`
+//
 // matches the data row template (SLOTID="SlotID" TYPE="Type" SN="SN" PN="P/N")
 // because each "value" is a non-space token. The header detection is
 // done here (SLOTID == "SlotID") rather than in the textfsm template

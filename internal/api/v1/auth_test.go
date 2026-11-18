@@ -10,11 +10,11 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/glebarez/sqlite"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/xingran-next/xingran-go-backend/pkg/crypto"
 	"github.com/xingran-next/xingran-go-backend/pkg/middleware"
-	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 )
 
@@ -55,14 +55,14 @@ func TestGetEncryptionConfig_Success(t *testing.T) {
 		// 模拟 getEncryptionConfig 处理器
 		enabled := middleware.GetEncryptionConfigFromCache()
 		c.JSON(http.StatusOK, gin.H{
-			"code": 0,
+			"code":    0,
 			"message": "success",
 			"data": gin.H{
 				"enabled": enabled,
 				"key":     "sys.request.encryption.enabled",
 				"source":  "database",
 			},
-			"timestamp": time.Now().Unix(),
+			"timestamp":  time.Now().Unix(),
 			"request_id": "test-request-id",
 		})
 	})
@@ -145,7 +145,7 @@ func TestGetEncryptionConfig_PublicAccess(t *testing.T) {
 		// 模拟 getEncryptionConfig 处理器（公共端点，无需认证）
 		enabled := middleware.GetEncryptionConfigFromCache()
 		c.JSON(http.StatusOK, gin.H{
-			"code": 0,
+			"code":    0,
 			"message": "success",
 			"data": gin.H{
 				"enabled": enabled,
@@ -181,14 +181,14 @@ func TestGetEncryptionConfig_ResponseFormat(t *testing.T) {
 	router.GET("/encryption-config", func(c *gin.Context) {
 		enabled := middleware.GetEncryptionConfigFromCache()
 		c.JSON(http.StatusOK, gin.H{
-			"code": 0,
+			"code":    0,
 			"message": "success",
 			"data": gin.H{
 				"enabled": enabled,
 				"key":     "sys.request.encryption.enabled",
 				"source":  "database",
 			},
-			"timestamp": time.Now().Unix(),
+			"timestamp":  time.Now().Unix(),
 			"request_id": "test-request-id",
 		})
 	})
@@ -298,9 +298,9 @@ func buildEncryptedLoginRequest(t *testing.T, username, password, captcha, captc
 
 	// 2. 构建明文请求体
 	plaintextRequest := map[string]interface{}{
-		"username": username,
-		"password": password, // 密码字段仍需SM2加密（三层加密）
-		"captcha":  captcha,
+		"username":  username,
+		"password":  password, // 密码字段仍需SM2加密（三层加密）
+		"captcha":   captcha,
 		"captchaId": captchaID,
 	}
 	plaintextBytes, _ := json.Marshal(plaintextRequest)
@@ -416,8 +416,8 @@ func TestLoginWithInvalidEncryptedRequest(t *testing.T) {
 	)
 
 	testCases := []struct {
-		name    string
-		request map[string]interface{}
+		name        string
+		request     map[string]interface{}
 		expectError string
 	}{
 		{
@@ -507,8 +507,8 @@ func TestLoginTimestampValidation(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	testCases := []struct {
-		name       string
-		timestamp  int64
+		name          string
+		timestamp     int64
 		shouldBeValid bool
 	}{
 		{"有效时间戳", time.Now().Unix(), true},

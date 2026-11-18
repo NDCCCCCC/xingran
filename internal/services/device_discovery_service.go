@@ -122,12 +122,12 @@ type DeviceProbeRequest struct {
 
 // DeviceProbeResult 单设备探测结果
 type DeviceProbeResult struct {
-	Success    bool                `json:"success"`
-	Message    string              `json:"message"`
-	IPAddress  string              `json:"ipAddress"`
-	DeviceName string              `json:"deviceName,omitempty"`
-	DeviceType models.DeviceType   `json:"deviceType,omitempty"`
-	Vendor     models.DeviceVendor `json:"vendor,omitempty"`
+	Success     bool                `json:"success"`
+	Message     string              `json:"message"`
+	IPAddress   string              `json:"ipAddress"`
+	DeviceName  string              `json:"deviceName,omitempty"`
+	DeviceType  models.DeviceType   `json:"deviceType,omitempty"`
+	Vendor      models.DeviceVendor `json:"vendor,omitempty"`
 	Model       string              `json:"model,omitempty"`
 	SysDescr    string              `json:"sysDescr,omitempty"`
 	SysName     string              `json:"sysName,omitempty"`
@@ -627,7 +627,7 @@ func (s *DeviceDiscoveryService) ImportDiscoveredDevices(ctx context.Context, di
 				cur.SerialNumber = ""
 				cur.SoftwareVersion = ""
 				cur.Uptime = ""
-			cur.SysObjectID = fresh.SysObjectID // B-3 / v1.56：软删恢复同步刷新 OID
+				cur.SysObjectID = fresh.SysObjectID // B-3 / v1.56：软删恢复同步刷新 OID
 				cur.CreatedBy = fresh.CreatedBy
 				cur.UpdatedBy = fresh.UpdatedBy
 				restored = append(restored, cur)
@@ -915,11 +915,11 @@ func (s *DeviceDiscoveryService) ProbeSingleDevice(ctx context.Context, req *Dev
 
 		// 构造返回结果
 		probeResult := &DeviceProbeResult{
-			Success:    true,
-			Message:    "探测成功",
-			IPAddress:  req.IPAddress,
-			DeviceName: discoveredDevice.SysName,
-			SysDescr:   discoveredDevice.SysDescr,
+			Success:     true,
+			Message:     "探测成功",
+			IPAddress:   req.IPAddress,
+			DeviceName:  discoveredDevice.SysName,
+			SysDescr:    discoveredDevice.SysDescr,
 			SysName:     discoveredDevice.SysName,
 			Vendor:      vendor,
 			Model:       model,
@@ -973,10 +973,10 @@ func (s *DeviceDiscoveryService) GetDiscoveryResults(ctx context.Context, discov
 	devices := make([]*DiscoveredDevice, 0, len(rows))
 	for _, row := range rows {
 		devices = append(devices, &DiscoveredDevice{
-			IPAddress:  row.IPAddress,
-			DeviceType: row.DeviceType,
-			Vendor:     row.Vendor,
-			Model:      row.Model,
+			IPAddress:   row.IPAddress,
+			DeviceType:  row.DeviceType,
+			Vendor:      row.Vendor,
+			Model:       row.Model,
 			SysName:     row.SysName,
 			SysDescr:    row.SysDescr,
 			IsAlive:     row.IsAlive,

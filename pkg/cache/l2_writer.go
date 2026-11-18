@@ -242,15 +242,16 @@ func (w *L2WriteWorker) TryEnqueue(ctx context.Context, cache Cache, key string,
 // buildTask 构建写入任务（提取公共逻辑，消除DRY违规）
 //
 // ctx 解耦 (login-menu-timeout-20260817 H8 修复):
-//   L2 写入是后台任务,必须独立于调用方(通常是 HTTP 请求) ctx 的生命周期。
-//   历史上 MultiLevelCache.Set 曾传入 defer-cancel 的临时 ctx,Set 返回即取消,
-//   processTask 前置 task.ctx.Done() 检查 100% 命中 → 几乎所有 L2 异步写被丢弃,
-//   menu:user:* 缓存永远写不进 Redis,形成"缓存永久 miss → 重复慢查询 → 超时 →
-//   客户端中止 → 写入再被取消"的恶性循环。
-//   这里统一 detach: context.WithoutCancel 保留 values(tracing) 但剥离取消信号,
-//   并加上有界存活期(队列积压过久视为过期写入,由 processTask 前置检查丢弃)。
-//   cancel 存于任务上,由 processTask 在处理完成(成功/失败/丢弃)时调用,
-//   或在 Enqueue/TryEnqueue 入队失败路径调用 — 不会泄漏。
+//
+//	L2 写入是后台任务,必须独立于调用方(通常是 HTTP 请求) ctx 的生命周期。
+//	历史上 MultiLevelCache.Set 曾传入 defer-cancel 的临时 ctx,Set 返回即取消,
+//	processTask 前置 task.ctx.Done() 检查 100% 命中 → 几乎所有 L2 异步写被丢弃,
+//	menu:user:* 缓存永远写不进 Redis,形成"缓存永久 miss → 重复慢查询 → 超时 →
+//	客户端中止 → 写入再被取消"的恶性循环。
+//	这里统一 detach: context.WithoutCancel 保留 values(tracing) 但剥离取消信号,
+//	并加上有界存活期(队列积压过久视为过期写入,由 processTask 前置检查丢弃)。
+//	cancel 存于任务上,由 processTask 在处理完成(成功/失败/丢弃)时调用,
+//	或在 Enqueue/TryEnqueue 入队失败路径调用 — 不会泄漏。
 func (w *L2WriteWorker) buildTask(ctx context.Context, cache Cache, key string, value interface{}, expiration time.Duration) (l2WriteTask, error) {
 	taskCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), w.taskQueueTTL())
 	return l2WriteTask{

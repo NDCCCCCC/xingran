@@ -143,7 +143,9 @@ func (s *dutyCacheServiceImpl) GetMonthlyDutySchedule(ctx context.Context, year 
 	cacheKey := systemServices.GetDutyMonthlyKey(year, month)
 	return base.GetOrSetJSON(ctx, s.cache, cacheKey,
 		s.getExpiration("cache.duty.monthly", 30*time.Minute),
-		func() (map[string][]services.TodayDutyMember, error) { return s.base.GetMonthlyDutySchedule(ctx, year, month) })
+		func() (map[string][]services.TodayDutyMember, error) {
+			return s.base.GetMonthlyDutySchedule(ctx, year, month)
+		})
 }
 
 func (s *dutyCacheServiceImpl) SwapDuty(ctx context.Context, req *services.SwapDutyRequest, operatorID string) error {

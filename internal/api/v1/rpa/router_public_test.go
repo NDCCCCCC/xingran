@@ -98,7 +98,9 @@ func TestSetupPublicWorkerRouter_RoutesRegistered(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	mock := &mockWorkerService{
-		RegisterFunc:  func(ctx context.Context, req *rpa.WorkerRegisterRequest) (*rpamodels.Worker, error) { return &rpamodels.Worker{}, nil },
+		RegisterFunc: func(ctx context.Context, req *rpa.WorkerRegisterRequest) (*rpamodels.Worker, error) {
+			return &rpamodels.Worker{}, nil
+		},
 		HeartbeatFunc: func(ctx context.Context, req *rpa.WorkerHeartbeatRequest) error { return nil },
 		ProgressFunc:  func(ctx context.Context, req *rpa.WorkerProgressRequest) error { return nil },
 	}

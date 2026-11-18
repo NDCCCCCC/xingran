@@ -39,16 +39,16 @@ const agentMaxReconnectDelay = 5 * time.Minute
 
 // ConnectionManager 连接管理器
 type ConnectionManager struct {
-	mu              sync.RWMutex
-	state           ConnectionState
-	lastConnected   time.Time
-	lastDisconnect  time.Time
-	reconnectCount  int
-	maxReconnects   int
-	reconnectDelay  time.Duration
-	authenticator   *JWTAuthenticator
-	onStateChange   func(ConnectionState)
-	stopCh          chan struct{}
+	mu             sync.RWMutex
+	state          ConnectionState
+	lastConnected  time.Time
+	lastDisconnect time.Time
+	reconnectCount int
+	maxReconnects  int
+	reconnectDelay time.Duration
+	authenticator  *JWTAuthenticator
+	onStateChange  func(ConnectionState)
+	stopCh         chan struct{}
 }
 
 // NewConnectionManager 创建连接管理器

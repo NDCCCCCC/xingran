@@ -4,24 +4,24 @@ import "time"
 
 // Task variable key constants
 const (
-	VariableIsSubTask          = "__isSubTask"
-	VariableParentExecutionID  = "__parentExecutionID"
-	VariableSubTaskIndex       = "__subTaskIndex"
-	VariableSessionData        = "__sessionData"
-	VariableCredentials        = "__credentials"
+	VariableIsSubTask         = "__isSubTask"
+	VariableParentExecutionID = "__parentExecutionID"
+	VariableSubTaskIndex      = "__subTaskIndex"
+	VariableSessionData       = "__sessionData"
+	VariableCredentials       = "__credentials"
 )
 
 // Task 任务定义
 type Task struct {
-	ID          string        `json:"id"`
-	TaskName    string        `json:"taskName"`
-	Description string        `json:"description"`
-	TargetURL   string        `json:"targetUrl"`
-	Script      *Script       `json:"script"`
-	Timeout     time.Duration `json:"timeout"`
-	MaxRetry    int           `json:"maxRetry"`
-	Priority    int           `json:"priority"`
-	Status      int           `json:"status"`
+	ID          string                 `json:"id"`
+	TaskName    string                 `json:"taskName"`
+	Description string                 `json:"description"`
+	TargetURL   string                 `json:"targetUrl"`
+	Script      *Script                `json:"script"`
+	Timeout     time.Duration          `json:"timeout"`
+	MaxRetry    int                    `json:"maxRetry"`
+	Priority    int                    `json:"priority"`
+	Status      int                    `json:"status"`
 	Variables   map[string]interface{} `json:"inputParams"`
 }
 
@@ -33,7 +33,7 @@ type Script struct {
 // Action 动作定义
 type Action struct {
 	ID          string                 `json:"id"`
-	Type        ActionType            `json:"type"`
+	Type        ActionType             `json:"type"`
 	Description string                 `json:"description"`
 	Selector    string                 `json:"selector,omitempty"`
 	Params      map[string]interface{} `json:"params,omitempty"`
@@ -60,10 +60,10 @@ const (
 	ActionEvaluate   ActionType = "evaluate"
 	ActionWaitFor    ActionType = "waitFor"
 	ActionClose      ActionType = "close"
-	ActionLoop       ActionType = "loop"       // Loop over data array
-	ActionPause      ActionType = "pause"      // Wait for human input
-	ActionCondition  ActionType = "condition"  // Conditional branching
-	ActionAutoLogin  ActionType = "autologin"  // Auto login with stored credentials
+	ActionLoop       ActionType = "loop"      // Loop over data array
+	ActionPause      ActionType = "pause"     // Wait for human input
+	ActionCondition  ActionType = "condition" // Conditional branching
+	ActionAutoLogin  ActionType = "autologin" // Auto login with stored credentials
 )
 
 // TaskMessage 任务消息（从 Redis）
@@ -73,7 +73,7 @@ type TaskMessage struct {
 	TaskName    string                 `json:"taskName"`
 	TargetURL   string                 `json:"targetUrl"`
 	Script      []Action               `json:"script"`
-	Timeout     time.Duration         `json:"timeout"`
+	Timeout     time.Duration          `json:"timeout"`
 	MaxRetry    int                    `json:"maxRetry"`
 	Variables   map[string]interface{} `json:"inputParams"`
 	TriggeredBy string                 `json:"triggeredBy"`
@@ -81,25 +81,25 @@ type TaskMessage struct {
 	CreatedAt   time.Time              `json:"createdAt"`
 
 	// 自动登录相关
-	CredentialID string                 `json:"credentialId,omitempty"`
-	SessionID    string                 `json:"sessionId,omitempty"`    // 已存在的会话ID
-	SessionData  *SessionData           `json:"sessionData,omitempty"` // 会话数据（token/cookie）
+	CredentialID string       `json:"credentialId,omitempty"`
+	SessionID    string       `json:"sessionId,omitempty"`   // 已存在的会话ID
+	SessionData  *SessionData `json:"sessionData,omitempty"` // 会话数据（token/cookie）
 }
 
 // ExecutionResult 执行结果
 type ExecutionResult struct {
-	ExecutionID  string        `json:"executionId"`
-	TaskID       string        `json:"taskId"`
-	Status       ExecutionStatus `json:"status"`
-	ErrorMessage string        `json:"error,omitempty"`
-	StartedAt    time.Time     `json:"startedAt"`
-	CompletedAt  time.Time     `json:"completedAt"`
-	Duration     time.Duration `json:"duration"`
+	ExecutionID  string                 `json:"executionId"`
+	TaskID       string                 `json:"taskId"`
+	Status       ExecutionStatus        `json:"status"`
+	ErrorMessage string                 `json:"error,omitempty"`
+	StartedAt    time.Time              `json:"startedAt"`
+	CompletedAt  time.Time              `json:"completedAt"`
+	Duration     time.Duration          `json:"duration"`
 	Data         map[string]interface{} `json:"data,omitempty"`
-	Screenshots  []string      `json:"screenshots,omitempty"`
-	Logs         []string      `json:"logs,omitempty"`
-	Step         int           `json:"step"`
-	Total        int           `json:"total"`
+	Screenshots  []string               `json:"screenshots,omitempty"`
+	Logs         []string               `json:"logs,omitempty"`
+	Step         int                    `json:"step"`
+	Total        int                    `json:"total"`
 }
 
 // ExecutionStatus 执行状态
@@ -119,7 +119,7 @@ const (
 type SessionData struct {
 	AccessToken  string                 `json:"accessToken,omitempty"`
 	RefreshToken string                 `json:"refreshToken,omitempty"`
-	Cookies      []Cookie                `json:"cookies,omitempty"`
+	Cookies      []Cookie               `json:"cookies,omitempty"`
 	SessionData  map[string]interface{} `json:"sessionData,omitempty"`
 }
 
@@ -174,7 +174,7 @@ type WorkerRegisterRequest struct {
 // WorkerRegisterResponse Worker 注册响应
 type WorkerRegisterResponse struct {
 	WorkerID string `json:"workerId"`
-	Token     string `json:"token,omitempty"`
+	Token    string `json:"token,omitempty"`
 }
 
 // WorkerHeartbeatRequest 心跳请求
@@ -215,20 +215,20 @@ type ScaleCommand struct {
 
 // ScaleEvent 扩缩容事件
 type ScaleEvent struct {
-	EventID     string         `json:"eventId"`
-	WorkerID    string         `json:"workerId"`
-	Direction   ScaleDirection `json:"direction"`
-	OldValue    int            `json:"oldValue"`
-	NewValue    int            `json:"newValue"`
-	Reason      string         `json:"reason"`
-	Timestamp   time.Time      `json:"timestamp"`
+	EventID   string         `json:"eventId"`
+	WorkerID  string         `json:"workerId"`
+	Direction ScaleDirection `json:"direction"`
+	OldValue  int            `json:"oldValue"`
+	NewValue  int            `json:"newValue"`
+	Reason    string         `json:"reason"`
+	Timestamp time.Time      `json:"timestamp"`
 }
 
 // ========== 混合模式相关类型 ==========
 
 // SubTaskMessage 子任务消息（继承 TaskMessage）
 type SubTaskMessage struct {
-	*TaskMessage                      // 嵌入原始任务消息
+	*TaskMessage                             // 嵌入原始任务消息
 	ParentExecutionID string                 `json:"parentExecutionId"` // 父任务执行ID
 	SubTaskIndex      int                    `json:"subTaskIndex"`      // 子任务索引
 	SubTaskTotal      int                    `json:"subTaskTotal"`      // 子任务总数
@@ -238,11 +238,11 @@ type SubTaskMessage struct {
 
 // SubTaskResult 子任务执行结果（用于进度聚合）
 type SubTaskResult struct {
-	SubTaskIndex int             `json:"subTaskIndex"`
-	Status       ExecutionStatus `json:"status"`
-	ErrorMessage string          `json:"errorMessage,omitempty"`
-	StartedAt    time.Time       `json:"startedAt"`
-	CompletedAt  time.Time       `json:"completedAt"`
+	SubTaskIndex int                    `json:"subTaskIndex"`
+	Status       ExecutionStatus        `json:"status"`
+	ErrorMessage string                 `json:"errorMessage,omitempty"`
+	StartedAt    time.Time              `json:"startedAt"`
+	CompletedAt  time.Time              `json:"completedAt"`
 	Data         map[string]interface{} `json:"data,omitempty"`
 }
 

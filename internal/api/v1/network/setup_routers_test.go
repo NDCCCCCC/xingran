@@ -398,9 +398,9 @@ func TestRouterRegistration_HTTPMethods(t *testing.T) {
 // is documented in the file — we lock it down.
 //
 // Per the file:
-//   1. /mac group delegated to SetupMACRouter
-//   2. /ports group delegated to SetupPortRouter + SetupPortWriteRouter
-//   3. /batch-export top-level route
+//  1. /mac group delegated to SetupMACRouter
+//  2. /ports group delegated to SetupPortRouter + SetupPortWriteRouter
+//  3. /batch-export top-level route
 func TestSetupNetworkRouter_RegisterOrder(t *testing.T) {
 	src := readFile(t, "network_router.go")
 

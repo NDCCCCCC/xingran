@@ -46,7 +46,7 @@ func TestDetectLayer3ExceptionHit(t *testing.T) {
 
 	// 验证 INSERT 的记录含 ExceptionRuleID + AppliedActions
 	var rec struct {
-		ExceptionRuleID *string       `gorm:"column:exception_rule_id"`
+		ExceptionRuleID *string        `gorm:"column:exception_rule_id"`
 		AppliedActions  pq.StringArray `gorm:"column:applied_actions"`
 	}
 	require.NoError(t, db.Raw(`SELECT exception_rule_id, applied_actions FROM sys_data_reconciliation WHERE asset_id = ?`, uid).Scan(&rec).Error)
@@ -72,7 +72,7 @@ func TestDetectLayer3NoExceptionNoChange(t *testing.T) {
 	assert.Equal(t, 1, inserted)
 
 	var rec struct {
-		ExceptionRuleID *string       `gorm:"column:exception_rule_id"`
+		ExceptionRuleID *string        `gorm:"column:exception_rule_id"`
 		AppliedActions  pq.StringArray `gorm:"column:applied_actions"`
 	}
 	require.NoError(t, db.Raw(`SELECT exception_rule_id, applied_actions FROM sys_data_reconciliation WHERE asset_id = ?`, uid).Scan(&rec).Error)

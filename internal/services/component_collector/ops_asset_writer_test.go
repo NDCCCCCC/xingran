@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/require"
 	"github.com/glebarez/sqlite"
+	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 )
 
@@ -297,7 +297,7 @@ func TestPipelineParentMissingInOpsAsset(t *testing.T) {
 	require.NoError(t, p.Run(context.Background(), dev.toDeviceRef(), set))
 
 	type row struct {
-		ParentAssetID *string
+		ParentAssetID  *string
 		SourceDeviceID *string
 	}
 	var r1 row

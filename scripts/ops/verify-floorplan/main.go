@@ -90,7 +90,7 @@ func main() {
 		fmt.Println("=== 最近 10 个上传文件 ===")
 		for _, o := range orphans {
 			fmt.Printf("  %-38s path=%-40s 被楼层引用=%d\n",
-				o.ID, trunc(o.StoragePath, 40),  o.RefCount)
+				o.ID, trunc(o.StoragePath, 40), o.RefCount)
 		}
 	}
 }

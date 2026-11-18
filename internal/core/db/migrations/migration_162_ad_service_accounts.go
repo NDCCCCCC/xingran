@@ -69,9 +69,9 @@ CREATE INDEX IF NOT EXISTS idx_ad_acct_active
 
 	// 查找第一个启用的 AD 配置（sync_enabled=true AND status=0）
 	type adConfigRow struct {
-		ID               string
-		AdminUsername    string
-		AdminPassword    string
+		ID            string
+		AdminUsername string
+		AdminPassword string
 	}
 	var configRow adConfigRow
 	err := db.Raw(`

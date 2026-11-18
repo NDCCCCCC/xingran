@@ -12,17 +12,17 @@ import (
 // redisNonceStorage 基于 Redis 的分布式 nonce 存储
 // 支持多实例部署，天然防止重放攻击
 type redisNonceStorage struct {
-	client         *redis.Client
-	ctx            context.Context
+	client          *redis.Client
+	ctx             context.Context
 	replayWindowSec int // 时间戳容差(秒),用于 nonce TTL。<=0 时使用 DefaultReplayWindowSec
 }
 
 // RedisNonceStorageConfig Redis 配置
 type RedisNonceStorageConfig struct {
-	Addr     string // Redis 地址，如 "localhost:6379"
-	Password string // Redis 密码
-	DB       int    // Redis 数据库编号
-	ReplayWindowSec int // nonce TTL = 2 * ReplayWindowSec (秒),<=0 时使用 DefaultReplayWindowSec
+	Addr            string // Redis 地址，如 "localhost:6379"
+	Password        string // Redis 密码
+	DB              int    // Redis 数据库编号
+	ReplayWindowSec int    // nonce TTL = 2 * ReplayWindowSec (秒),<=0 时使用 DefaultReplayWindowSec
 }
 
 // NewRedisNonceStorage 创建基于 Redis 的 nonce 存储
@@ -46,8 +46,8 @@ func NewRedisNonceStorage(config RedisNonceStorageConfig) (NonceStorage, error) 
 		window = DefaultReplayWindowSec
 	}
 	return &redisNonceStorage{
-		client:         client,
-		ctx:            context.Background(),
+		client:          client,
+		ctx:             context.Background(),
 		replayWindowSec: window,
 	}, nil
 }

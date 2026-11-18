@@ -2,10 +2,11 @@
 
 // 一次性工具: SM4 密钥迁移(OLD → NEW)
 // 用法:
-//   export OLD_SM4_KEY="dGVzdC1zZWNyZXQxNiEhIQ=="      # 当前在用的 key
-//   export NEW_SM4_KEY="$(openssl rand -base64 16)"     # 新 key
-//   go run scripts/migrate-sm4-key.go --dry-run         # 先 dry-run 看效果
-//   go run scripts/migrate-sm4-key.go                   # 实际迁移
+//
+//	export OLD_SM4_KEY="dGVzdC1zZWNyZXQxNiEhIQ=="      # 当前在用的 key
+//	export NEW_SM4_KEY="$(openssl rand -base64 16)"     # 新 key
+//	go run scripts/migrate-sm4-key.go --dry-run         # 先 dry-run 看效果
+//	go run scripts/migrate-sm4-key.go                   # 实际迁移
 //
 // 不会进入正常构建(//go:build ignore 标签)
 package main
@@ -123,7 +124,7 @@ func main() {
 func migrateField(db *gorm.DB, t targetField, oldCipher, newCipher *crypto.SM4Cipher, dryRun bool) (int, int, int) {
 	var rows []map[string]interface{}
 	if err := db.Table(t.Table).
-		Where(t.Column+" IS NOT NULL AND "+t.Column+" <> ''").
+		Where(t.Column + " IS NOT NULL AND " + t.Column + " <> ''").
 		Find(&rows).Error; err != nil {
 		log.Printf("❌ 查询 %s.%s 失败: %v", t.Table, t.Column, err)
 		return 0, 0, 0

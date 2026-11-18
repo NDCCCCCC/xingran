@@ -15,8 +15,8 @@ import (
 //
 // Each emit writes one row with:
 //   - asset_id       = supplied UUID (typically the parent switch's
-//                      ops_asset.id — the row the UI locates the anomaly
-//                      under)
+//     ops_asset.id — the row the UI locates the anomaly
+//     under)
 //   - conflict_type  = supplied (typically "F" for missing data)
 //   - recon_category = supplied (typically "component_serial")
 //   - severity       = "medium" (RESEARCH Open Question 2)

@@ -253,7 +253,9 @@ func (s *settingsService) GetUserPreferences(ctx context.Context, userID string)
 //
 // v1.22 收尾：不再合并 sys.theme.default（已删除默认主题页面）。
 // 行为变化：之前若管理员在 sys.theme.default 配置了 mode=dark，
-//          新用户的默认 Theme 会被设为 dark；现在统一回到 light。
+//
+//	新用户的默认 Theme 会被设为 dark；现在统一回到 light。
+//
 // 后续如需"管理员配置全局默认值"能力，应以独立的 sys.user_preferences_default 表
 // 或 sys_config 通用键实现，不再耦合到 sys.theme.default 这一被删除的主题语义。
 //

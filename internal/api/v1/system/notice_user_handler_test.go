@@ -40,23 +40,23 @@ import (
 
 // mockNoticeCacheService satisfies systemServices.NoticeCacheService via per-method *Func fields.
 type mockNoticeCacheService struct {
-	GetUserNoticesFunc         func(ctx context.Context, userID string, page, pageSize int, status *string) ([]models.Notice, int64, error)
-	GetUnreadCountFunc         func(ctx context.Context, userID string) (int, error)
-	MarkNoticeReadFunc         func(ctx context.Context, noticeID, userID, ip string) error
-	MarkAllNoticesReadFunc     func(ctx context.Context, userID string) error
-	IgnoreNoticeFunc           func(ctx context.Context, noticeID, userID string) error
-	UnignoreNoticeFunc         func(ctx context.Context, noticeID, userID string) error
-	GetNoticeByIDFunc          func(ctx context.Context, id string) (*models.Notice, error)
-	CreateFunc                 func(ctx context.Context, req *requests.NoticeCreateRequest, creatorID, creatorName string) (*models.Notice, error)
-	UpdateFunc                 func(ctx context.Context, id string, req *requests.NoticeUpdateRequest) error
-	DeleteFunc                 func(ctx context.Context, id string) error
-	BatchDeleteFunc            func(ctx context.Context, ids []string) error
-	ListFunc                   func(ctx context.Context, params requests.NoticeListParams) (*systemServices.PageResult, error)
-	PublishFunc                func(ctx context.Context, id string) error
-	WithdrawFunc               func(ctx context.Context, id string) error
-	GetStatisticsFunc          func(ctx context.Context, id string) (*models.NoticeStatistics, error)
-	GetStatusStatisticsFunc    func(ctx context.Context) (*services.NoticeStatusStatistics, error)
-	InvalidateNoticeCacheFunc  func(ctx context.Context, noticeID string) error
+	GetUserNoticesFunc            func(ctx context.Context, userID string, page, pageSize int, status *string) ([]models.Notice, int64, error)
+	GetUnreadCountFunc            func(ctx context.Context, userID string) (int, error)
+	MarkNoticeReadFunc            func(ctx context.Context, noticeID, userID, ip string) error
+	MarkAllNoticesReadFunc        func(ctx context.Context, userID string) error
+	IgnoreNoticeFunc              func(ctx context.Context, noticeID, userID string) error
+	UnignoreNoticeFunc            func(ctx context.Context, noticeID, userID string) error
+	GetNoticeByIDFunc             func(ctx context.Context, id string) (*models.Notice, error)
+	CreateFunc                    func(ctx context.Context, req *requests.NoticeCreateRequest, creatorID, creatorName string) (*models.Notice, error)
+	UpdateFunc                    func(ctx context.Context, id string, req *requests.NoticeUpdateRequest) error
+	DeleteFunc                    func(ctx context.Context, id string) error
+	BatchDeleteFunc               func(ctx context.Context, ids []string) error
+	ListFunc                      func(ctx context.Context, params requests.NoticeListParams) (*systemServices.PageResult, error)
+	PublishFunc                   func(ctx context.Context, id string) error
+	WithdrawFunc                  func(ctx context.Context, id string) error
+	GetStatisticsFunc             func(ctx context.Context, id string) (*models.NoticeStatistics, error)
+	GetStatusStatisticsFunc       func(ctx context.Context) (*services.NoticeStatusStatistics, error)
+	InvalidateNoticeCacheFunc     func(ctx context.Context, noticeID string) error
 	InvalidateUserNoticeCacheFunc func(ctx context.Context, userID string) error
 	InvalidateAllNoticeCacheFunc  func(ctx context.Context) error
 }
@@ -157,8 +157,12 @@ func (m *mockNoticeCacheService) GetStatusStatistics(ctx context.Context) (*serv
 	}
 	return nil, nil
 }
-func (m *mockNoticeCacheService) InvalidateNoticeCache(ctx context.Context, noticeID string) error { return nil }
-func (m *mockNoticeCacheService) InvalidateUserNoticeCache(ctx context.Context, userID string) error { return nil }
+func (m *mockNoticeCacheService) InvalidateNoticeCache(ctx context.Context, noticeID string) error {
+	return nil
+}
+func (m *mockNoticeCacheService) InvalidateUserNoticeCache(ctx context.Context, userID string) error {
+	return nil
+}
 func (m *mockNoticeCacheService) InvalidateAllNoticeCache(ctx context.Context) error { return nil }
 
 // setupNoticeUserDB creates a SQLite DB with sys_notice_read for read-status tracking.

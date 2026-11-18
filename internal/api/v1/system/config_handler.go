@@ -9,9 +9,9 @@ import (
 	systemServices "github.com/xingran-next/xingran-go-backend/internal/services/system"
 	"github.com/xingran-next/xingran-go-backend/internal/utils/operlog"
 	apperrors "github.com/xingran-next/xingran-go-backend/pkg/errors"
+	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"github.com/xingran-next/xingran-go-backend/pkg/middleware"
 	"github.com/xingran-next/xingran-go-backend/pkg/response"
-	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 )
 
 // ConfigHandler 参数配置处理器
@@ -160,8 +160,8 @@ func (h *ConfigHandler) List(c *gin.Context) {
 	// DEBUG: 打印实际接收的分页参数
 	applogger.WithFields(map[string]interface{}{
 		"rawReq_pageSize": rawReq["pageSize"],
-		"params_pageSize":  params.PageSize,
-		"params_Current":   params.Current,
+		"params_pageSize": params.PageSize,
+		"params_Current":  params.Current,
 	}).Info("[DEBUG] Config List received pagination parameters")
 
 	// 处理字符串字段

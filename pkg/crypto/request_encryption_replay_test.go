@@ -43,10 +43,10 @@ func TestRequestEncryption_ReplayWindow_Boundary60s(t *testing.T) {
 		{name: "now_offset_0", offset: 0, wantError: false},
 		{name: "now_minus_30s", offset: -30, wantError: false},
 		{name: "now_minus_59s", offset: -59, wantError: false},  // 边界内 (-1s buffer)
-		{name: "now_plus_59s", offset: 59, wantError: false},   // 边界内
-		{name: "now_minus_61s", offset: -61, wantError: true},  // 刚超出 (-1s 超出)
-		{name: "now_plus_61s", offset: 61, wantError: true},    // 刚超出
-		{name: "now_plus_5min", offset: 300, wantError: true},  // 远未来
+		{name: "now_plus_59s", offset: 59, wantError: false},    // 边界内
+		{name: "now_minus_61s", offset: -61, wantError: true},   // 刚超出 (-1s 超出)
+		{name: "now_plus_61s", offset: 61, wantError: true},     // 刚超出
+		{name: "now_plus_5min", offset: 300, wantError: true},   // 远未来
 		{name: "now_minus_5min", offset: -300, wantError: true}, // 远过去
 	}
 
@@ -126,10 +126,10 @@ func TestRequestEncryption_ReplayWindow_InvalidTimestamp(t *testing.T) {
 // 同一逻辑,不同窗口值应产生不同的接受/拒绝边界。
 func TestRequestEncryption_ReplayWindow_WindowConfigurable(t *testing.T) {
 	tests := []struct {
-		name        string
-		windowSec   int
-		offset      int64
-		wantError   bool
+		name      string
+		windowSec int
+		offset    int64
+		wantError bool
 	}{
 		{"window30_offset_29s", 30, 29, false},
 		{"window30_offset_31s", 30, 31, true},

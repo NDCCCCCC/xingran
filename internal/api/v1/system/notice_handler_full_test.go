@@ -196,7 +196,7 @@ func TestNoticeHandler_Create_ChannelSetError(t *testing.T) {
 	}
 	body := map[string]interface{}{
 		"noticeTitle": "t", "noticeType": "1", "noticeContent": "c",
-		"channels":    []map[string]interface{}{{"channelType": "email"}},
+		"channels": []map[string]interface{}{{"channelType": "email"}},
 	}
 	h := newAdminNoticeHandler(&mockNoticeCacheService{CreateFunc: okNoticeCreate}, ch, &mockNoticeScheduler{})
 	w := invokeAdminNotice(t, "POST", "/system/notices", body, nil, h.Create)
@@ -206,7 +206,7 @@ func TestNoticeHandler_Create_ChannelSetError(t *testing.T) {
 func TestNoticeHandler_Create_RecurringMissingCron(t *testing.T) {
 	recurring := "recurring"
 	body := map[string]interface{}{
-		"noticeTitle":      "t", "noticeType": "1", "noticeContent": "c",
+		"noticeTitle": "t", "noticeType": "1", "noticeContent": "c",
 		"executionType":    recurring,
 		"recurrenceConfig": map[string]interface{}{},
 	}
@@ -220,7 +220,7 @@ func TestNoticeHandler_Create_RecurringWithCron_Success(t *testing.T) {
 	cron := "0 0 9 * * *"
 	endDate := time.Now().Add(24 * time.Hour).Format(time.RFC3339)
 	body := map[string]interface{}{
-		"noticeTitle":   "t", "noticeType": "1", "noticeContent": "c",
+		"noticeTitle": "t", "noticeType": "1", "noticeContent": "c",
 		"executionType": recurring,
 		"recurrenceConfig": map[string]interface{}{
 			"cronExpression": cron,
@@ -245,7 +245,7 @@ func TestNoticeHandler_Create_RecurringAddJobFail(t *testing.T) {
 	recurring := "recurring"
 	cron := "0 0 9 * * *"
 	body := map[string]interface{}{
-		"noticeTitle":   "t", "noticeType": "1", "noticeContent": "c",
+		"noticeTitle": "t", "noticeType": "1", "noticeContent": "c",
 		"executionType": recurring,
 		"recurrenceConfig": map[string]interface{}{
 			"cronExpression": cron,
@@ -273,7 +273,7 @@ func TestNoticeHandler_Create_UpdateStatusFail(t *testing.T) {
 	recurring := "recurring"
 	cron := "0 0 9 * * *"
 	body := map[string]interface{}{
-		"noticeTitle":   "t", "noticeType": "1", "noticeContent": "c",
+		"noticeTitle": "t", "noticeType": "1", "noticeContent": "c",
 		"executionType": recurring,
 		"recurrenceConfig": map[string]interface{}{
 			"cronExpression": cron,
@@ -299,7 +299,7 @@ func TestNoticeHandler_Create_NilScheduler_PlainSuccess(t *testing.T) {
 func TestNoticeHandler_Create_NilScheduler_Recurring(t *testing.T) {
 	recurring := "recurring"
 	body := map[string]interface{}{
-		"noticeTitle":   "t", "noticeType": "1", "noticeContent": "c",
+		"noticeTitle": "t", "noticeType": "1", "noticeContent": "c",
 		"executionType": recurring,
 	}
 	h := newAdminNoticeHandler(&mockNoticeCacheService{CreateFunc: okNoticeCreate}, &mockNotificationChannelService{}, nil)
@@ -414,7 +414,7 @@ func TestNoticeHandler_Update_ChannelError(t *testing.T) {
 	}
 	body := map[string]interface{}{
 		"noticeTitle": "t", "noticeType": "1", "noticeContent": "c",
-		"channels":    []map[string]interface{}{{"channelType": "email"}},
+		"channels": []map[string]interface{}{{"channelType": "email"}},
 	}
 	h := newAdminNoticeHandler(&mockNoticeCacheService{}, ch, &mockNoticeScheduler{})
 	w := invokeAdminNotice(t, "POST", "/system/notices/n1/update", body, gin.Params{{Key: "id", Value: "n1"}}, h.Update)

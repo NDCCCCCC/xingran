@@ -122,7 +122,7 @@ func OperLogMiddleware(operLogSvc services.OperLogService, core *core.Core) gin.
 			c.Request.Method,
 			c.Request.URL.String(),
 			username,
-		nickname,
+			nickname,
 			deptName,
 			&clientIP,
 			nil, // operParam - 可以后续添加请求参数过滤

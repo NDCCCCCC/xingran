@@ -3,8 +3,9 @@
 // 删除判定:interface_name 全部由数字 + 斜杠组成(典型异常:纯数字 "5"、X/Y "3/11"、以斜杠开头 "/47")。
 //
 // 用法:
-//   go run ./scripts/ops/cleanup_port_status                # 预演(只 SELECT,不 DELETE)
-//   go run ./scripts/ops/cleanup_port_status --confirm      # 实际执行 DELETE
+//
+//	go run ./scripts/ops/cleanup_port_status                # 预演(只 SELECT,不 DELETE)
+//	go run ./scripts/ops/cleanup_port_status --confirm      # 实际执行 DELETE
 package main
 
 import (

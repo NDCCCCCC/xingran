@@ -162,7 +162,7 @@ func TestFileHandler_List_WithFilter(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 
 	var resp struct {
-		Code int `json:"code"`
+		Code int                    `json:"code"`
 		Data map[string]interface{} `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))

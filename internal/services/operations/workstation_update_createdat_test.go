@@ -5,9 +5,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/xingran-next/xingran-go-backend/internal/models"
-	"github.com/stretchr/testify/require"
 	"github.com/glebarez/sqlite"
+	"github.com/stretchr/testify/require"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"gorm.io/gorm"
 )
 
@@ -131,7 +131,7 @@ func TestWorkstationUpdate_RecordNotFound(t *testing.T) {
 	// Phase 91-02:经构造器初始化(含 repo 字段)
 	svc := NewWorkstationService(db)
 	input := &models.Workstation{
-		BaseModel:      models.BaseModel{ID: "does-not-exist"},
+		BaseModel:       models.BaseModel{ID: "does-not-exist"},
 		WorkstationName: "ghost",
 	}
 	err = svc.Update(context.Background(), input)

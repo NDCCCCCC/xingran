@@ -35,14 +35,16 @@ import (
 // setupOGM78DB 在 78-05 7 表 fixture 上追加 OU-Group 映射与同步日志表。
 //
 // sys_ou_group_mapping 列名照 model gorm tag：
-//   id (uuid PK) / ad_config_id / ou_dn / ou_name / ad_group_id / mapping_status /
-//   sync_enabled / last_sync_at / created_by / updated_by / created_at / updated_at
-//   + 唯一索引 UNIQUE(ou_dn, ad_group_id)（对应 model `uniqueIndex:uni_ou_group_mapping_ou`）
+//
+//	id (uuid PK) / ad_config_id / ou_dn / ou_name / ad_group_id / mapping_status /
+//	sync_enabled / last_sync_at / created_by / updated_by / created_at / updated_at
+//	+ 唯一索引 UNIQUE(ou_dn, ad_group_id)（对应 model `uniqueIndex:uni_ou_group_mapping_ou`）
 //
 // sys_ou_group_mapping_sync_log 列名照 model gorm tag：
-//   id / mapping_id / ou_dn / ad_group_id / sync_type / members_added /
-//   members_removed / total_members / status / error_msg /
-//   started_at / completed_at / duration_ms / created_at
+//
+//	id / mapping_id / ou_dn / ad_group_id / sync_type / members_added /
+//	members_removed / total_members / status / error_msg /
+//	started_at / completed_at / duration_ms / created_at
 //
 // 注意 OUGroupMapping 不嵌入 BaseModel（无 deleted_at / version）；sys_ou_group_mapping_sync_log
 // 也不含 BaseModel 与 deleted_at。

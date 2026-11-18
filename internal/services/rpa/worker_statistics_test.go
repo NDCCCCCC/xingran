@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/require"
 	"github.com/glebarez/sqlite"
+	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 )
 
@@ -43,10 +43,10 @@ func TestWorkerService_Statistics(t *testing.T) {
 			id, id, id, status, maxCon, tasks, heartbeat, createdStr,
 		).Error)
 	}
-	insert("w-online", "online", &alive, 5, 2)   // 在线, max5 用2
-	insert("w-busy", "busy", &alive, 4, 4)       // 忙碌(busy+在线), max4 用4
-	insert("w-offline", "online", &dead, 3, 0)   // 心跳超时 → 离线
-	insert("w-error", "error", &alive, 2, 0)     // 错误
+	insert("w-online", "online", &alive, 5, 2) // 在线, max5 用2
+	insert("w-busy", "busy", &alive, 4, 4)     // 忙碌(busy+在线), max4 用4
+	insert("w-offline", "online", &dead, 3, 0) // 心跳超时 → 离线
+	insert("w-error", "error", &alive, 2, 0)   // 错误
 	// 1 条已软删除,不计入统计
 	require.NoError(t, db.Exec(
 		`INSERT INTO sys_rpa_workers (id, worker_name, worker_id, status, max_concurrency, current_tasks, last_heartbeat, created_at, deleted_at) VALUES (?, ?, ?, 'online', 3, 0, ?, ?, ?)`,

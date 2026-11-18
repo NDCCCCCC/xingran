@@ -1,6 +1,5 @@
 //go:build archive_skip
 
-
 package migrations
 
 import (
@@ -97,11 +96,11 @@ func Migrate144VDIGranularPermissions(db *gorm.DB) error {
 		// Step 2: Add 4 new granular permissions (vdi:vm:sync already exists)
 		// Parent menu ID for VM list: 770e8400-e29b-41d4-a716-446655440002
 		granularPermissions := []struct {
-			ID        string
-			Name      string
-			Perms     string
-			OrderNum  int
-			Remark    string
+			ID       string
+			Name     string
+			Perms    string
+			OrderNum int
+			Remark   string
 		}{
 			{
 				ID:       "770e8400-e29b-41d4-a716-446655440020",

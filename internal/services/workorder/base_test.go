@@ -16,10 +16,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/glebarez/sqlite"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 
 	"github.com/xingran-next/xingran-go-backend/internal/models"
@@ -283,14 +283,14 @@ func seedWorkOrder(t *testing.T, db *gorm.DB, overrides map[string]interface{}) 
 	t.Helper()
 	id := uuid.NewString()
 	defaults := map[string]interface{}{
-		"id":             id,
-		"submitter_id":   uuid.NewString(),
-		"category_id":    uuid.NewString(),
-		"title":          "测试工单",
-		"work_order_no":  "WO" + id[:8],
-		"type":           string(models.WorkOrderTypeFault),
-		"priority":       int(models.WorkOrderPriorityMedium),
-		"status":         int(models.WorkOrderStatusPending),
+		"id":            id,
+		"submitter_id":  uuid.NewString(),
+		"category_id":   uuid.NewString(),
+		"title":         "测试工单",
+		"work_order_no": "WO" + id[:8],
+		"type":          string(models.WorkOrderTypeFault),
+		"priority":      int(models.WorkOrderPriorityMedium),
+		"status":        int(models.WorkOrderStatusPending),
 	}
 	for k, v := range defaults {
 		if _, ok := overrides[k]; !ok {
@@ -533,25 +533,25 @@ func TestBaseService_Update_AllFields(t *testing.T) {
 	assignee := uuid.NewString()
 	dept := uuid.NewString()
 	err := svc.Update(context.Background(), &UpdateRequest{
-		ID:         id,
-		Title:      ptrStr("新标题"),
-		CategoryID: &newCat,
-		Type:       ptrType(models.WorkOrderTypeChange),
-		Priority:   ptrPriority(models.WorkOrderPriorityHigh),
-		Status:     ptrStatus(models.WorkOrderStatusProcessing),
-		Description: ptrStr("新描述"),
-		Solution:   ptrStr("新方案"),
-		AssigneeID: &assignee,
-		DeptID:     &dept,
+		ID:            id,
+		Title:         ptrStr("新标题"),
+		CategoryID:    &newCat,
+		Type:          ptrType(models.WorkOrderTypeChange),
+		Priority:      ptrPriority(models.WorkOrderPriorityHigh),
+		Status:        ptrStatus(models.WorkOrderStatusProcessing),
+		Description:   ptrStr("新描述"),
+		Solution:      ptrStr("新方案"),
+		AssigneeID:    &assignee,
+		DeptID:        &dept,
 		AttachmentIDs: ptrStr("a1,a2"),
 	}, uuid.NewString())
 	require.NoError(t, err)
 }
 
-func ptrStr(s string) *string { return &s }
-func ptrType(t models.WorkOrderType) *models.WorkOrderType { return &t }
+func ptrStr(s string) *string                                          { return &s }
+func ptrType(t models.WorkOrderType) *models.WorkOrderType             { return &t }
 func ptrPriority(p models.WorkOrderPriority) *models.WorkOrderPriority { return &p }
-func ptrStatus(s models.WorkOrderStatus) *models.WorkOrderStatus { return &s }
+func ptrStatus(s models.WorkOrderStatus) *models.WorkOrderStatus       { return &s }
 
 func TestBaseService_Delete_Success(t *testing.T) {
 	db := setupTestDB(t)
@@ -979,7 +979,7 @@ func TestAssignmentService_UpdateStatus_CompletedSetsResolvedAt(t *testing.T) {
 	woID := seedWorkOrder(t, db, map[string]interface{}{"status": int(models.WorkOrderStatusProcessing)})
 	svc := NewAssignmentService(db)
 	err := svc.UpdateStatus(context.Background(), woID, &UpdateStatusRequest{
-		Status: models.WorkOrderStatusCompleted,
+		Status:   models.WorkOrderStatusCompleted,
 		Solution: "解决方案",
 	}, uuid.NewString())
 	require.NoError(t, err)

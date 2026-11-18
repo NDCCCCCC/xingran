@@ -103,22 +103,24 @@ func TestMetricsService_Queries(t *testing.T) {
 
 // fakeMetricsService MetricsService mock。
 type fakeMetricsService struct {
-	mu          sync.Mutex
-	pending     int
-	running     int
-	active      int
-	capacity    int
-	avg         time.Duration
-	pendingErr  error
-	events      []ScalingEvent
-	historyErr  error
+	mu         sync.Mutex
+	pending    int
+	running    int
+	active     int
+	capacity   int
+	avg        time.Duration
+	pendingErr error
+	events     []ScalingEvent
+	historyErr error
 }
 
 func (f *fakeMetricsService) GetQueueLength(ctx context.Context) (int, error) { return f.pending, nil }
 func (f *fakeMetricsService) GetActiveWorkers(ctx context.Context) (int, error) {
 	return f.active, nil
 }
-func (f *fakeMetricsService) GetWorkerCapacity(ctx context.Context) (int, error) { return f.capacity, nil }
+func (f *fakeMetricsService) GetWorkerCapacity(ctx context.Context) (int, error) {
+	return f.capacity, nil
+}
 func (f *fakeMetricsService) GetPendingExecutions(ctx context.Context) (int, error) {
 	return f.pending, f.pendingErr
 }
@@ -343,7 +345,9 @@ func TestDockerClient_HTTP(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch {
 		case r.URL.Path == "/v1.40/containers/create":
-			var body struct{ ID string `json:"Id"` }
+			var body struct {
+				ID string `json:"Id"`
+			}
 			body.ID = fmt.Sprintf("cid-%d", len(created)+1)
 			created = append(created, body.ID)
 			_ = json.NewEncoder(w).Encode(body)

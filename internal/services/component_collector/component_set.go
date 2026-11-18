@@ -85,17 +85,18 @@ type ComponentSet struct {
 // Name, Class, ContainedIn). It is the input to OwnerResolver.
 //
 // Class uses ENTITY-MIB INTEGER enum semantics:
-//   3=chassis, 5=module, 6=port, 7=port (overlap), 8=powerSupply, 9=fan.
+//
+//	3=chassis, 5=module, 6=port, 7=port (overlap), 8=powerSupply, 9=fan.
 //
 // (Ruijie reports PSU as class=6/port with Name="power0" — see RESEARCH
 // Pitfall 1 / Open Question 5; the collector maps this to power.)
 type EntityRow struct {
-	Index        int    `json:"index"`
-	Class        int    `json:"class"`
-	ContainedIn  int    `json:"containedIn"`
-	Name         string `json:"name"`
-	Serial       string `json:"serial"`
-	Model        string `json:"model"`
+	Index       int    `json:"index"`
+	Class       int    `json:"class"`
+	ContainedIn int    `json:"containedIn"`
+	Name        string `json:"name"`
+	Serial      string `json:"serial"`
+	Model       string `json:"model"`
 }
 
 // OwnedComponent is the output of OwnerResolver.ResolveOwnership: it

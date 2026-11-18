@@ -163,10 +163,10 @@ func (s *workerServiceImpl) registerSQLite(ctx context.Context, req *WorkerRegis
 	switch {
 	case err == nil:
 		updates := map[string]interface{}{
-			"worker_name":     req.Name,
-			"ip_address":      req.Host,
-			"port":            req.Port,
-			"status":          rpamodels.WorkerStatusOnline,
+			"worker_name": req.Name,
+			"ip_address":  req.Host,
+			"port":        req.Port,
+			"status":      rpamodels.WorkerStatusOnline,
 			// ⚠ 必须 []byte：sqlite 驱动把 string 写入后回读 Scan 到
 			// json.RawMessage 报 unsupported Scan（2026-11-01 冒烟实测）
 			"capabilities":    []byte(capsJSON),

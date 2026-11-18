@@ -4,10 +4,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/internal/services/portcollection"
 	"github.com/xingran-next/xingran-go-backend/tests/fixtures"
-	"github.com/stretchr/testify/assert"
 )
 
 // TestGetMACThreshold 测试获取MAC阈值
@@ -101,28 +101,28 @@ func TestParseMACLineHuawei(t *testing.T) {
 	service := &MACCollectionService{}
 
 	tests := []struct {
-		name        string
-		line        string
-		wantEntry   bool
-		expectedMAC string
+		name         string
+		line         string
+		wantEntry    bool
+		expectedMAC  string
 		expectedVLAN int
 	}{
 		{
-			name:        "Valid Huawei MAC line",
-			line:        "d89e.f327.2d19 100 GigabitEthernet0/1/1 Dynamic",
-			wantEntry:   true,
-			expectedMAC: "D8:9E:F3:27:2D:19", // 2026-07-01: parseMACLine 现在写入前归一化为大写+冒号
+			name:         "Valid Huawei MAC line",
+			line:         "d89e.f327.2d19 100 GigabitEthernet0/1/1 Dynamic",
+			wantEntry:    true,
+			expectedMAC:  "D8:9E:F3:27:2D:19", // 2026-07-01: parseMACLine 现在写入前归一化为大写+冒号
 			expectedVLAN: 100,
 		},
 		{
-			name:        "Too few fields",
-			line:        "d89e.f327.2d19 100",
-			wantEntry:   false,
+			name:      "Too few fields",
+			line:      "d89e.f327.2d19 100",
+			wantEntry: false,
 		},
 		{
-			name:        "Empty line",
-			line:        "",
-			wantEntry:   false,
+			name:      "Empty line",
+			line:      "",
+			wantEntry: false,
 		},
 	}
 
@@ -145,23 +145,23 @@ func TestParseMACLineRuijie(t *testing.T) {
 	service := &MACCollectionService{}
 
 	tests := []struct {
-		name        string
-		line        string
-		wantEntry   bool
-		expectedMAC string
+		name         string
+		line         string
+		wantEntry    bool
+		expectedMAC  string
 		expectedVLAN int
 	}{
 		{
-			name:        "Valid Ruijie MAC line",
-			line:        "100 00:11:22:33:44:55 Dynamic GigabitEthernet0/1",
-			wantEntry:   true,
-			expectedMAC: "00:11:22:33:44:55",
+			name:         "Valid Ruijie MAC line",
+			line:         "100 00:11:22:33:44:55 Dynamic GigabitEthernet0/1",
+			wantEntry:    true,
+			expectedMAC:  "00:11:22:33:44:55",
 			expectedVLAN: 100,
 		},
 		{
-			name:        "Too few fields",
-			line:        "100 00:11:22:33:44:55",
-			wantEntry:   false,
+			name:      "Too few fields",
+			line:      "100 00:11:22:33:44:55",
+			wantEntry: false,
 		},
 	}
 
@@ -192,7 +192,8 @@ func TestParseMACLineHuaweiSignature(t *testing.T) {
 // TestParseRuijiePortSecurityLine 验证锐捷 show port-security address 格式解析
 // 格式: Index VLAN MAC Interface(<多 token>) Type LearnAge Action
 // 真实设备输出样本（来源: CX-WH-WH-04F-FL-RS8607E-03, 2026-06-29）:
-//   56   308   b022.7a2e.4a4f  GigabitEthernet 2/25      Dynamic            --          active
+//
+//	56   308   b022.7a2e.4a4f  GigabitEthernet 2/25      Dynamic            --          active
 func TestParseRuijiePortSecurityLine(t *testing.T) {
 	service := &MACCollectionService{}
 
@@ -211,7 +212,7 @@ func TestParseRuijiePortSecurityLine(t *testing.T) {
 			wantEntry:         true,
 			expectedMAC:       "B0:22:7A:2E:4A:4F", // 2026-07-03 Phase 47 R5: NormalizeMACAddress 归一 cisco 点分 → canonical 冒号
 			expectedVLAN:      308,
-			expectedInterface: "GE2/25",            // 2026-07-01: 全称+空格 → 短名
+			expectedInterface: "GE2/25", // 2026-07-01: 全称+空格 → 短名
 			expectedType:      "Dynamic",
 		},
 		{
@@ -220,7 +221,7 @@ func TestParseRuijiePortSecurityLine(t *testing.T) {
 			wantEntry:         true,
 			expectedMAC:       "00:11:22:33:44:55", // 2026-07-03 Phase 47 R5: 归一
 			expectedVLAN:      100,
-			expectedInterface: "GE0/1",             // 2026-07-01: 全称+空格 → 短名
+			expectedInterface: "GE0/1", // 2026-07-01: 全称+空格 → 短名
 			expectedType:      "SecureDynamic",
 		},
 		{
@@ -292,8 +293,8 @@ func TestGetMACCommands(t *testing.T) {
 	service := &MACCollectionService{}
 
 	tests := []struct {
-		vendor        models.DeviceVendor
-		expectedCmds  []MACCommand
+		vendor       models.DeviceVendor
+		expectedCmds []MACCommand
 	}{
 		{
 			models.VendorHuawei,
@@ -417,8 +418,8 @@ func TestGetMACCommand(t *testing.T) {
 	service := &MACCollectionService{}
 
 	tests := []struct {
-		vendor        models.DeviceVendor
-		expectedCmd   string
+		vendor      models.DeviceVendor
+		expectedCmd string
 	}{
 		{models.VendorHuawei, "display mac-address"},
 		{models.VendorH3C, "display mac-address"},
@@ -505,7 +506,7 @@ func TestHighMACCountPortGeneration(t *testing.T) {
 // TestMACAddressTypeConversion 测试MAC类型转换
 func TestMACAddressTypeConversion(t *testing.T) {
 	tests := []struct {
-		input     string
+		input    string
 		expected models.MACType
 	}{
 		{"DYNAMIC", models.MACTypeDynamic},
@@ -817,4 +818,3 @@ func BenchmarkNormalizeInterfaceNameMAC(b *testing.B) {
 		}
 	}
 }
-

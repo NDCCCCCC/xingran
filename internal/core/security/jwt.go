@@ -6,10 +6,10 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/tjfoc/gmsm/sm2"
 	"github.com/xingran-next/xingran-go-backend/internal/config"
 	"github.com/xingran-next/xingran-go-backend/pkg/crypto"
 	"github.com/xingran-next/xingran-go-backend/pkg/response"
-	"github.com/tjfoc/gmsm/sm2"
 )
 
 // JWTManager JWT管理器

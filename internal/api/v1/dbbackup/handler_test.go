@@ -27,8 +27,8 @@ func newTestGinContext() *gin.Context {
 // fakeSvc 仅覆写 GetPlan/SavePlan；其余方法在测试路径中不会被调用。
 type fakeSvc struct {
 	dbbackup.Service
-	plan    *dbbackup.Plan
-	planErr error
+	plan     *dbbackup.Plan
+	planErr  error
 	getCalls int
 }
 

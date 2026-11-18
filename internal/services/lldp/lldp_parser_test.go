@@ -214,10 +214,10 @@ func TestLLDPParserMultipleVendors(t *testing.T) {
 	parser := NewLLDPParser()
 
 	vendors := []struct {
-		vendor    models.DeviceVendor
-		output    string
-		minCount  int
-		maxCount  int
+		vendor   models.DeviceVendor
+		output   string
+		minCount int
+		maxCount int
 	}{
 		{models.VendorHuawei, fixtures.HuaweiLLDPBrief, 3, 10},
 		{models.VendorRuijie, fixtures.RuijieLLDPNeighbors, 3, 10},

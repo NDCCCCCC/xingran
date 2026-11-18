@@ -1,194 +1,194 @@
 package executor
 
 import (
-    "context"
-    "encoding/base64"
-    "encoding/json"
-    "fmt"
-    "strings"
-    "time"
+	"context"
+	"encoding/base64"
+	"encoding/json"
+	"fmt"
+	"strings"
+	"time"
 
-    "github.com/redis/go-redis/v9"
-    "github.com/xingran-next/rpa-worker/internal/browser"
-    "github.com/xingran-next/rpa-worker/internal/communication"
-    "github.com/xingran-next/rpa-worker/internal/config"
-    "github.com/xingran-next/rpa-worker/internal/logger"
-    "github.com/xingran-next/rpa-worker/internal/types"
+	"github.com/redis/go-redis/v9"
+	"github.com/xingran-next/rpa-worker/internal/browser"
+	"github.com/xingran-next/rpa-worker/internal/communication"
+	"github.com/xingran-next/rpa-worker/internal/config"
+	"github.com/xingran-next/rpa-worker/internal/logger"
+	"github.com/xingran-next/rpa-worker/internal/types"
 )
 
 // Engine execution engine
 type Engine struct {
-    config              *config.ExecutorConfig
-    workerConfig        *config.WorkerConfig
-    browserPool         *browser.Pool
-    progressReporter    *communication.ProgressReporter
-    logger              logger.Logger
-    redisClient         *redis.Client
-    currentExecutionID  string
-    currentWorkerID     string
-    currentStep         int
-    currentTotal        int
-    loopConcurrency     int // 循环内并发执行数量
+	config             *config.ExecutorConfig
+	workerConfig       *config.WorkerConfig
+	browserPool        *browser.Pool
+	progressReporter   *communication.ProgressReporter
+	logger             logger.Logger
+	redisClient        *redis.Client
+	currentExecutionID string
+	currentWorkerID    string
+	currentStep        int
+	currentTotal       int
+	loopConcurrency    int // 循环内并发执行数量
 }
 
 // NewEngine create execution engine
 func NewEngine(
-    cfg *config.ExecutorConfig,
-    workerCfg *config.WorkerConfig,
-    browserPool *browser.Pool,
-    progressReporter *communication.ProgressReporter,
-    log logger.Logger,
-    redisClient *redis.Client,
+	cfg *config.ExecutorConfig,
+	workerCfg *config.WorkerConfig,
+	browserPool *browser.Pool,
+	progressReporter *communication.ProgressReporter,
+	log logger.Logger,
+	redisClient *redis.Client,
 ) *Engine {
-    return &Engine{
-        config:           cfg,
-        workerConfig:     workerCfg,
-        browserPool:      browserPool,
-        progressReporter: progressReporter,
-        logger:           log,
-        redisClient:      redisClient,
-        loopConcurrency:  workerCfg.LoopConcurrency, // 从配置中获取循环并发数
-    }
+	return &Engine{
+		config:           cfg,
+		workerConfig:     workerCfg,
+		browserPool:      browserPool,
+		progressReporter: progressReporter,
+		logger:           log,
+		redisClient:      redisClient,
+		loopConcurrency:  workerCfg.LoopConcurrency, // 从配置中获取循环并发数
+	}
 }
 
 // Execute execute task
 func (e *Engine) Execute(ctx context.Context, task *types.TaskMessage, workerID string) (*types.ExecutionResult, error) {
-    startTime := time.Now()
+	startTime := time.Now()
 
-    // Set current execution context for pause action
-    e.currentExecutionID = task.ExecutionID
-    e.currentWorkerID = workerID
+	// Set current execution context for pause action
+	e.currentExecutionID = task.ExecutionID
+	e.currentWorkerID = workerID
 
-    // 检查是否是子任务
-    isSubTask, parentExecutionID, subTaskIndex := e.extractSubTaskMeta(task)
+	// 检查是否是子任务
+	isSubTask, parentExecutionID, subTaskIndex := e.extractSubTaskMeta(task)
 
-    // 记录日志 - 子任务使用 debug 级别减少日志量
-    if isSubTask {
-        e.logger.Debug("start executing task",
-            logger.String("execution_id", task.ExecutionID),
-            logger.String("task_id", task.TaskID),
-            logger.String("worker_id", workerID),
-            logger.Int("actions", len(task.Script)),
-            logger.String("task_type", "subtask"),
-        )
-    } else {
-        e.logger.Info("start executing task",
-            logger.String("execution_id", task.ExecutionID),
-            logger.String("task_id", task.TaskID),
-            logger.String("worker_id", workerID),
-            logger.Int("actions", len(task.Script)),
-        )
-    }
+	// 记录日志 - 子任务使用 debug 级别减少日志量
+	if isSubTask {
+		e.logger.Debug("start executing task",
+			logger.String("execution_id", task.ExecutionID),
+			logger.String("task_id", task.TaskID),
+			logger.String("worker_id", workerID),
+			logger.Int("actions", len(task.Script)),
+			logger.String("task_type", "subtask"),
+		)
+	} else {
+		e.logger.Info("start executing task",
+			logger.String("execution_id", task.ExecutionID),
+			logger.String("task_id", task.TaskID),
+			logger.String("worker_id", workerID),
+			logger.Int("actions", len(task.Script)),
+		)
+	}
 
-    result := &types.ExecutionResult{
-        ExecutionID: task.ExecutionID,
-        TaskID:      task.TaskID,
-        Status:      types.StatusRunning,
-        StartedAt:   startTime,
-        Step:        0,
-        Total:       len(task.Script),
-    }
+	result := &types.ExecutionResult{
+		ExecutionID: task.ExecutionID,
+		TaskID:      task.TaskID,
+		Status:      types.StatusRunning,
+		StartedAt:   startTime,
+		Step:        0,
+		Total:       len(task.Script),
+	}
 
-    // Acquire browser page
-    pooledPage, err := e.browserPool.Acquire(ctx)
-    if err != nil {
-        errorResult := e.createErrorResult(result, err, 0, len(task.Script))
-        e.reportSubTaskResult(ctx, task, errorResult)
-        return errorResult, fmt.Errorf("failed to acquire browser: %w", err)
-    }
-    defer e.browserPool.Release(pooledPage)
+	// Acquire browser page
+	pooledPage, err := e.browserPool.Acquire(ctx)
+	if err != nil {
+		errorResult := e.createErrorResult(result, err, 0, len(task.Script))
+		e.reportSubTaskResult(ctx, task, errorResult)
+		return errorResult, fmt.Errorf("failed to acquire browser: %w", err)
+	}
+	defer e.browserPool.Release(pooledPage)
 
-    // Create page manager
-    pageMgr := browser.NewPageManager(pooledPage.Page(), e.logger)
+	// Create page manager
+	pageMgr := browser.NewPageManager(pooledPage.Page(), e.logger)
 
-    // Initialize variable context
-    variables := make(map[string]interface{})
-    for k, v := range task.Variables {
-        variables[k] = v
-    }
+	// Initialize variable context
+	variables := make(map[string]interface{})
+	for k, v := range task.Variables {
+		variables[k] = v
+	}
 
-    // Navigate to target URL
-    if task.TargetURL != "" {
-        if err := pageMgr.Goto(task.TargetURL); err != nil {
-            errorResult := e.createErrorResult(result, err, 0, len(task.Script))
-            e.reportSubTaskResult(ctx, task, errorResult)
-            return errorResult, fmt.Errorf("failed to navigate to %s: %w", task.TargetURL, err)
-        }
-    }
+	// Navigate to target URL
+	if task.TargetURL != "" {
+		if err := pageMgr.Goto(task.TargetURL); err != nil {
+			errorResult := e.createErrorResult(result, err, 0, len(task.Script))
+			e.reportSubTaskResult(ctx, task, errorResult)
+			return errorResult, fmt.Errorf("failed to navigate to %s: %w", task.TargetURL, err)
+		}
+	}
 
-    // Execute script actions
-    for i, action := range task.Script {
-        // Update current step and total for screenshot reporting
-        e.currentStep = i + 1
-        e.currentTotal = len(task.Script)
+	// Execute script actions
+	for i, action := range task.Script {
+		// Update current step and total for screenshot reporting
+		e.currentStep = i + 1
+		e.currentTotal = len(task.Script)
 
-        result.Step = i + 1
-        result.Status = types.StatusRunning
+		result.Step = i + 1
+		result.Status = types.StatusRunning
 
-        // Report progress
-        // 子任务额外上报到 Redis Pub/Sub
-        if isSubTask && parentExecutionID != "" {
-            e.reportSubTaskProgress(ctx, parentExecutionID, subTaskIndex, i+1, len(task.Script), types.StatusRunning, fmt.Sprintf("executing: %s %s", action.Type, action.Description))
-        }
+		// Report progress
+		// 子任务额外上报到 Redis Pub/Sub
+		if isSubTask && parentExecutionID != "" {
+			e.reportSubTaskProgress(ctx, parentExecutionID, subTaskIndex, i+1, len(task.Script), types.StatusRunning, fmt.Sprintf("executing: %s %s", action.Type, action.Description))
+		}
 
-        if err := e.progressReporter.ReportProgress(ctx, &types.ProgressReport{
-            ExecutionID:     task.ExecutionID,
-            ProgressCurrent: i + 1,
-            ProgressTotal:   len(task.Script),
-            Message:         fmt.Sprintf("executing: %s %s", action.Type, action.Description),
-            Status:          types.StatusRunning,
-        }); err != nil {
-            e.logger.Warn("failed to report progress", logger.Err(err))
-        }
+		if err := e.progressReporter.ReportProgress(ctx, &types.ProgressReport{
+			ExecutionID:     task.ExecutionID,
+			ProgressCurrent: i + 1,
+			ProgressTotal:   len(task.Script),
+			Message:         fmt.Sprintf("executing: %s %s", action.Type, action.Description),
+			Status:          types.StatusRunning,
+		}); err != nil {
+			e.logger.Warn("failed to report progress", logger.Err(err))
+		}
 
-        // Execute action
-        if err := e.executeAction(ctx, pageMgr, &action, variables); err != nil {
-            // Retry logic
-            if action.Retry > 0 {
-                lastErr := err
-                for retry := 0; retry <= action.Retry; retry++ {
-                    e.logger.Warn("action failed, retrying",
-                        logger.Int("retry", retry),
-                        logger.Int("max_retries", action.Retry),
-                        logger.Err(err),
-                    )
-                    time.Sleep(e.config.InitialDelay)
+		// Execute action
+		if err := e.executeAction(ctx, pageMgr, &action, variables); err != nil {
+			// Retry logic
+			if action.Retry > 0 {
+				lastErr := err
+				for retry := 0; retry <= action.Retry; retry++ {
+					e.logger.Warn("action failed, retrying",
+						logger.Int("retry", retry),
+						logger.Int("max_retries", action.Retry),
+						logger.Err(err),
+					)
+					time.Sleep(e.config.InitialDelay)
 
-                    if err = e.executeAction(ctx, pageMgr, &action, variables); err == nil {
-                        break
-                    }
-                    lastErr = err
-                }
-                err = lastErr
-            }
+					if err = e.executeAction(ctx, pageMgr, &action, variables); err == nil {
+						break
+					}
+					lastErr = err
+				}
+				err = lastErr
+			}
 
-            if err != nil {
-                errorResult := e.createErrorResult(result, err, i+1, len(task.Script))
-                e.reportSubTaskResult(ctx, task, errorResult)
-                return errorResult, nil
-            }
-        }
-    }
+			if err != nil {
+				errorResult := e.createErrorResult(result, err, i+1, len(task.Script))
+				e.reportSubTaskResult(ctx, task, errorResult)
+				return errorResult, nil
+			}
+		}
+	}
 
-    // Task completed successfully
-    result.Status = types.StatusSuccess
-    result.CompletedAt = time.Now()
-    result.Duration = result.CompletedAt.Sub(result.StartedAt)
+	// Task completed successfully
+	result.Status = types.StatusSuccess
+	result.CompletedAt = time.Now()
+	result.Duration = result.CompletedAt.Sub(result.StartedAt)
 
-    // TIDY-03 配套：选择器明细契约信封行（空事件不发——验收 #2）
-    if envelope := pageMgr.SelectorEnvelopeLine(); envelope != "" {
-        result.Logs = append(result.Logs, envelope)
-    }
+	// TIDY-03 配套：选择器明细契约信封行（空事件不发——验收 #2）
+	if envelope := pageMgr.SelectorEnvelopeLine(); envelope != "" {
+		result.Logs = append(result.Logs, envelope)
+	}
 
-    e.logger.Info("task executed successfully",
-        logger.String("execution_id", task.ExecutionID),
-        logger.Duration("duration", result.Duration),
-    )
+	e.logger.Info("task executed successfully",
+		logger.String("execution_id", task.ExecutionID),
+		logger.Duration("duration", result.Duration),
+	)
 
-    // 上报子任务结果
-    e.reportSubTaskResult(ctx, task, result)
+	// 上报子任务结果
+	e.reportSubTaskResult(ctx, task, result)
 
-    return result, nil
+	return result, nil
 }
 
 // extractSubTaskMeta 从任务变量中提取子任务元数据
@@ -207,218 +207,218 @@ func (e *Engine) extractSubTaskMeta(task *types.TaskMessage) (isSubTask bool, pa
 
 // executeAction execute single action
 func (e *Engine) executeAction(ctx context.Context, pageMgr *browser.PageManager, action *types.Action, variables map[string]interface{}) error {
-    e.logger.Debug("executing action",
-        logger.String("type", string(action.Type)),
-        logger.String("selector", action.Selector),
-        logger.String("description", action.Description),
-    )
+	e.logger.Debug("executing action",
+		logger.String("type", string(action.Type)),
+		logger.String("selector", action.Selector),
+		logger.String("description", action.Description),
+	)
 
-    // Substitute variables
-    params := e.substituteVariables(action.Params, variables)
+	// Substitute variables
+	params := e.substituteVariables(action.Params, variables)
 
-    // Execute by action type
-    switch action.Type {
-    case types.ActionNavigate:
-        url, ok := params["url"].(string)
-        if !ok {
-            return fmt.Errorf("missing url parameter")
-        }
-        return pageMgr.Goto(url)
+	// Execute by action type
+	switch action.Type {
+	case types.ActionNavigate:
+		url, ok := params["url"].(string)
+		if !ok {
+			return fmt.Errorf("missing url parameter")
+		}
+		return pageMgr.Goto(url)
 
-    case types.ActionClick:
-        if action.Selector == "" {
-            return fmt.Errorf("missing selector")
-        }
-        return pageMgr.Click(action.Selector)
+	case types.ActionClick:
+		if action.Selector == "" {
+			return fmt.Errorf("missing selector")
+		}
+		return pageMgr.Click(action.Selector)
 
-    case types.ActionFill:
-        if action.Selector == "" {
-            return fmt.Errorf("missing selector")
-        }
-        value, ok := params["value"].(string)
-        if !ok {
-            return fmt.Errorf("missing value parameter")
-        }
-        return pageMgr.Fill(action.Selector, value)
+	case types.ActionFill:
+		if action.Selector == "" {
+			return fmt.Errorf("missing selector")
+		}
+		value, ok := params["value"].(string)
+		if !ok {
+			return fmt.Errorf("missing value parameter")
+		}
+		return pageMgr.Fill(action.Selector, value)
 
-    case types.ActionSelect:
-        if action.Selector == "" {
-            return fmt.Errorf("missing selector")
-        }
-        value, ok := params["value"].(string)
-        if !ok {
-            return fmt.Errorf("missing value parameter")
-        }
-        return pageMgr.Select(action.Selector, value)
+	case types.ActionSelect:
+		if action.Selector == "" {
+			return fmt.Errorf("missing selector")
+		}
+		value, ok := params["value"].(string)
+		if !ok {
+			return fmt.Errorf("missing value parameter")
+		}
+		return pageMgr.Select(action.Selector, value)
 
-    case types.ActionWait:
-        duration, ok := params["duration"].(int)
-        if !ok {
-            duration = 1000
-        }
-        time.Sleep(time.Duration(duration) * time.Millisecond)
-        return nil
+	case types.ActionWait:
+		duration, ok := params["duration"].(int)
+		if !ok {
+			duration = 1000
+		}
+		time.Sleep(time.Duration(duration) * time.Millisecond)
+		return nil
 
-    case types.ActionScreenshot:
-        // 获取截图数据
-        data, err := pageMgr.Screenshot()
-        if err != nil {
-            return err
-        }
+	case types.ActionScreenshot:
+		// 获取截图数据
+		data, err := pageMgr.Screenshot()
+		if err != nil {
+			return err
+		}
 
-        // 转换为 base64
-        base64Data := base64.StdEncoding.EncodeToString(data)
+		// 转换为 base64
+		base64Data := base64.StdEncoding.EncodeToString(data)
 
-        // 获取截图名称
-        screenshotName := fmt.Sprintf("screenshot_%d", time.Now().UnixMilli())
-        if name, ok := params["name"].(string); ok && name != "" {
-            screenshotName = name
-        }
+		// 获取截图名称
+		screenshotName := fmt.Sprintf("screenshot_%d", time.Now().UnixMilli())
+		if name, ok := params["name"].(string); ok && name != "" {
+			screenshotName = name
+		}
 
-        // 通过进度上报发送截图
-        if e.progressReporter != nil {
-            if err := e.progressReporter.ReportProgress(ctx, &types.ProgressReport{
-                ExecutionID:     e.currentExecutionID,
-                ProgressCurrent: e.currentStep,
-                ProgressTotal:   e.currentTotal,
-                Message:         fmt.Sprintf("截图: %s", screenshotName),
-                Status:          types.StatusRunning,
-                Screenshot:      base64Data,
-            }); err != nil {
-                e.logger.Warn("failed to report screenshot", logger.Err(err))
-            }
-        }
+		// 通过进度上报发送截图
+		if e.progressReporter != nil {
+			if err := e.progressReporter.ReportProgress(ctx, &types.ProgressReport{
+				ExecutionID:     e.currentExecutionID,
+				ProgressCurrent: e.currentStep,
+				ProgressTotal:   e.currentTotal,
+				Message:         fmt.Sprintf("截图: %s", screenshotName),
+				Status:          types.StatusRunning,
+				Screenshot:      base64Data,
+			}); err != nil {
+				e.logger.Warn("failed to report screenshot", logger.Err(err))
+			}
+		}
 
-        return nil
+		return nil
 
-    case types.ActionWaitFor:
-        if action.Selector == "" {
-            return fmt.Errorf("missing selector")
-        }
-        timeout := time.Duration(action.Timeout) * time.Millisecond
-        if timeout == 0 {
-            timeout = e.workerConfig.ActionTimeout
-        }
-        return pageMgr.WaitFor(action.Selector, timeout)
+	case types.ActionWaitFor:
+		if action.Selector == "" {
+			return fmt.Errorf("missing selector")
+		}
+		timeout := time.Duration(action.Timeout) * time.Millisecond
+		if timeout == 0 {
+			timeout = e.workerConfig.ActionTimeout
+		}
+		return pageMgr.WaitFor(action.Selector, timeout)
 
-    case types.ActionLoop:
-        // Loop action - iterate over data array and execute nested actions
-        return e.executeLoop(ctx, pageMgr, action, variables)
+	case types.ActionLoop:
+		// Loop action - iterate over data array and execute nested actions
+		return e.executeLoop(ctx, pageMgr, action, variables)
 
-    case types.ActionPause:
-        // Pause action - wait for human input (for captcha handling)
-        return e.executePause(ctx, pageMgr, action, variables)
+	case types.ActionPause:
+		// Pause action - wait for human input (for captcha handling)
+		return e.executePause(ctx, pageMgr, action, variables)
 
-    case types.ActionExtract:
-        // Extract action - extract data from page
-        return e.executeExtract(ctx, pageMgr, action, variables)
+	case types.ActionExtract:
+		// Extract action - extract data from page
+		return e.executeExtract(ctx, pageMgr, action, variables)
 
-    case types.ActionScroll:
-        // Scroll action - scroll the page
-        return e.executeScroll(ctx, pageMgr, action, variables)
+	case types.ActionScroll:
+		// Scroll action - scroll the page
+		return e.executeScroll(ctx, pageMgr, action, variables)
 
-    case types.ActionAutoLogin:
-        // Auto login action - use stored credentials or session
-        return e.executeAutoLogin(ctx, pageMgr, action, variables)
+	case types.ActionAutoLogin:
+		// Auto login action - use stored credentials or session
+		return e.executeAutoLogin(ctx, pageMgr, action, variables)
 
-    default:
-        return fmt.Errorf("unsupported action type: %s", action.Type)
-    }
+	default:
+		return fmt.Errorf("unsupported action type: %s", action.Type)
+	}
 }
 
 // executeLoop execute loop action for batch processing
 // 注意：混合模式下，Loop 动作应该由 Worker 的 TaskSplitter 拆分为子任务
 // 这里保留简单的串行执行是为了向后兼容（当混合模式未启用时）
 func (e *Engine) executeLoop(ctx context.Context, pageMgr *browser.PageManager, action *types.Action, variables map[string]interface{}) error {
-    // Get loop data source
-    dataSource, ok := action.Params["dataSource"]
-    if !ok {
-        return fmt.Errorf("loop action requires dataSource parameter")
-    }
+	// Get loop data source
+	dataSource, ok := action.Params["dataSource"]
+	if !ok {
+		return fmt.Errorf("loop action requires dataSource parameter")
+	}
 
-    // Convert dataSource to array
-    var dataArray []map[string]interface{}
-    switch v := dataSource.(type) {
-    case []interface{}:
-        for _, item := range v {
-            if itemMap, ok := item.(map[string]interface{}); ok {
-                dataArray = append(dataArray, itemMap)
-            }
-        }
-    case []map[string]interface{}:
-        dataArray = v
-    default:
-        return fmt.Errorf("dataSource must be an array of objects")
-    }
+	// Convert dataSource to array
+	var dataArray []map[string]interface{}
+	switch v := dataSource.(type) {
+	case []interface{}:
+		for _, item := range v {
+			if itemMap, ok := item.(map[string]interface{}); ok {
+				dataArray = append(dataArray, itemMap)
+			}
+		}
+	case []map[string]interface{}:
+		dataArray = v
+	default:
+		return fmt.Errorf("dataSource must be an array of objects")
+	}
 
-    if len(dataArray) == 0 {
-        e.logger.Info("loop data source is empty, skipping")
-        return nil
-    }
+	if len(dataArray) == 0 {
+		e.logger.Info("loop data source is empty, skipping")
+		return nil
+	}
 
-    // Get nested actions to execute for each iteration
-    nestedActionsRaw, ok := action.Params["actions"]
-    if !ok {
-        return fmt.Errorf("loop action requires actions parameter")
-    }
+	// Get nested actions to execute for each iteration
+	nestedActionsRaw, ok := action.Params["actions"]
+	if !ok {
+		return fmt.Errorf("loop action requires actions parameter")
+	}
 
-    // Convert nested actions
-    var nestedActions []types.Action
-    switch v := nestedActionsRaw.(type) {
-    case []interface{}:
-        for _, item := range v {
-            if actionMap, ok := item.(map[string]interface{}); ok {
-                nestedActions = append(nestedActions, e.mapToAction(actionMap))
-            }
-        }
-    case []types.Action:
-        nestedActions = v
-    }
+	// Convert nested actions
+	var nestedActions []types.Action
+	switch v := nestedActionsRaw.(type) {
+	case []interface{}:
+		for _, item := range v {
+			if actionMap, ok := item.(map[string]interface{}); ok {
+				nestedActions = append(nestedActions, e.mapToAction(actionMap))
+			}
+		}
+	case []types.Action:
+		nestedActions = v
+	}
 
-    // Get item variable name (default: "item")
-    itemName := "item"
-    if name, ok := action.Params["itemVar"].(string); ok && name != "" {
-        itemName = name
-    }
+	// Get item variable name (default: "item")
+	itemName := "item"
+	if name, ok := action.Params["itemVar"].(string); ok && name != "" {
+		itemName = name
+	}
 
-    e.logger.Info("starting loop (serial execution for backward compatibility)",
-        logger.String("item_var", itemName),
-        logger.Int("iterations", len(dataArray)))
+	e.logger.Info("starting loop (serial execution for backward compatibility)",
+		logger.String("item_var", itemName),
+		logger.Int("iterations", len(dataArray)))
 
-    // 串行执行（向后兼容）
-    for i, item := range dataArray {
-        e.logger.Debug("loop iteration",
-            logger.Int("index", i),
-            logger.Int("total", len(dataArray)),
-        )
+	// 串行执行（向后兼容）
+	for i, item := range dataArray {
+		e.logger.Debug("loop iteration",
+			logger.Int("index", i),
+			logger.Int("total", len(dataArray)),
+		)
 
-        // Create new variable context for this iteration
-        iterationVars := make(map[string]interface{})
-        for k, v := range variables {
-            iterationVars[k] = v
-        }
+		// Create new variable context for this iteration
+		iterationVars := make(map[string]interface{})
+		for k, v := range variables {
+			iterationVars[k] = v
+		}
 
-        // Add current item to variables (can access with ${item.fieldName})
-        for k, v := range item {
-            iterationVars[itemName+"."+k] = v
-            // Also add direct access with field name
-            iterationVars[k] = v
-        }
+		// Add current item to variables (can access with ${item.fieldName})
+		for k, v := range item {
+			iterationVars[itemName+"."+k] = v
+			// Also add direct access with field name
+			iterationVars[k] = v
+		}
 
-        // Add iteration index
-        iterationVars[itemName+".index"] = i
-        iterationVars["index"] = i
+		// Add iteration index
+		iterationVars[itemName+".index"] = i
+		iterationVars["index"] = i
 
-        // Execute nested actions
-        for _, nestedAction := range nestedActions {
-            if err := e.executeAction(ctx, pageMgr, &nestedAction, iterationVars); err != nil {
-                return fmt.Errorf("loop iteration %d failed: %w", i, err)
-            }
-        }
-    }
+		// Execute nested actions
+		for _, nestedAction := range nestedActions {
+			if err := e.executeAction(ctx, pageMgr, &nestedAction, iterationVars); err != nil {
+				return fmt.Errorf("loop iteration %d failed: %w", i, err)
+			}
+		}
+	}
 
-    e.logger.Info("loop completed", logger.Int("iterations", len(dataArray)))
-    return nil
+	e.logger.Info("loop completed", logger.Int("iterations", len(dataArray)))
+	return nil
 }
 
 // executePause execute pause action for human intervention
@@ -531,87 +531,87 @@ func (e *Engine) subscribeForHumanInput(ctx context.Context, executionID, worker
 
 // executeExtract execute extract action to get data from page
 func (e *Engine) executeExtract(ctx context.Context, pageMgr *browser.PageManager, action *types.Action, variables map[string]interface{}) error {
-    if action.Selector == "" {
-        return fmt.Errorf("extract action requires selector")
-    }
+	if action.Selector == "" {
+		return fmt.Errorf("extract action requires selector")
+	}
 
-    // Get extract target variable name
-    targetVar := "extracted"
-    if tv, ok := action.Params["targetVar"].(string); ok && tv != "" {
-        targetVar = tv
-    }
+	// Get extract target variable name
+	targetVar := "extracted"
+	if tv, ok := action.Params["targetVar"].(string); ok && tv != "" {
+		targetVar = tv
+	}
 
-    // Get extract type (text, value, html, attribute)
-    extractType := "text"
-    if et, ok := action.Params["type"].(string); ok && et != "" {
-        extractType = et
-    }
+	// Get extract type (text, value, html, attribute)
+	extractType := "text"
+	if et, ok := action.Params["type"].(string); ok && et != "" {
+		extractType = et
+	}
 
-    // Extract data based on type
-    var extractedValue interface{}
-    var err error
+	// Extract data based on type
+	var extractedValue interface{}
+	var err error
 
-    switch extractType {
-    case "text":
-        extractedValue, err = pageMgr.GetText(action.Selector)
-    case "value":
-        extractedValue, err = pageMgr.GetValue(action.Selector)
-    case "html":
-        extractedValue, err = pageMgr.GetHTML(action.Selector)
-    case "attribute":
-        attrName, ok := action.Params["attribute"].(string)
-        if !ok || attrName == "" {
-            return fmt.Errorf("attribute extract type requires attribute parameter")
-        }
-        extractedValue, err = pageMgr.GetAttribute(action.Selector, attrName)
-    default:
-        return fmt.Errorf("unsupported extract type: %s", extractType)
-    }
+	switch extractType {
+	case "text":
+		extractedValue, err = pageMgr.GetText(action.Selector)
+	case "value":
+		extractedValue, err = pageMgr.GetValue(action.Selector)
+	case "html":
+		extractedValue, err = pageMgr.GetHTML(action.Selector)
+	case "attribute":
+		attrName, ok := action.Params["attribute"].(string)
+		if !ok || attrName == "" {
+			return fmt.Errorf("attribute extract type requires attribute parameter")
+		}
+		extractedValue, err = pageMgr.GetAttribute(action.Selector, attrName)
+	default:
+		return fmt.Errorf("unsupported extract type: %s", extractType)
+	}
 
-    if err != nil {
-        return fmt.Errorf("extract failed: %w", err)
-    }
+	if err != nil {
+		return fmt.Errorf("extract failed: %w", err)
+	}
 
-    // Store extracted value in variables
-    variables[targetVar] = extractedValue
+	// Store extracted value in variables
+	variables[targetVar] = extractedValue
 
-    e.logger.Debug("data extracted",
-        logger.String("target_var", targetVar),
-        logger.String("value", fmt.Sprintf("%v", extractedValue)),
-    )
+	e.logger.Debug("data extracted",
+		logger.String("target_var", targetVar),
+		logger.String("value", fmt.Sprintf("%v", extractedValue)),
+	)
 
-    return nil
+	return nil
 }
 
 // executeScroll execute scroll action
 func (e *Engine) executeScroll(ctx context.Context, pageMgr *browser.PageManager, action *types.Action, variables map[string]interface{}) error {
-    // Get scroll direction (down, up, toElement)
-    direction := "down"
-    if d, ok := action.Params["direction"].(string); ok && d != "" {
-        direction = d
-    }
+	// Get scroll direction (down, up, toElement)
+	direction := "down"
+	if d, ok := action.Params["direction"].(string); ok && d != "" {
+		direction = d
+	}
 
-    switch direction {
-    case "down":
-        pixels := 500
-        if p, ok := action.Params["pixels"].(int); ok && p > 0 {
-            pixels = p
-        }
-        return pageMgr.ScrollDown(pixels)
-    case "up":
-        pixels := 500
-        if p, ok := action.Params["pixels"].(int); ok && p > 0 {
-            pixels = p
-        }
-        return pageMgr.ScrollUp(pixels)
-    case "toElement":
-        if action.Selector == "" {
-            return fmt.Errorf("scroll to element requires selector")
-        }
-        return pageMgr.ScrollToElement(action.Selector)
-    default:
-        return fmt.Errorf("unsupported scroll direction: %s", direction)
-    }
+	switch direction {
+	case "down":
+		pixels := 500
+		if p, ok := action.Params["pixels"].(int); ok && p > 0 {
+			pixels = p
+		}
+		return pageMgr.ScrollDown(pixels)
+	case "up":
+		pixels := 500
+		if p, ok := action.Params["pixels"].(int); ok && p > 0 {
+			pixels = p
+		}
+		return pageMgr.ScrollUp(pixels)
+	case "toElement":
+		if action.Selector == "" {
+			return fmt.Errorf("scroll to element requires selector")
+		}
+		return pageMgr.ScrollToElement(action.Selector)
+	default:
+		return fmt.Errorf("unsupported scroll direction: %s", direction)
+	}
 }
 
 // executeAutoLogin execute auto login action
@@ -788,45 +788,45 @@ func (e *Engine) mapToAction(m map[string]interface{}) types.Action {
 
 // substituteVariables substitute variables
 func (e *Engine) substituteVariables(params map[string]interface{}, variables map[string]interface{}) map[string]interface{} {
-    result := make(map[string]interface{})
-    for k, v := range params {
-        switch val := v.(type) {
-        case string:
-            result[k] = e.replaceVariables(val, variables)
-        default:
-            result[k] = v
-        }
-    }
-    return result
+	result := make(map[string]interface{})
+	for k, v := range params {
+		switch val := v.(type) {
+		case string:
+			result[k] = e.replaceVariables(val, variables)
+		default:
+			result[k] = v
+		}
+	}
+	return result
 }
 
 // replaceVariables replace variables in string
 func (e *Engine) replaceVariables(s string, variables map[string]interface{}) string {
-    result := s
-    for k, v := range variables {
-        placeholder := fmt.Sprintf("${%s}", k)
-        result = strings.ReplaceAll(result, placeholder, fmt.Sprintf("%v", v))
-    }
-    return result
+	result := s
+	for k, v := range variables {
+		placeholder := fmt.Sprintf("${%s}", k)
+		result = strings.ReplaceAll(result, placeholder, fmt.Sprintf("%v", v))
+	}
+	return result
 }
 
 // createErrorResult create error result
 func (e *Engine) createErrorResult(result *types.ExecutionResult, err error, step, total int) *types.ExecutionResult {
-    result.Status = types.StatusFailed
-    result.ErrorMessage = err.Error()
-    result.CompletedAt = time.Now()
-    result.Duration = result.CompletedAt.Sub(result.StartedAt)
-    result.Step = step
-    result.Total = total
+	result.Status = types.StatusFailed
+	result.ErrorMessage = err.Error()
+	result.CompletedAt = time.Now()
+	result.Duration = result.CompletedAt.Sub(result.StartedAt)
+	result.Step = step
+	result.Total = total
 
-    e.logger.Error("task execution failed",
-        logger.String("execution_id", result.ExecutionID),
-        logger.Int("step", step),
-        logger.Int("total", total),
-        logger.Err(err),
-    )
+	e.logger.Error("task execution failed",
+		logger.String("execution_id", result.ExecutionID),
+		logger.Int("step", step),
+		logger.Int("total", total),
+		logger.Err(err),
+	)
 
-    return result
+	return result
 }
 
 // reportSubTaskProgress 上报子任务进度到 Redis Pub/Sub

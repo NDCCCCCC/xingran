@@ -169,7 +169,7 @@ func TestPWX06_WriteAuditChain(t *testing.T) {
 	code, body := f.do("POST", "/api/v1/network/ports/write/shutdown", "u-admin", map[string]interface{}{
 		"deviceId": "de-1", "portId": "p-missing",
 	})
-		// 同上：HTTP 400 + 业务 code 404 契约
+	// 同上：HTTP 400 + 业务 code 404 契约
 	require.Equal(t, http.StatusBadRequest, code, "write 端口不存在应 HTTP 400, got %s", body)
 	require.Contains(t, body, `"code":404`)
 

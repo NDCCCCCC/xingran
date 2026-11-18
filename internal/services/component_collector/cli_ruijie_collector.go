@@ -10,9 +10,9 @@ import (
 //
 //   - show version              — per-slot module SNs (Slot M1/M2/1..N)
 //   - show manuinfo             — physical chassis SN + per-slot SNs
-//                                 (D-11: show version "System serial number"
-//                                 is the active M1 engine's SN, NOT the
-//                                 chassis SN — see ParseShowManuinfo doc)
+//     (D-11: show version "System serial number"
+//     is the active M1 engine's SN, NOT the
+//     chassis SN — see ParseShowManuinfo doc)
 //   - show interfaces status    — D-10 up-interface pre-filter
 //   - show interface transceiver — optical-module Vendor SN + DDM
 //

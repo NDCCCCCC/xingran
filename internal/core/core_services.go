@@ -14,7 +14,7 @@ import (
 // 这些组件通常是业务层依赖，由 Init() 流程按顺序初始化。
 //
 // 通过 struct embedding 嵌入到 Core 中，保持向后兼容的字段访问语法
-//（core.UserService、core.DeviceExecutor、core.NoticeHub 等）。
+// （core.UserService、core.DeviceExecutor、core.NoticeHub 等）。
 type CoreServices struct {
 	// 网络设备相关服务
 	DeviceExecutor              *device.DeviceExecutor                // 设备执行器

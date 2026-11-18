@@ -9,18 +9,19 @@
 //   - 预期: detection 走 Type A (物理 + 声明匹配, 健康), 实际走了非 A 分支
 //
 // 排查维度:
-//   1. ops_asset 原始 user_id / nowuser_name (declared 端)
-//   2. sys_workstation.user_id / user_name (工位所属人员)
-//   3. sys_user 中 username/nickname='程步启' 的 id
-//   4. ops_info_points (port_id → workstation_id 桥)
-//   5. sys_device_mac_address (asset → port 桥的 MAC 端)
-//   6. sys_device_port_status (asset → port 桥的 port 端)
-//   7. reconciliation_physical_chain view (4F001 → 设备 → 物理用户)
-//   8. reconciliation_normalized MV (detection 引擎的输入)
-//   9. sys_data_reconciliation (detection 引擎的输出)
+//  1. ops_asset 原始 user_id / nowuser_name (declared 端)
+//  2. sys_workstation.user_id / user_name (工位所属人员)
+//  3. sys_user 中 username/nickname='程步启' 的 id
+//  4. ops_info_points (port_id → workstation_id 桥)
+//  5. sys_device_mac_address (asset → port 桥的 MAC 端)
+//  6. sys_device_port_status (asset → port 桥的 port 端)
+//  7. reconciliation_physical_chain view (4F001 → 设备 → 物理用户)
+//  8. reconciliation_normalized MV (detection 引擎的输入)
+//  9. sys_data_reconciliation (detection 引擎的输出)
 //
 // 用法:
-//   go run ./scripts/ops/diag_4f001_red
+//
+//	go run ./scripts/ops/diag_4f001_red
 package main
 
 import (
@@ -36,11 +37,11 @@ import (
 )
 
 const (
-	targetDevicesn     = "1CZ151008W"
-	targetWorkstation  = "4F001"
-	targetAssetMAC     = "B0:22:7A:2E:4A:4F" // 大写冒号, sys_device_mac_address 归一化后格式
-	targetUserHint     = "程步启"
-	targetAssetIP      = "10.62.8.1"
+	targetDevicesn    = "1CZ151008W"
+	targetWorkstation = "4F001"
+	targetAssetMAC    = "B0:22:7A:2E:4A:4F" // 大写冒号, sys_device_mac_address 归一化后格式
+	targetUserHint    = "程步启"
+	targetAssetIP     = "10.62.8.1"
 )
 
 func main() {
@@ -72,17 +73,17 @@ func main() {
 
 	section("1. ops_asset (declared 端)", func() {
 		type Row struct {
-			ID            string
-			DeviceSN      string
-			DeviceName    *string
-			MachineIP     *string
-			MAC1          *string
-			MAC2          *string
-			UserID        *string
-			NowUserName   *string
-			UserName      *string
-			DeptName      *string
-			Status        int
+			ID          string
+			DeviceSN    string
+			DeviceName  *string
+			MachineIP   *string
+			MAC1        *string
+			MAC2        *string
+			UserID      *string
+			NowUserName *string
+			UserName    *string
+			DeptName    *string
+			Status      int
 		}
 		var rows []Row
 		g.Raw(`
@@ -117,10 +118,10 @@ func main() {
 
 	section("2. sys_workstation (工位所属人员)", func() {
 		type Row struct {
-			ID             string
+			ID              string
 			WorkstationName string
-			UserID         *string
-			UserName       *string
+			UserID          *string
+			UserName        *string
 		}
 		var rows []Row
 		g.Raw(`
@@ -267,11 +268,11 @@ func main() {
 
 	section("7. reconciliation_physical_chain VIEW (整链路集成)", func() {
 		type Row struct {
-			AssetID         string
-			AssetCode       string
-			MacJoin         *string
-			WorkstationID   *string
-			PhysicalUserID  *string
+			AssetID          string
+			AssetCode        string
+			MacJoin          *string
+			WorkstationID    *string
+			PhysicalUserID   *string
 			PhysicalUsername *string
 		}
 		var rows []Row
@@ -299,16 +300,16 @@ func main() {
 
 	section("8. reconciliation_normalized MV (detection 引擎输入)", func() {
 		type Row struct {
-			AssetID         string
-			AssetCode       string
-			AssetIP         *string
-			MacJoin         *string
-			AssetUserID     *string
-			AssetUsername   *string
-			WorkstationID   *string
-			PhysicalUserID  *string
+			AssetID          string
+			AssetCode        string
+			AssetIP          *string
+			MacJoin          *string
+			AssetUserID      *string
+			AssetUsername    *string
+			WorkstationID    *string
+			PhysicalUserID   *string
 			PhysicalUsername *string
-			AdUsername      *string
+			AdUsername       *string
 		}
 		var rows []Row
 		g.Raw(`
@@ -365,11 +366,11 @@ func main() {
 
 	section("9. sys_data_reconciliation (detection 引擎输出, 最近 24h)", func() {
 		type Row struct {
-			AssetID         string
-			ConflictType    string
-			Severity        string
-			DetectedAt      time.Time
-			AssetUsername   *string
+			AssetID          string
+			ConflictType     string
+			Severity         string
+			DetectedAt       time.Time
+			AssetUsername    *string
 			PhysicalUsername *string
 		}
 		var rows []Row

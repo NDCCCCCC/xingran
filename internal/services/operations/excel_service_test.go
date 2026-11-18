@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/glebarez/sqlite"
+	"github.com/stretchr/testify/assert"
 	"gorm.io/gorm"
 )
 
@@ -105,7 +105,7 @@ func TestIsEmptyValue(t *testing.T) {
 		{"nil pointer", (*string)(nil), true},
 		{"empty pointer", ptr(""), true},
 		{"non-empty pointer", ptr("x"), false},
-		{"int zero", int(0), false},  // 0 不是"空"
+		{"int zero", int(0), false}, // 0 不是"空"
 		{"int non-zero", int(1), false},
 	}
 	for _, c := range cases {

@@ -70,21 +70,23 @@ func (d *defaultNonceStorage) CheckAndStore(nonce string, timestamp int64) bool 
 
 // RequestEncryptor 请求加密器
 type RequestEncryptor struct {
-	sm2PrivateKey  *sm2.PrivateKey // SM2 私钥（用于解密 SM4 密钥）
-	sm2PublicKey   *sm2.PublicKey  // SM2 公钥（用于加密响应，可选）
-	nonceStorage   NonceStorage    // nonce存储（防止重放攻击）
-	replayWindowSec int            // 时间戳容差(秒),±N
+	sm2PrivateKey   *sm2.PrivateKey // SM2 私钥（用于解密 SM4 密钥）
+	sm2PublicKey    *sm2.PublicKey  // SM2 公钥（用于加密响应，可选）
+	nonceStorage    NonceStorage    // nonce存储（防止重放攻击）
+	replayWindowSec int             // 时间戳容差(秒),±N
 }
 
 // NewRequestEncryptor 创建请求加密器
 // 需要传入 SM2 密钥对，用于加密/解密 SM4 密钥
-//  默认使用 DefaultReplayWindowSec (60s) 作为时间戳容差。
+//
+//	默认使用 DefaultReplayWindowSec (60s) 作为时间戳容差。
+//
 // 如需自定义,使用 NewRequestEncryptorWithConfig 或 SetReplayWindowSec。
 func NewRequestEncryptor(privateKey *sm2.PrivateKey, publicKey *sm2.PublicKey) *RequestEncryptor {
 	re := &RequestEncryptor{
-		sm2PrivateKey:  privateKey,
-		sm2PublicKey:   publicKey,
-		nonceStorage:   NewDefaultNonceStorage(),
+		sm2PrivateKey:   privateKey,
+		sm2PublicKey:    publicKey,
+		nonceStorage:    NewDefaultNonceStorage(),
 		replayWindowSec: DefaultReplayWindowSec,
 	}
 	return re

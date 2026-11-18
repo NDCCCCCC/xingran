@@ -8,9 +8,9 @@ import (
 	"github.com/xingran-next/xingran-go-backend/internal/core"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/internal/services/addomain"
+	"github.com/xingran-next/xingran-go-backend/pkg/constants"
 	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"github.com/xingran-next/xingran-go-backend/pkg/response"
-	"github.com/xingran-next/xingran-go-backend/pkg/constants"
 	"gorm.io/gorm"
 )
 

@@ -34,9 +34,9 @@ func NewADUserSyncHandler(core *core.Core) *ADUserSyncHandler {
 
 // BatchSyncUsersRequest 批量同步用户请求
 type BatchSyncUsersRequest struct {
-	ConfigID      string   `json:"configId" binding:"required"`        // AD配置ID
-	UserDNs       []string `json:"userDns" binding:"required,min=1"`  // 用户DN列表
-	DefaultRoleID string   `json:"defaultRoleId"`                     // 默认角色ID（可选）
+	ConfigID      string   `json:"configId" binding:"required"`      // AD配置ID
+	UserDNs       []string `json:"userDns" binding:"required,min=1"` // 用户DN列表
+	DefaultRoleID string   `json:"defaultRoleId"`                    // 默认角色ID（可选）
 }
 
 // getADUsersByDNs 根据DN列表从数据库获取AD用户详细信息

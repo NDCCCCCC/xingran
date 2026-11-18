@@ -6,7 +6,8 @@
 // wire-shark test in /tmp/snmp_test2.go), but gosnmp's sendOneRequest discards
 // the response. This is a known Windows loopback limitation, not a code bug.
 // → Fall back to pure-function coverage + error-path coverage; network methods
-//   covered by error-path (connect to closed port, timeout).
+//
+//	covered by error-path (connect to closed port, timeout).
 //
 // D-78-06: fake server in _test.go, zero BER hand-writing.
 // D-78-04c: closeLocked nil-Conn quirk verdict pending; handled defensively.
@@ -32,13 +33,13 @@ import (
 // TestSN78_Probe_GetRoundTrip is the UDP probe experiment.
 //
 // CONCLUSION B RECORDED (2026-08-27):
-// - Fake server receives requests (RequestCount increments correctly)
-// - Fake server sends responses (verified by manual wire-test in /tmp/snmp_test2.go)
-// - gosnmp sendOneRequest discards responses: client sees "request timeout (after 1 retries)"
-// - Root cause: gosnmp v1.35.0's sendOneRequest uses Conn.Write() on a connected UDP
-//   socket; when server sends back from a DIFFERENT port, the ICMP error "port unreachable"
-//   is generated but not handled, causing the response to be silently dropped on Windows loopback.
-// - All further SNMP network tests use error-path coverage (closed-port timeouts, drop behavior).
+//   - Fake server receives requests (RequestCount increments correctly)
+//   - Fake server sends responses (verified by manual wire-test in /tmp/snmp_test2.go)
+//   - gosnmp sendOneRequest discards responses: client sees "request timeout (after 1 retries)"
+//   - Root cause: gosnmp v1.35.0's sendOneRequest uses Conn.Write() on a connected UDP
+//     socket; when server sends back from a DIFFERENT port, the ICMP error "port unreachable"
+//     is generated but not handled, causing the response to be silently dropped on Windows loopback.
+//   - All further SNMP network tests use error-path coverage (closed-port timeouts, drop behavior).
 func TestSN78_Probe_GetRoundTrip(t *testing.T) {
 	fakeTable := []gosnmp.SnmpPDU{
 		{Name: "1.3.6.1.2.1.1.1.0", Type: gosnmp.OctetString, Value: []byte("Huawei VRP dummy, Huawei S5700")},
@@ -488,8 +489,8 @@ func TestSN78_ParseSNMPValue_Table(t *testing.T) {
 			},
 		},
 		{
-			name:  "ObjectIdentifier",
-			pdu:   gosnmp.SnmpPDU{Name: "1.0", Type: gosnmp.ObjectIdentifier, Value: "1.3.6.1"},
+			name: "ObjectIdentifier",
+			pdu:  gosnmp.SnmpPDU{Name: "1.0", Type: gosnmp.ObjectIdentifier, Value: "1.3.6.1"},
 			check: func(t *testing.T, v any) {
 				if v != "1.3.6.1" {
 					t.Errorf("ObjectIdentifier = %v, want 1.3.6.1", v)
@@ -694,12 +695,12 @@ func TestSN78_ExtractByPattern_Table(t *testing.T) {
 		// "S5700", the Huawei S-series loop checks contains("S5700", "S[0-9]{4}") which
 		// is FALSE (literal match), so the function returns "". This is the actual
 		// behavior. The test cases below reflect the real output.
-		{"pattern_in_descr_literal", "S5700", "Huawei S5700-28P-LI-AC", ""},  // Huawei S-loop doesn't match literal
+		{"pattern_in_descr_literal", "S5700", "Huawei S5700-28P-LI-AC", ""}, // Huawei S-loop doesn't match literal
 		{"RG_S_in_descr", "RG-S", "Ruijie RG-S5750-28GT", "RG-S5750-28GT"},  // RG-S is a literal in the descr
-		{"USG_in_descr", "USG", "Huawei USG6000V2", "USG6000"},  // USG is a literal
-		{"MSR_in_descr", "MSR", "H3C MSR3640", "MSR3640"},  // MSR is a literal
-		{"RSR_in_descr", "RSR", "Ruijie RSR20-04", "RSR20-04"},  // RSR is a literal
-		{"RG_AP_in_descr", "RG-AP", "Ruijie RG-AP640", "RG-AP640"},  // RG-AP is a literal
+		{"USG_in_descr", "USG", "Huawei USG6000V2", "USG6000"},              // USG is a literal
+		{"MSR_in_descr", "MSR", "H3C MSR3640", "MSR3640"},                   // MSR is a literal
+		{"RSR_in_descr", "RSR", "Ruijie RSR20-04", "RSR20-04"},              // RSR is a literal
+		{"RG_AP_in_descr", "RG-AP", "Ruijie RG-AP640", "RG-AP640"},          // RG-AP is a literal
 		{"no_match", "NOTFOUND", "Some device description", ""},
 		{"empty_descr", "S5700", "", ""},
 	}
@@ -798,8 +799,8 @@ func TestSN78_NextIP(t *testing.T) {
 	}{
 		{"127.0.0.1", "127.0.0.2"},
 		{"127.0.0.2", "127.0.0.3"},
-		{"127.0.0.255", "127.0.1.0"},  // rollover
-		{"127.0.255.255", "127.1.0.0"},  // boundary (not 128.0.0.0 - net.IP wraps at byte boundaries)
+		{"127.0.0.255", "127.0.1.0"},   // rollover
+		{"127.0.255.255", "127.1.0.0"}, // boundary (not 128.0.0.0 - net.IP wraps at byte boundaries)
 		{"255.255.255.255", ""},        // null (Q-8 fix)
 	}
 
@@ -830,7 +831,7 @@ func TestSN78_ConvertPortToInt_Table(t *testing.T) {
 		{"22", 22, false},
 		{"161", 161, false},
 		{"65535", 65535, false},
-		{"0", 0, true},   // out of range
+		{"0", 0, true}, // out of range
 		{"65536", 0, true},
 		{"-1", 0, true},
 		{"abc", 0, true},

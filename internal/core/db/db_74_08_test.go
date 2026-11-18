@@ -80,7 +80,7 @@ func TestFilterLogger_TraceBranches(t *testing.T) {
 
 	// 慢查询成功 → WARN 路径
 	slow := NewFilterLogger(LogFilterConfig{
-		FilterTypes:  map[LogType]bool{LogTypeSQL: true, LogTypeError: false},
+		FilterTypes:   map[LogType]bool{LogTypeSQL: true, LogTypeError: false},
 		SlowThreshold: 1,
 	})
 	emit, msg, rows := slow.slowQueryLog(time.Now().Add(-50*time.Millisecond), fc)
@@ -109,7 +109,7 @@ func TestFilterLogger_TraceBranches(t *testing.T) {
 
 	// FilterTypes[SQL]=false + 快查询 → 走保留分支(尾部)
 	keep := NewFilterLogger(LogFilterConfig{
-		FilterTypes:  map[LogType]bool{LogTypeSQL: false},
+		FilterTypes:   map[LogType]bool{LogTypeSQL: false},
 		SlowThreshold: 100000,
 	})
 	assert.NotPanics(t, func() {

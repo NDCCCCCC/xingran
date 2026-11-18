@@ -7,11 +7,10 @@ import (
 	"context"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/glebarez/sqlite"
+	"github.com/stretchr/testify/assert"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
-
 	// 使用纯 Go 实现的 SQLite 驱动
 )
 

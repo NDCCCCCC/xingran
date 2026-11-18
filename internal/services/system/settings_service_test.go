@@ -102,10 +102,10 @@ func TestSettingsService_UpdateUserPreferences_Create(t *testing.T) {
 	svc := NewSettingsService(db)
 
 	req := &UserPreferences{
-		Theme:        "dark",
-		ThemeStyle:   "minimal",
-		PageSize:     20,
-		Language:     "en-US",
+		Theme:      "dark",
+		ThemeStyle: "minimal",
+		PageSize:   20,
+		Language:   "en-US",
 	}
 	require.NoError(t, svc.UpdateUserPreferences(context.Background(), "user-1", req))
 

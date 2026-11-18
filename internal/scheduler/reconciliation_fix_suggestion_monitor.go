@@ -3,12 +3,12 @@ package scheduler
 import (
 	"context"
 
-	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"github.com/xingran-next/xingran-go-backend/internal/services"
 	"github.com/xingran-next/xingran-go-backend/internal/services/asset"
 	"github.com/xingran-next/xingran-go-backend/internal/services/system"
 	"github.com/xingran-next/xingran-go-backend/internal/websocket"
 	"github.com/xingran-next/xingran-go-backend/pkg/cache"
+	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"gorm.io/gorm"
 )
 
@@ -22,12 +22,14 @@ import (
 //     sys_reconciliation_fix_suggestion 写锁(W-7 修订)
 //
 // 调用链:
-//  cron tick → RegisterReconciliationTasks switch "monitorFixSuggestionMisFix"
-//    → fixSuggestionMonitor.CheckAndNotify(ctx)
-//    → FixSuggestionService.Stats(ctx, 7) + 阈值判定 + 1h 节流 + WS + SysNotice + operlog
+//
+//	cron tick → RegisterReconciliationTasks switch "monitorFixSuggestionMisFix"
+//	  → fixSuggestionMonitor.CheckAndNotify(ctx)
+//	  → FixSuggestionService.Stats(ctx, 7) + 阈值判定 + 1h 节流 + WS + SysNotice + operlog
 //
 // 软失败:CheckAndNotify 内部所有错误仅 applogger.Warnf,不返回 error(cron exit 0)
-//   — 监控告警失败不应阻塞对账主流程。
+//
+//	— 监控告警失败不应阻塞对账主流程。
 func RegisterFixSuggestionMisFixMonitor(s *Scheduler, db *gorm.DB, cacheSvc cache.Cache, wsSvc *websocket.NoticeHub, noticeSvc *services.NoticeService) {
 	_ = cacheSvc // 暂未使用(预留:若 monitor 需要失效 cache 可注入)
 

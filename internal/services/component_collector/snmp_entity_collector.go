@@ -13,10 +13,11 @@ import (
 // (RESEARCH Pitfall 1).
 //
 // Class enum per RFC 6933 + vendor quirks (RQ-001):
-//   3=chassis, 5=module(Huawei slot placeholder), 6=port(Ruijie power
-//   workaround per Open Question 5), 7=fan, 8=powerSupply(Ruijie
-//   temprature* noise also sits here — D-11 filter), 9=module(Huawei fan
-//   table — Pitfall 2 dual-class dedup).
+//
+//	3=chassis, 5=module(Huawei slot placeholder), 6=port(Ruijie power
+//	workaround per Open Question 5), 7=fan, 8=powerSupply(Ruijie
+//	temprature* noise also sits here — D-11 filter), 9=module(Huawei fan
+//	table — Pitfall 2 dual-class dedup).
 var snmpEntityClasses = []int{3, 5, 6, 7, 8, 9}
 
 // EntityCollector implements the SNMP ENTITY-MIB single-GET path per

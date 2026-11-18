@@ -17,16 +17,17 @@ import (
 //   - AABBCCDDEEFF      (12 字符无分隔符)                -> AA:BB:CC:DD:EE:FF
 //
 // 三步策略:
-//   1) 剥分隔符(. : -) → 12 字符 hex(只对 12/14/17 字符的 hex 字符串)
-//   2) UPPER
-//   3) 重新插入冒号
+//  1. 剥分隔符(. : -) → 12 字符 hex(只对 12/14/17 字符的 hex 字符串)
+//  2. UPPER
+//  3. 重新插入冒号
 //
 // 兜底: 任何剥完分隔符后不是 12 hex 字符的(如 00:00:00:00:00:00x / 全 0 / 注释行)
 // 不动,保留原值(warn 日志 + 后续人工 review)。
 //
 // 修复历史:
-//   2026-07-01 v1: 初版只处理 length=12/17,漏掉 14 字符 hyphenated 格式(706 行)
-//   2026-07-01 v2: 重写为"剥分隔符→UPPER→插冒号",覆盖 12/14/17 三种 hex 长度
+//
+//	2026-07-01 v1: 初版只处理 length=12/17,漏掉 14 字符 hyphenated 格式(706 行)
+//	2026-07-01 v2: 重写为"剥分隔符→UPPER→插冒号",覆盖 12/14/17 三种 hex 长度
 func Migrate184NormalizeMACAddressToUppercase(db *gorm.DB) error {
 	log.Println("Running migration 184 (v2): 统一 sys_device_mac_address 大写+冒号 (覆盖 12/14/17 字符)")
 

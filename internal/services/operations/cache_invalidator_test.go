@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/xingran-next/xingran-go-backend/internal/services/system"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/xingran-next/xingran-go-backend/internal/services/system"
 )
 
 // MockCacheProvider 模拟缓存提供者

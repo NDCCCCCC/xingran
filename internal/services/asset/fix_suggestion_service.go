@@ -8,13 +8,13 @@ import (
 	"strconv"
 	"time"
 
-	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
-	"github.com/xingran-next/xingran-go-backend/pkg/cache"
-	"github.com/xingran-next/xingran-go-backend/pkg/query"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/internal/services/base"
 	"github.com/xingran-next/xingran-go-backend/internal/services/system"
 	"github.com/xingran-next/xingran-go-backend/internal/websocket"
+	"github.com/xingran-next/xingran-go-backend/pkg/cache"
+	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
+	"github.com/xingran-next/xingran-go-backend/pkg/query"
 	"gorm.io/gorm"
 )
 
@@ -70,9 +70,9 @@ type FixSuggestionListItem struct {
 
 // FixSuggestionDetail 修复建议详情(包含异常元数据 + 同 exception_id 历史)
 type FixSuggestionDetail struct {
-	Suggestion FixSuggestionListItem    `json:"suggestion"`
+	Suggestion FixSuggestionListItem         `json:"suggestion"`
 	Exception  *models.SysDataReconciliation `json:"exception,omitempty"`
-	History    []FixSuggestionListItem  `json:"history"`
+	History    []FixSuggestionListItem       `json:"history"`
 }
 
 // TrendPoint 趋势点(Stats 用)
@@ -150,7 +150,9 @@ func NewFixSuggestionService(db *gorm.DB, c cache.Cache, configSvc system.Config
 // userJoinOn 返回方言感知的 sys_user JOIN 子句。
 //
 // PG: sys_user.id 是 uuid 而 suggested_user_id 是 varchar,必须 ::text 强转
-//     (PG 强类型不会自动 cast,SQLSTATE 42883)。
+//
+//	(PG 强类型不会自动 cast,SQLSTATE 42883)。
+//
 // SQLite: 不支持 `::` cast(unrecognized token ":");两列均为文本,直接等值比较。
 func (s *fixSuggestionServiceImpl) userJoinOn() string {
 	if s.db.Dialector.Name() == "postgres" {
@@ -580,8 +582,9 @@ func (s *fixSuggestionServiceImpl) rollbackWindowValue(now time.Time) interface{
 // Apply 应用建议(accepted → applied,事务内 5 步)
 //
 // B-3 关键修复:必须同步写 sys_data_reconciliation.resolved_at = NOW(),
-//              否则下次 DetectLayer3 cron 重新检出该 Type B,触发新一轮 fix_suggestion,
-//              操作员看到 "应用 + 新待处理" 重复对(RESEARCH.md §13.5 隐藏陷阱)
+//
+//	否则下次 DetectLayer3 cron 重新检出该 Type B,触发新一轮 fix_suggestion,
+//	操作员看到 "应用 + 新待处理" 重复对(RESEARCH.md §13.5 隐藏陷阱)
 func (s *fixSuggestionServiceImpl) Apply(ctx context.Context, id, userID string) error {
 	if id == "" {
 		return errors.New("建议ID不能为空")
@@ -666,16 +669,16 @@ func (s *fixSuggestionServiceImpl) Apply(ctx context.Context, id, userID string)
 // Rollback 回滚应用(applied → rolled_back,7d 窗口内)
 //
 // 校验顺序加固(46-02 / D-C1+D-C2+D-C3):
-//   1) id / userID 非空
-//   2) len(reason) >= 10(D-C3 审计:回滚必须填原因)
-//   3) 读 applied 建议(WHERE fix_status='applied' AND deleted_at IS NULL)→ 防御性检查
-//      3a) sugg.RollbackWindowUntil 非 nil
-//      3b) time.Now().Before(*sugg.RollbackWindowUntil)(7d 内,Go-side 防御性 + DB-side 主判定)
-//   4) sugg.PreFixUserID 非 nil(防止数据被外部修改为 NULL 致回滚静默写空值)
-//   5) DB-side 主判定:SELECT (rollback_window_until > NOW()) — 避免 app clock 漂移
-//   6) 反查 exception → asset_id → UPDATE ops_asset.user_id = pre_fix_user_id(D-C1)
-//   7) UPDATE sys_reconciliation_fix_suggestion SET fix_status='rolled_back' + 时间戳
-//   8) UPDATE sys_data_reconciliation SET resolved_at = NULL(让 DetectLayer3 重新检出)
+//  1. id / userID 非空
+//  2. len(reason) >= 10(D-C3 审计:回滚必须填原因)
+//  3. 读 applied 建议(WHERE fix_status='applied' AND deleted_at IS NULL)→ 防御性检查
+//     3a) sugg.RollbackWindowUntil 非 nil
+//     3b) time.Now().Before(*sugg.RollbackWindowUntil)(7d 内,Go-side 防御性 + DB-side 主判定)
+//  4. sugg.PreFixUserID 非 nil(防止数据被外部修改为 NULL 致回滚静默写空值)
+//  5. DB-side 主判定:SELECT (rollback_window_until > NOW()) — 避免 app clock 漂移
+//  6. 反查 exception → asset_id → UPDATE ops_asset.user_id = pre_fix_user_id(D-C1)
+//  7. UPDATE sys_reconciliation_fix_suggestion SET fix_status='rolled_back' + 时间戳
+//  8. UPDATE sys_data_reconciliation SET resolved_at = NULL(让 DetectLayer3 重新检出)
 func (s *fixSuggestionServiceImpl) Rollback(ctx context.Context, id, userID, reason string) error {
 	if id == "" {
 		return errors.New("建议ID不能为空")

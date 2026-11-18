@@ -8,9 +8,9 @@ import (
 	"os"
 	"strconv"
 
+	_ "github.com/lib/pq"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
-	_ "github.com/lib/pq"
 )
 
 func getEnv(key, defaultVal string) string {

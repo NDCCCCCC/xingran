@@ -97,8 +97,8 @@ func TestInterfaceName(t *testing.T) {
 // TestInterfaceName_PrefixOrder 验证前缀匹配顺序(twe 早于 tw,et 早于 te)。
 func TestInterfaceName_PrefixOrder(t *testing.T) {
 	cases := map[string]string{
-		"twe1/1": "TWE1/1",
-		"tw1/1":  "TWE1/1",
+		"twe1/1":  "TWE1/1",
+		"tw1/1":   "TWE1/1",
 		"te1/0/1": "XGE1/0/1",
 	}
 	for in, want := range cases {

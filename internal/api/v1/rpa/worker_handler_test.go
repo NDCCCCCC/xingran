@@ -26,15 +26,15 @@ var _ rpa.WorkerService = (*mockWorkerService)(nil)
 type mockWorkerService struct {
 	rpa.WorkerService
 
-	GetByIDFunc            func(ctx context.Context, id string) (*rpamodels.Worker, error)
-	ListFunc               func(ctx context.Context, params *rpa.WorkerListParams) (*rpa.PageResult, error)
-	StatisticsFunc         func(ctx context.Context) (*rpa.WorkerStatisticsResult, error)
-	RegisterFunc           func(ctx context.Context, req *rpa.WorkerRegisterRequest) (*rpamodels.Worker, error)
-	HeartbeatFunc          func(ctx context.Context, req *rpa.WorkerHeartbeatRequest) error
-	OfflineFunc            func(ctx context.Context, id string) error
-	GetAvailableFunc       func(ctx context.Context) ([]rpamodels.Worker, error)
+	GetByIDFunc             func(ctx context.Context, id string) (*rpamodels.Worker, error)
+	ListFunc                func(ctx context.Context, params *rpa.WorkerListParams) (*rpa.PageResult, error)
+	StatisticsFunc          func(ctx context.Context) (*rpa.WorkerStatisticsResult, error)
+	RegisterFunc            func(ctx context.Context, req *rpa.WorkerRegisterRequest) (*rpamodels.Worker, error)
+	HeartbeatFunc           func(ctx context.Context, req *rpa.WorkerHeartbeatRequest) error
+	OfflineFunc             func(ctx context.Context, id string) error
+	GetAvailableFunc        func(ctx context.Context) ([]rpamodels.Worker, error)
 	CheckOfflineWorkersFunc func(ctx context.Context, timeoutSeconds int64) error
-	ProgressFunc           func(ctx context.Context, req *rpa.WorkerProgressRequest) error
+	ProgressFunc            func(ctx context.Context, req *rpa.WorkerProgressRequest) error
 }
 
 func (m *mockWorkerService) GetByID(ctx context.Context, id string) (*rpamodels.Worker, error) {

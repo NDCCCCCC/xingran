@@ -13,17 +13,20 @@
 //   - mac_purge_meaningless:保留 vlan_changed;本工具严格按用户原话,VLAN-only 变化删除
 //
 // 用法:
-//   go run ./scripts/ops/mac_merge_real                      # 真跑(自动备份)
-//   go run ./scripts/ops/mac_merge_real -dry-run             # 只统计,不写 DB
-//   go run ./scripts/ops/mac_merge_real -dry-run -verbose    # 详细统计
+//
+//	go run ./scripts/ops/mac_merge_real                      # 真跑(自动备份)
+//	go run ./scripts/ops/mac_merge_real -dry-run             # 只统计,不写 DB
+//	go run ./scripts/ops/mac_merge_real -dry-run -verbose    # 详细统计
 //
 // 备份:
-//   执行前自动创建 sys_device_mac_history_merge_real_backup_YYYYMMDD_HHMMSS,
-//   包含所有当前行,可用于回滚。
+//
+//	执行前自动创建 sys_device_mac_history_merge_real_backup_YYYYMMDD_HHMMSS,
+//	包含所有当前行,可用于回滚。
 //
 // 回滚:
-//   INSERT INTO sys_device_mac_history SELECT * FROM <backup_table>;
-//   注意:备份表不含分区(普通表),需手工处理 first_seen 落对应分区。
+//
+//	INSERT INTO sys_device_mac_history SELECT * FROM <backup_table>;
+//	注意:备份表不含分区(普通表),需手工处理 first_seen 落对应分区。
 package main
 
 import (

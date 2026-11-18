@@ -14,14 +14,14 @@ import (
 )
 
 type MenuPathInfo struct {
-	ID          string
-	MenuName    string
-	ParentID    *string
-	Path        string
-	Component   string
-	MenuType    string
-	ParentPath  string
-	ParentName  string
+	ID         string
+	MenuName   string
+	ParentID   *string
+	Path       string
+	Component  string
+	MenuType   string
+	ParentPath string
+	ParentName string
 }
 
 func main() {

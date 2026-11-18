@@ -57,29 +57,29 @@ func main() {
 		{
 			RuleName: "分公司本部·部门经理→分管副总", Priority: 20, Enabled: true,
 			SubjectType: models.ManagerSubjectDeptLeader, SubjectOrgID: strPtr(hqBranch.ID),
-			ManagerType: models.ManagerSourceOrgLeader, // 分公司本部机构节点部门的负责人 = 分管副总
-			ManagerOrgID: nil, // 自身机构（分公司本部）
+			ManagerType:  models.ManagerSourceOrgLeader, // 分公司本部机构节点部门的负责人 = 分管副总
+			ManagerOrgID: nil,                           // 自身机构（分公司本部）
 			ScopeType:    models.ManagerScopeAll,
 		},
 		{
 			RuleName: "各机构·部门经理→本机构一把手", Priority: 30, Enabled: true,
-			SubjectType: models.ManagerSubjectDeptLeader,
-			ManagerType: models.ManagerSourceOrgLeader, // 本机构节点部门的负责人
-			ManagerOrgID: nil, // 自身机构
+			SubjectType:  models.ManagerSubjectDeptLeader,
+			ManagerType:  models.ManagerSourceOrgLeader, // 本机构节点部门的负责人
+			ManagerOrgID: nil,                           // 自身机构
 			ScopeType:    models.ManagerScopeOrgTree, ScopeID: strPtr(hqOrg.ID),
 		},
 		{
 			RuleName: "各机构·一把手→分公司总经理", Priority: 35, Enabled: true,
-			SubjectType: models.ManagerSubjectDeptLeader, // 主体=部门负责人（机构节点部门的负责人即一把手，不依赖岗位）
-			ManagerType: models.ManagerSourceOrgLeader, // 湖北分公司机构节点部门的负责人 = 分公司总经理
-			ManagerOrgID: strPtr(hqOrg.ID), // 指定机构：湖北分公司
+			SubjectType:  models.ManagerSubjectDeptLeader, // 主体=部门负责人（机构节点部门的负责人即一把手，不依赖岗位）
+			ManagerType:  models.ManagerSourceOrgLeader,   // 湖北分公司机构节点部门的负责人 = 分公司总经理
+			ManagerOrgID: strPtr(hqOrg.ID),                // 指定机构：湖北分公司
 			ScopeType:    models.ManagerScopeOrgTree, ScopeID: strPtr(hqOrg.ID),
 		},
 		{
 			RuleName: "各机构·员工→本机构一把手", Priority: 40, Enabled: true,
-			SubjectType: models.ManagerSubjectEmployee,
-			ManagerType: models.ManagerSourceOrgLeader, // 本机构节点部门的负责人
-			ManagerOrgID: nil, // 自身机构
+			SubjectType:  models.ManagerSubjectEmployee,
+			ManagerType:  models.ManagerSourceOrgLeader, // 本机构节点部门的负责人
+			ManagerOrgID: nil,                           // 自身机构
 			ScopeType:    models.ManagerScopeAll,
 		},
 	}

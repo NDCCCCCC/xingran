@@ -39,20 +39,20 @@ const (
 
 // Entity403Fixture 持有两部门各一套完整归属链数据。
 type Entity403Fixture struct {
-	DB                                                        *gorm.DB
-	BuildingA, BuildingB                                      string
-	FloorA, FloorB                                            string
-	WSA, WSB                                                  string
-	RoomA, RoomB                                              string
-	AssetA, AssetB                                            string
-	LineA, LineB, LineCross, LineBroken                       string
-	DeviceA, DeviceB, DeviceBroken                            string
-	WDeviceA, WDeviceB                                        string
-	AssetSvc                                                  AssetService
-	RoomSvc                                                   ServerRoomService
-	LineSvc                                                   DedicatedLineService
-	DeviceSvc                                                 RoomDeviceService
-	WDeviceSvc                                                WorkstationDeviceService
+	DB                                  *gorm.DB
+	BuildingA, BuildingB                string
+	FloorA, FloorB                      string
+	WSA, WSB                            string
+	RoomA, RoomB                        string
+	AssetA, AssetB                      string
+	LineA, LineB, LineCross, LineBroken string
+	DeviceA, DeviceB, DeviceBroken      string
+	WDeviceA, WDeviceB                  string
+	AssetSvc                            AssetService
+	RoomSvc                             ServerRoomService
+	LineSvc                             DedicatedLineService
+	DeviceSvc                           RoomDeviceService
+	WDeviceSvc                          WorkstationDeviceService
 }
 
 func entity403Ctx(r datascope.ScopeResult) context.Context {

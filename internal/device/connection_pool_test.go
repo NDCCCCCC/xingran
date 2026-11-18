@@ -172,14 +172,16 @@ func TestPooledConnection_GetConnection_InternalRefCount_Pattern(t *testing.T) {
 //
 // 旧错误模式 (pre-F-14 残留,在 config_execution_service.go / device_info_collection_service.go
 // 的 3 处出现):
-//   conn, _ := pool.GetConnection(ctx, deviceID)  // refCount=1
-//   conn.Acquire()                                // +1 → refCount=2
-//   defer conn.Release()                          // -1 → refCount=1, mu.Unlock
-//   // 失败: refCount 停在 1,IsIdle()=false,cleanup 永不清除 → pool 满
+//
+//	conn, _ := pool.GetConnection(ctx, deviceID)  // refCount=1
+//	conn.Acquire()                                // +1 → refCount=2
+//	defer conn.Release()                          // -1 → refCount=1, mu.Unlock
+//	// 失败: refCount 停在 1,IsIdle()=false,cleanup 永不清除 → pool 满
 //
 // 正确模式 (F-14 协议):
-//   conn, _ := pool.GetConnection(ctx, deviceID)  // refCount=1
-//   defer conn.ReleaseRef()                       // -1 → refCount=0
+//
+//	conn, _ := pool.GetConnection(ctx, deviceID)  // refCount=1
+//	defer conn.ReleaseRef()                       // -1 → refCount=0
 //
 // 本测试直接对 refCount 字段做算术(绕开 Acquire/Release 的 mu.Lock 副作用,
 // 因为 wrapper=nil 时 Acquire 会早退),断言两种模式的最终 refCount 状态:
@@ -194,7 +196,7 @@ func TestPooledConnection_AntiPattern_AcquireAfterGetConnection(t *testing.T) {
 		deviceID: "dev-wrong",
 		mu:       &sync.Mutex{},
 	}
-	atomic.AddInt32(&wrong.refCount, 1) // 模拟 Acquire 的 +1
+	atomic.AddInt32(&wrong.refCount, 1)  // 模拟 Acquire 的 +1
 	atomic.AddInt32(&wrong.refCount, -1) // 模拟 Release 的 -1
 	if got := atomic.LoadInt32(&wrong.refCount); got != 1 {
 		t.Fatalf("错误模式算术后 refCount 应停在 1, 实际 %d", got)
@@ -226,6 +228,7 @@ func TestPooledConnection_AntiPattern_AcquireAfterGetConnection(t *testing.T) {
 // (2026-07-08 连接池满修复):
 //   - 池满时 GetConnection 调 oldestIdleConnectionLocked 找一条 idle 连接淘汰腾位。
 //   - 必须跳过活跃连接 (refCount>0), 只在 idle (refCount<=0) 中选 lastUsed 最老的。
+//
 // 不依赖真实 SSH, 直接构造 connections map 测选择语义。
 func TestOldestIdleConnectionLocked_PicksOldestIdle_SkipsActive(t *testing.T) {
 	base := time.Now()

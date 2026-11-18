@@ -129,6 +129,7 @@ var actionPermissionFTypeSeedCodes = []string{
 	"network:discovery:delete",
 	"network:discovery:export",
 }
+
 // F_TYPE_SEED_END
 
 // actionPermissionSeeds 动作级权限种子表（第一批 65 条）。

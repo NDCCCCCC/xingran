@@ -45,19 +45,19 @@ type ListMappingsResponse struct {
 
 // CreateMappingRequest 创建映射请求
 type CreateMappingRequest struct {
-	ADConfigID  string                       `json:"adConfigId" binding:"required"`
-	OUDn        string                       `json:"ouDn" binding:"required"`
-	OUName      string                       `json:"ouName" binding:"required"`
-	ADGroupID   string                       `json:"adGroupId" binding:"required"`
-	SyncEnabled bool                         `json:"syncEnabled"`
-	CreatedBy   string                       `json:"createdBy,omitempty"`
+	ADConfigID  string `json:"adConfigId" binding:"required"`
+	OUDn        string `json:"ouDn" binding:"required"`
+	OUName      string `json:"ouName" binding:"required"`
+	ADGroupID   string `json:"adGroupId" binding:"required"`
+	SyncEnabled bool   `json:"syncEnabled"`
+	CreatedBy   string `json:"createdBy,omitempty"`
 }
 
 // UpdateMappingRequest 更新映射请求
 type UpdateMappingRequest struct {
-	SyncEnabled *bool                         `json:"syncEnabled"`
+	SyncEnabled *bool                        `json:"syncEnabled"`
 	Status      *models.OUGroupMappingStatus `json:"status"`
-	UpdatedBy   string                        `json:"updatedBy,omitempty"`
+	UpdatedBy   string                       `json:"updatedBy,omitempty"`
 }
 
 // ListMappings 查询映射列表

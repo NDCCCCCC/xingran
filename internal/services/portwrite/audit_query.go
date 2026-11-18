@@ -26,7 +26,7 @@ type AuditListRequest struct {
 	// StartTime/EndTime RFC3339 或 "2006-01-02 15:04:05"（可空）
 	StartTime *time.Time `json:"startTime,omitempty"`
 	EndTime   *time.Time `json:"endTime,omitempty"`
-	Current   int        `json:"current,omitempty"` // 默认 1
+	Current   int        `json:"current,omitempty"`  // 默认 1
 	PageSize  int        `json:"pageSize,omitempty"` // 默认 20，上限 100
 }
 

@@ -202,8 +202,8 @@ func TestWot8002_PureFuncs_ReplaceVariables(t *testing.T) {
 // TestWot8002_PureFuncs_GetWeekdayName 7 天全表驱动。
 func TestWot8002_PureFuncs_GetWeekdayName(t *testing.T) {
 	cases := []struct {
-		wd    time.Weekday
-		want  string
+		wd   time.Weekday
+		want string
 	}{
 		{time.Sunday, "周日"},
 		{time.Monday, "周一"},
@@ -284,11 +284,11 @@ func TestWot8002_AssignWorkOrderHandler_Branches(t *testing.T) {
 	require.NoError(t, db.Exec(`INSERT INTO sys_user (id, username, password) VALUES ('system-id', 'system', 'x')`).Error)
 
 	template := &models.PeriodicWorkOrderTemplate{
-		BaseModel:        models.BaseModel{ID: "tpl-8002"},
-		TemplateName:     "测试模板",
-		WorkOrderTitle:   "测试工单",
-		AssignType:       models.PeriodicAssignTypeManual,
-		AssignTargetID:   strPtr("assignee-1"),
+		BaseModel:      models.BaseModel{ID: "tpl-8002"},
+		TemplateName:   "测试模板",
+		WorkOrderTitle: "测试工单",
+		AssignType:     models.PeriodicAssignTypeManual,
+		AssignTargetID: strPtr("assignee-1"),
 	}
 	workOrder := &models.WorkOrder{}
 
@@ -377,11 +377,11 @@ func TestWot8002_SyncCreateUpdateJob_Create(t *testing.T) {
 
 	// 模板有 job_id=nil → create 分支
 	template := &models.PeriodicWorkOrderTemplate{
-		BaseModel:        models.BaseModel{ID: "tpl-new"},
-		TemplateName:     "新建任务模板",
-		WorkOrderTitle:   "工单-{date}",
-		CronExpression:   "0 0 8 * * *",
-		NotifyAssignee:   true,
+		BaseModel:      models.BaseModel{ID: "tpl-new"},
+		TemplateName:   "新建任务模板",
+		WorkOrderTitle: "工单-{date}",
+		CronExpression: "0 0 8 * * *",
+		NotifyAssignee: true,
 	}
 	require.NoError(t, db.Create(template).Error)
 
@@ -414,11 +414,11 @@ func TestWot8002_SyncCreateUpdateJob_Update(t *testing.T) {
 	require.NoError(t, db.Create(existingJob).Error)
 
 	template := &models.PeriodicWorkOrderTemplate{
-		BaseModel:        models.BaseModel{ID: "tpl-upd"},
-		TemplateName:     "更新任务模板",
-		WorkOrderTitle:   "工单-{date}",
-		CronExpression:   "0 0 9 * * *", // 表达式变更
-		JobID:            &existingJob.ID,
+		BaseModel:      models.BaseModel{ID: "tpl-upd"},
+		TemplateName:   "更新任务模板",
+		WorkOrderTitle: "工单-{date}",
+		CronExpression: "0 0 9 * * *", // 表达式变更
+		JobID:          &existingJob.ID,
 	}
 	require.NoError(t, db.Create(template).Error)
 

@@ -93,7 +93,7 @@ func isEmptyInterface(expr ast.Expr) bool {
 }
 
 // cacheImplFiles92 返回目录下 *_cache_impl.go 与 cache_impl.go 两个口径的并集
-//（network 的文件名为 cache_impl.go，不匹配 *_cache_impl.go 前缀通配）。
+// （network 的文件名为 cache_impl.go，不匹配 *_cache_impl.go 前缀通配）。
 func cacheImplFiles92(t *testing.T, dir string) []string {
 	t.Helper()
 	var files []string

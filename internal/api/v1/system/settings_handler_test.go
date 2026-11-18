@@ -115,7 +115,7 @@ func TestSettingsHandler_GetUserPreferences_Defaults(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 
 	var resp struct {
-		Code int `json:"code"`
+		Code int                    `json:"code"`
 		Data map[string]interface{} `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
@@ -145,11 +145,11 @@ func TestSettingsHandler_UpdateUserPreferences_Success(t *testing.T) {
 	h, db := newSettingsTestHandler(t, setupSettingsTestDB(t))
 
 	body := systemServices.UserPreferences{
-		Theme:        "dark",
-		ThemeStyle:   "minimal",
-		LayoutType:   "classic",
-		PageSize:     20,
-		Language:     "en-US",
+		Theme:      "dark",
+		ThemeStyle: "minimal",
+		LayoutType: "classic",
+		PageSize:   20,
+		Language:   "en-US",
 	}
 	w := invokeAuthHandler(t, "PUT", "/system/settings/preferences", body, nil, h.UpdateUserPreferences, "user-1")
 	assert.Equal(t, http.StatusOK, w.Code, "body=%s", w.Body.String())

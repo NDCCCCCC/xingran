@@ -216,7 +216,7 @@ func TestTaskService_Execute_Success(t *testing.T) {
 	ctx := context.Background()
 
 	created, err := svc.Create(ctx, &CreateTaskRequest{
-		Name:   "nav-task",
+		Name: "nav-task",
 		Script: []interface{}{
 			map[string]interface{}{"type": "navigate", "value": "http://erp.local/home"},
 			map[string]interface{}{"type": "fill", "selector": "#user", "value": "bob",
@@ -579,8 +579,8 @@ func TestErrorHandlingService_Fallback(t *testing.T) {
 	// HandleError fallback 策略集成
 	res2, err := svc.HandleError(ctx, &ErrorHandleRequest{
 		ExecutionID: "e1", Error: assert.AnError,
-		Config:      &ErrorHandlingConfig{Strategy: ErrorStrategyFallback, FallbackAction: &action},
-		Variables:   map[string]interface{}{},
+		Config:    &ErrorHandlingConfig{Strategy: ErrorStrategyFallback, FallbackAction: &action},
+		Variables: map[string]interface{}{},
 	})
 	require.NoError(t, err)
 	assert.True(t, res2.Handled)

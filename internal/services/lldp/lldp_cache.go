@@ -9,8 +9,8 @@ import (
 
 // LLDPCacheEntry LLDP缓存条目
 type LLDPCacheEntry struct {
-	Neighbors   map[string]*models.LLDPNeighborInfo
-	CachedAt    time.Time
+	Neighbors map[string]*models.LLDPNeighborInfo
+	CachedAt  time.Time
 }
 
 // LLDPCache LLDP缓存服务

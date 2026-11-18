@@ -111,7 +111,7 @@ func TestHomology_DiffInvariant_NChangesMFixed(t *testing.T) {
 
 	type snapshot struct {
 		Total int64 `json:"total"`
-		Count int    `json:"count"`
+		Count int   `json:"count"`
 	}
 	var byScope [2][]snapshot
 	for si, s := range scopes {

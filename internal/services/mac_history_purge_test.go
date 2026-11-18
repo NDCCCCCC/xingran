@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/stretchr/testify/require"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
 )
 
 // TestPurgeMeaninglessRecords_DryRun 验证 dry-run 模式仅统计不修改 DB

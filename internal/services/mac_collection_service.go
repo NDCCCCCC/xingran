@@ -21,12 +21,12 @@ import (
 
 // MACCollectionService MAC地址采集服务
 type MACCollectionService struct {
-	db              *gorm.DB
-	executor        *device.DeviceExecutor
-	maxConcurrent   int
-	lldpService     *lldp.LLDPService
+	db                *gorm.DB
+	executor          *device.DeviceExecutor
+	maxConcurrent     int
+	lldpService       *lldp.LLDPService
 	filterRuleService topology.FilterRuleService
-	enableHistory   bool // 是否启用MAC历史记录
+	enableHistory     bool // 是否启用MAC历史记录
 }
 
 // MAC采集并发数的默认配置键
@@ -277,8 +277,8 @@ func (s *MACCollectionService) collectDeviceMAC(ctx context.Context, device *mod
 
 		macRecord := &models.DeviceMACAddress{
 			DeviceID:      device.ID,
-			MACAddress:    NormalizeMACAddress(macAddr.MACAddress),  // 2026-07-01: 防御性归一化(LLDP/filterRule 路径)
-			InterfaceName: portcollection.NormalizeInterfaceName(macAddr.InterfaceName),  // 同上
+			MACAddress:    NormalizeMACAddress(macAddr.MACAddress),                      // 2026-07-01: 防御性归一化(LLDP/filterRule 路径)
+			InterfaceName: portcollection.NormalizeInterfaceName(macAddr.InterfaceName), // 同上
 			VLANID:        vlanIDPtr,
 			MACType:       macType,
 			CollectedAt:   collectionTime,
@@ -425,14 +425,14 @@ func (s *MACCollectionService) parseMACAddressTable(output string, vendor models
 		// 过滤标题行 - 检查常见的标题关键词
 		lowerLine := strings.ToLower(line)
 		if strings.Contains(lowerLine, "mac address") ||
-		   strings.Contains(lowerLine, "vlan") && strings.Contains(lowerLine, "mac") ||
-		   strings.Contains(lowerLine, "type") && strings.Contains(lowerLine, "interface") ||
-		   strings.Contains(lowerLine, "port") && strings.Contains(lowerLine, "mac") ||
-		   strings.Contains(lowerLine, "learned") ||
-		   strings.Contains(lowerLine, "flags") ||          // 华为列头 "Flags:"
-		   strings.Contains(lowerLine, "total") ||          // 汇总行 "Total items displayed"
-		   strings.Contains(lowerLine, "forwarding logical") || // 华为注释行
-		   strings.HasPrefix(line, "#") {                   // 华为注释行首字符
+			strings.Contains(lowerLine, "vlan") && strings.Contains(lowerLine, "mac") ||
+			strings.Contains(lowerLine, "type") && strings.Contains(lowerLine, "interface") ||
+			strings.Contains(lowerLine, "port") && strings.Contains(lowerLine, "mac") ||
+			strings.Contains(lowerLine, "learned") ||
+			strings.Contains(lowerLine, "flags") || // 华为列头 "Flags:"
+			strings.Contains(lowerLine, "total") || // 汇总行 "Total items displayed"
+			strings.Contains(lowerLine, "forwarding logical") || // 华为注释行
+			strings.HasPrefix(line, "#") { // 华为注释行首字符
 			continue
 		}
 
@@ -463,7 +463,7 @@ func (s *MACCollectionService) parseMACLine(line string, vendor models.DeviceVen
 		// d89e.f327.2d19 100 GigabitEthernet0/1/1 Dynamic
 		// 或者包含更多空格的变体
 		if len(fields) >= 4 {
-			entry.MACAddress = NormalizeMACAddress(fields[0])  // 2026-07-01: 写入前归一化
+			entry.MACAddress = NormalizeMACAddress(fields[0]) // 2026-07-01: 写入前归一化
 			// 解析VLAN ID (fields[1])
 			if vlanID, err := strconv.Atoi(fields[1]); err == nil {
 				entry.VLANID = vlanID
@@ -510,7 +510,7 @@ func (s *MACCollectionService) parseMACLine(line string, vendor models.DeviceVen
 			if vlanID, err := strconv.Atoi(fields[0]); err == nil {
 				entry.VLANID = vlanID
 			}
-			entry.MACAddress = NormalizeMACAddress(fields[1])  // 2026-07-01: 写入前归一化
+			entry.MACAddress = NormalizeMACAddress(fields[1]) // 2026-07-01: 写入前归一化
 			entry.MACType = fields[2]
 
 			// 接口名称从fields[3]开始
@@ -676,13 +676,16 @@ func isCiscoLearnAgeOrAction(token string) bool {
 // parseRuijiePortSecurityLine 解析锐捷 show port-security address 输出
 // 字段顺序:Index VLAN MAC Interface(<多 token,可能含空格>) Type LearnAge Action
 // 真实样本（CX-WH-WH-04F-FL-RS8607E-03,2026-06-29）:
-//   56   308   b022.7a2e.4a4f  GigabitEthernet 2/25      Dynamic            --          active
-//   [0]  [1]    [2]            [3..N-3]                [N-3]            [N-2] [N-1]
+//
+//	56   308   b022.7a2e.4a4f  GigabitEthernet 2/25      Dynamic            --          active
+//	[0]  [1]    [2]            [3..N-3]                [N-3]            [N-2] [N-1]
+//
 // 至少需要 7 字段:Idx + VLAN + MAC + Interface(≥1 token) + Type + LearnAge + Action
 // 若 Interface 含多个 token（如 "GigabitEthernet 2/25"）则为 8 字段。
 //
 // 2026-07-03 Phase 47 R5 (D-04): 加 NormalizeMACAddress 归一 + isCanonicalMAC 守卫,
-//   过滤解析层垃圾行;脏历史由 migration_181 软删除清理(D-05)。
+//
+//	过滤解析层垃圾行;脏历史由 migration_181 软删除清理(D-05)。
 func (s *MACCollectionService) parseRuijiePortSecurityLine(fields []string) (MACAddressEntry, bool) {
 	if len(fields) < 7 {
 		return MACAddressEntry{}, false
@@ -773,10 +776,11 @@ type MACAddressResponse struct {
 // GetMACAddressList 获取MAC地址列表
 // orderByColumn/isAsc 为服务端排序参数(可选,透传给 base.ApplySort 白名单)。
 // deptID(2026-06-30):部门树联动 — 后端一处 JOIN sys_network_device.dept_id 过滤该部门下所有设备的 MAC,
-//   彻底替代前端 dept→deviceIds→MAC 三层链路(后者有 stale closure / setSearchParams 重挂载导致
-//   devices/list 丢 deptId 的时序 bug:选"分公司本部"却查出"武汉中支"设备)。
-//   baseQuery(用于 Count)无 JOIN → 用子查询;joinQuery 已 JOIN → 直接 WHERE sys_network_device.dept_id。
-//   deviceID(单设备精确)与 deptID 可叠加(选部门后又选具体设备),互不冲突。
+//
+//	彻底替代前端 dept→deviceIds→MAC 三层链路(后者有 stale closure / setSearchParams 重挂载导致
+//	devices/list 丢 deptId 的时序 bug:选"分公司本部"却查出"武汉中支"设备)。
+//	baseQuery(用于 Count)无 JOIN → 用子查询;joinQuery 已 JOIN → 直接 WHERE sys_network_device.dept_id。
+//	deviceID(单设备精确)与 deptID 可叠加(选部门后又选具体设备),互不冲突。
 func (s *MACCollectionService) GetMACAddressList(ctx context.Context, current, pageSize int, deviceID string, deptID string, macAddress, interfaceName string, orderByColumn string, isAsc *bool) ([]MACAddressResponse, int64, error) {
 	var total int64
 

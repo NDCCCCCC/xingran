@@ -57,7 +57,7 @@ import (
 // before password decryption). For non-error branches we use a passthrough.
 type fakeCipher struct{}
 
-func (fakeCipher) Encrypt(plaintext string) (string, error) { return plaintext, nil }
+func (fakeCipher) Encrypt(plaintext string) (string, error)  { return plaintext, nil }
 func (fakeCipher) Decrypt(ciphertext string) (string, error) { return ciphertext, nil }
 
 // poolFixturePath resolves a fixture under internal/device/testdata/.
@@ -354,9 +354,11 @@ func TestCP78_Execute_Success(t *testing.T) {
 // TestCP78_Execute_ErrorBranches — three branches:
 // (a) wrapper=nil → Acquire returns false → "连接不可用"
 // (b) ctx cancelled before fn runs → returns ctx.Err() — but Execute
-//     internally acquires wrapper, so we use wrapper=nil to hit the early
-//     return path; ctx cancellation with a real wrapper would deadlock on
-//     GetPrompt fixture reads.
+//
+//	internally acquires wrapper, so we use wrapper=nil to hit the early
+//	return path; ctx cancellation with a real wrapper would deadlock on
+//	GetPrompt fixture reads.
+//
 // (c) fn panics → recover converts to "执行命令时发生 panic" + state=Closed
 // -----------------------------------------------------------------------------
 func TestCP78_Execute_ErrorBranches(t *testing.T) {
@@ -415,6 +417,7 @@ func TestCP78_Execute_ErrorBranches(t *testing.T) {
 //   - same *PooledConnection pointer returned (NOT a new pc)
 //   - refCount +1 (=1, not 0)
 //   - lastUsed refreshed to ~now
+//
 // Then ReleaseRef and confirm refCount back to 0.
 //
 // We use the longer huawei_vrp_ops.fixture (24 lines) so IsReady's GetPrompt
@@ -661,7 +664,7 @@ func TestCP78_CreateConnection_NoCipher(t *testing.T) {
 
 // -----------------------------------------------------------------------------
 // TestCP78_CreateConnection_EmptyPassword — credential row exists with
-// password='' → "凭证密码为空" (per connection_pool.go:420-422).
+// password=” → "凭证密码为空" (per connection_pool.go:420-422).
 // -----------------------------------------------------------------------------
 func TestCP78_CreateConnection_EmptyPassword(t *testing.T) {
 	pool, db := newPool78(t)
@@ -713,7 +716,9 @@ func TestCP78_RemoveConnection(t *testing.T) {
 // TestCP78_CleanupIdleConnections — covers cleanupIdleConnections' two
 // branches:
 // (a) idle + expired lastUsed → cleaned (we use stub wrappers so
-//     wrapper.Close() during cleanup is safe — no fixture reads).
+//
+//	wrapper.Close() during cleanup is safe — no fixture reads).
+//
 // (b) active (refCount>0) + expired lastUsed → NOT cleaned
 // -----------------------------------------------------------------------------
 func TestCP78_CleanupIdleConnections(t *testing.T) {
@@ -755,9 +760,12 @@ func TestCP78_CleanupIdleConnections(t *testing.T) {
 // TestCP78_StartCleanup_TickerPath — startCleanup is exercised by every
 // newPool78 (the constructor spawns the goroutine). This test confirms:
 // (a) cleanupIdleConnections can be called directly without panic on a
-//     fresh pool (it iterates an empty connections map).
+//
+//	fresh pool (it iterates an empty connections map).
+//
 // (b) After Close, the done channel is closed (signaling the goroutine to
-//     exit).
+//
+//	exit).
 //
 // We do NOT call Close manually — the t.Cleanup registered by newPool78
 // handles it once. Calling Close twice would panic on close-of-closed-

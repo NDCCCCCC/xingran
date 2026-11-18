@@ -44,8 +44,8 @@ func TestLgr8005_Hook_Fire_Levels(t *testing.T) {
 	for _, tc := range cases {
 		buf.Reset()
 		entry := &logrus.Entry{
-			Logger: fl,
-			Level:  tc.level,
+			Logger:  fl,
+			Level:   tc.level,
 			Message: "msg-" + tc.contains,
 		}
 		require.NoError(t, hook.Fire(entry), "Fire 应返回 nil(nil fileLogger 分支已测)")

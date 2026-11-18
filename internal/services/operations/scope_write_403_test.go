@@ -39,15 +39,15 @@ const (
 
 // Write403Fixture 持有两部门各一套楼宇/楼层/工位/信息点 ID。
 type Write403Fixture struct {
-	DB                                      *gorm.DB
-	BuildingA, BuildingB                    string
-	FloorA, FloorB                          string
-	WSA, WSB                                string
-	IPA, IPB                                string
-	BuildingSvc                             BuildingService
-	FloorSvc                                FloorService
-	WSSvc                                   WorkstationService
-	IPSvc                                   InfoPointService
+	DB                   *gorm.DB
+	BuildingA, BuildingB string
+	FloorA, FloorB       string
+	WSA, WSB             string
+	IPA, IPB             string
+	BuildingSvc          BuildingService
+	FloorSvc             FloorService
+	WSSvc                WorkstationService
+	IPSvc                InfoPointService
 }
 
 // write403Ctx 构造指定可见集的 ctx。

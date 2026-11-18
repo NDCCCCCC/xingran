@@ -16,13 +16,13 @@ import (
 // nopLogger 实现 logger.Logger，仅计数，不做真实 IO。
 type nopLogger struct{}
 
-func (nopLogger) Debug(string, ...logger.Field)            {}
-func (nopLogger) Info(string, ...logger.Field)             {}
-func (nopLogger) Warn(string, ...logger.Field)             {}
-func (nopLogger) Error(string, ...logger.Field)            {}
-func (nopLogger) Fatal(string, ...logger.Field)            {}
-func (n nopLogger) With(...logger.Field) logger.Logger     { return n }
-func (nopLogger) Sync() error                              { return nil }
+func (nopLogger) Debug(string, ...logger.Field)        {}
+func (nopLogger) Info(string, ...logger.Field)         {}
+func (nopLogger) Warn(string, ...logger.Field)         {}
+func (nopLogger) Error(string, ...logger.Field)        {}
+func (nopLogger) Fatal(string, ...logger.Field)        {}
+func (n nopLogger) With(...logger.Field) logger.Logger { return n }
+func (nopLogger) Sync() error                          { return nil }
 
 // stubPage 是前端副本 Page 接口的可编程假实现；只让 Evaluate 有行为。
 type stubPage struct {

@@ -77,10 +77,10 @@ func TestStrictMountSourceCount(t *testing.T) {
 }
 
 type strictMountRoute struct {
-	Method   string   `json:"method"`
-	Path     string   `json:"path"`
-	IsWrite  bool     `json:"isWrite"`
-	PermKind *string  `json:"permKind"`
+	Method   string  `json:"method"`
+	Path     string  `json:"path"`
+	IsWrite  bool    `json:"isWrite"`
+	PermKind *string `json:"permKind"`
 }
 
 func (r strictMountRoute) kind() string {

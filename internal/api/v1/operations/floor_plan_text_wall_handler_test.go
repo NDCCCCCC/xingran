@@ -17,11 +17,11 @@ import (
 
 // mockFloorPlanTextService implements opsServices.FloorPlanTextService.
 type mockFloorPlanTextService struct {
-	CreateFunc    func(ctx context.Context, t *opsModels.FloorPlanText) error
-	UpdateFunc    func(ctx context.Context, t *opsModels.FloorPlanText) error
-	DeleteFunc    func(ctx context.Context, id string) error
-	GetByIDFunc   func(ctx context.Context, id string) (*opsModels.FloorPlanText, error)
-	ListFunc    func(ctx context.Context, req requests.FloorPlanTextListRequest) (*opsServices.PageResult, error)
+	CreateFunc      func(ctx context.Context, t *opsModels.FloorPlanText) error
+	UpdateFunc      func(ctx context.Context, t *opsModels.FloorPlanText) error
+	DeleteFunc      func(ctx context.Context, id string) error
+	GetByIDFunc     func(ctx context.Context, id string) (*opsModels.FloorPlanText, error)
+	ListFunc        func(ctx context.Context, req requests.FloorPlanTextListRequest) (*opsServices.PageResult, error)
 	BatchDeleteFunc func(ctx context.Context, ids []string) error
 }
 
@@ -208,11 +208,11 @@ func TestFloorPlanTextHandler_WithCore_NilSafe(t *testing.T) {
 
 // mockWallService implements opsServices.WallService.
 type mockWallService struct {
-	CreateFunc    func(ctx context.Context, w *opsModels.Wall) error
-	UpdateFunc    func(ctx context.Context, w *opsModels.Wall) error
-	DeleteFunc    func(ctx context.Context, id string) error
-	GetByIDFunc   func(ctx context.Context, id string) (*opsModels.Wall, error)
-	ListFunc    func(ctx context.Context, req requests.WallListRequest) (*opsServices.PageResult, error)
+	CreateFunc      func(ctx context.Context, w *opsModels.Wall) error
+	UpdateFunc      func(ctx context.Context, w *opsModels.Wall) error
+	DeleteFunc      func(ctx context.Context, id string) error
+	GetByIDFunc     func(ctx context.Context, id string) (*opsModels.Wall, error)
+	ListFunc        func(ctx context.Context, req requests.WallListRequest) (*opsServices.PageResult, error)
 	BatchDeleteFunc func(ctx context.Context, ids []string) error
 }
 

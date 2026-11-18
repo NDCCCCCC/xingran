@@ -162,11 +162,11 @@ var scopeLayerCoreFiles = []string{
 // 实际只覆盖 8 核心 + GORMRepository 读链；这 4 类的可见集谓词仍由
 // 149/148 既有收口承担，不得宣称「全 ops 域零裸起链」或「统一架构覆盖所有端点」。
 var zeroBareChainWhitelist = map[string]string{
-	"excel_export_service.go":      "归 148：resolveAssociations / CAST(id AS TEXT) 改写，151 禁改（PLAN §4.3 #11）",
+	"excel_export_service.go":       "归 148：resolveAssociations / CAST(id AS TEXT) 改写，151 禁改（PLAN §4.3 #11）",
 	"workstation_device_service.go": "归 148：DIALECT-02 CTE 改写 / Go 层合并，151 禁改（PLAN §4.3 #15）",
-	"location_alias_service.go":    "归 149：已用 dept_id ∈ 可见集直挂收口，151 只登记表不裸改（PLAN §4.3 #13）",
-	"room_photo_service.go":        "归 149：已 10 方法逐方法登记 photoReadVisible 等，151 只登记表不裸改（PLAN §4.3 #14）",
-	"pg_contract_test.go":          "测试文件：纳入静态断言扫描 + 追加同源断言，不计入生产起链（PLAN §4.3 #16）",
+	"location_alias_service.go":     "归 149：已用 dept_id ∈ 可见集直挂收口，151 只登记表不裸改（PLAN §4.3 #13）",
+	"room_photo_service.go":         "归 149：已 10 方法逐方法登记 photoReadVisible 等，151 只登记表不裸改（PLAN §4.3 #14）",
+	"pg_contract_test.go":           "测试文件：纳入静态断言扫描 + 追加同源断言，不计入生产起链（PLAN §4.3 #16）",
 }
 
 // scopedLayerReadFuncs 是「读端点」函数白名单：只有这些函数体内的起链必须

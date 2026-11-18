@@ -18,9 +18,9 @@ import (
 	"time"
 
 	"github.com/glebarez/sqlite"
-	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"gorm.io/gorm"
 )
 
@@ -28,14 +28,14 @@ import (
 // 混合格输入全部归一为大写冒号(与 DB 存量格式一致,2026-10-27 实测)。
 func TestSanitizeMACRecords_NormalizesMixedFormats(t *testing.T) {
 	inputs := []struct {
-		raw string
+		raw  string
 		want string
 	}{
-		{"b022.7a2e.4a4f", "B0:22:7A:2E:4A:4F"},              // Cisco 点分
-		{"00-e0-fc-09-bc-f9", "00:E0:FC:09:BC:F9"},            // 连字符小写
-		{"00:E0:FC:09:BC:F9", "00:E0:FC:09:BC:F9"},            // 已 canonical(幂等)
-		{"00e0fc09bcf9", "00:E0:FC:09:BC:F9"},                 // 无分隔符
-		{"d89e.f327.2d19", "D8:9E:F3:27:2D:19"},               // 点分小写
+		{"b022.7a2e.4a4f", "B0:22:7A:2E:4A:4F"},    // Cisco 点分
+		{"00-e0-fc-09-bc-f9", "00:E0:FC:09:BC:F9"}, // 连字符小写
+		{"00:E0:FC:09:BC:F9", "00:E0:FC:09:BC:F9"}, // 已 canonical(幂等)
+		{"00e0fc09bcf9", "00:E0:FC:09:BC:F9"},      // 无分隔符
+		{"d89e.f327.2d19", "D8:9E:F3:27:2D:19"},    // 点分小写
 	}
 	for _, tt := range inputs {
 		records := []*models.DeviceMACAddress{{
@@ -57,10 +57,10 @@ func TestSanitizeMACRecords_NormalizesMixedFormats(t *testing.T) {
 // 垃圾 MAC / 空 MAC / 空接口名被丢弃且计数(Warn 可观测)。
 func TestSanitizeMACRecords_RejectsGarbage(t *testing.T) {
 	records := []*models.DeviceMACAddress{
-		{DeviceID: "d", MACAddress: "Flags:", InterfaceName: "GE0/1", CollectedAt: time.Now()},    // 垃圾表头
-		{DeviceID: "d", MACAddress: "Total", InterfaceName: "GE0/1", CollectedAt: time.Now()},     // 汇总行
-		{DeviceID: "d", MACAddress: "", InterfaceName: "GE0/1", CollectedAt: time.Now()},          // 空 MAC
-		{DeviceID: "d", MACAddress: "00:E0:FC:09:BC:F9", InterfaceName: "", CollectedAt: time.Now()}, // 空接口名(not null 列)
+		{DeviceID: "d", MACAddress: "Flags:", InterfaceName: "GE0/1", CollectedAt: time.Now()},            // 垃圾表头
+		{DeviceID: "d", MACAddress: "Total", InterfaceName: "GE0/1", CollectedAt: time.Now()},             // 汇总行
+		{DeviceID: "d", MACAddress: "", InterfaceName: "GE0/1", CollectedAt: time.Now()},                  // 空 MAC
+		{DeviceID: "d", MACAddress: "00:E0:FC:09:BC:F9", InterfaceName: "", CollectedAt: time.Now()},      // 空接口名(not null 列)
 		{DeviceID: "d", MACAddress: "00:E0:FC:09:BC:F9", InterfaceName: "GE0/1", CollectedAt: time.Now()}, // 合法
 	}
 	clean, rejected := SanitizeMACRecords("test-dev", records)

@@ -2,9 +2,9 @@
 // +build !skip_db_tests
 
 // quick 261021-iqq（2026-10-21）：方案A热重载的守护测试。
-//   1. drainGate.shouldDrain 门控语义（零值首排 / 未到期跳过 / 到期放行 / 间隔变化重置）；
-//   2. taskRegistry 防删守护 —— ad_data_sync / ad_account_pool_recover_breakers 必须已注册，
-//      jobService 的 InvokeTarget 白名单校验（F-08）依赖它；误删注册代码时本文件必红。
+//  1. drainGate.shouldDrain 门控语义（零值首排 / 未到期跳过 / 到期放行 / 间隔变化重置）；
+//  2. taskRegistry 防删守护 —— ad_data_sync / ad_account_pool_recover_breakers 必须已注册，
+//     jobService 的 InvokeTarget 白名单校验（F-08）依赖它；误删注册代码时本文件必红。
 package scheduler
 
 import (
@@ -16,7 +16,7 @@ import (
 )
 
 // TestDrainGate_FirstTickDrainsImmediately 零值 lastDrain：启动后首个 tick 立即排水
-//（与旧实现"启动即挂 cron、首个刻度排水"行为一致）。
+// （与旧实现"启动即挂 cron、首个刻度排水"行为一致）。
 func TestDrainGate_FirstTickDrainsImmediately(t *testing.T) {
 	g := &drainGate{}
 	now := time.Now()

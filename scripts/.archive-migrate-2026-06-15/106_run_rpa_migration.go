@@ -44,7 +44,7 @@ func main() {
 		if err != nil {
 			// 某些语句可能因为对象已存在而失败，这是正常的
 			if strings.Contains(err.Error(), "already exists") ||
-			   strings.Contains(err.Error(), "duplicate key") {
+				strings.Contains(err.Error(), "duplicate key") {
 				fmt.Printf("✓ 跳过（已存在）\n")
 			} else {
 				log.Printf("执行失败: %v\n", err)

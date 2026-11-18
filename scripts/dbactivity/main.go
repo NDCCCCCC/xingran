@@ -27,22 +27,22 @@ import (
 
 // activityRow 一行 pg_stat_activity (仅本库、排除自身 probe 连接)。
 type activityRow struct {
-	PID           int     `gorm:"column:pid"`
-	State         string  `gorm:"column:state"`
-	WaitEventType *string `gorm:"column:wait_event_type"`
-	WaitEvent     *string `gorm:"column:wait_event"`
+	PID           int      `gorm:"column:pid"`
+	State         string   `gorm:"column:state"`
+	WaitEventType *string  `gorm:"column:wait_event_type"`
+	WaitEvent     *string  `gorm:"column:wait_event"`
 	QDurSec       *float64 `gorm:"column:q_dur_s"`
 	StDurSec      *float64 `gorm:"column:st_dur_s"`
-	Query         string  `gorm:"column:q"`
+	Query         string   `gorm:"column:q"`
 }
 
 // lockRow 一行 pg_locks + pg_stat_activity (仅未授予的锁等待)。
 type lockRow struct {
-	PID     int     `gorm:"column:pid"`
-	Mode    string  `gorm:"column:mode"`
-	Granted bool    `gorm:"column:granted"`
+	PID     int      `gorm:"column:pid"`
+	Mode    string   `gorm:"column:mode"`
+	Granted bool     `gorm:"column:granted"`
 	QDurSec *float64 `gorm:"column:q_dur_s"`
-	Query   string  `gorm:"column:q"`
+	Query   string   `gorm:"column:q"`
 }
 
 func main() {

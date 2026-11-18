@@ -62,8 +62,8 @@ type WorkerTokenService interface {
 }
 
 type workerTokenServiceImpl struct {
-	db        *gorm.DB
-	provToken string // config 里白名单（部署态通常 1-2 个；constant-time 逐个比较）
+	db         *gorm.DB
+	provToken  string // config 里白名单（部署态通常 1-2 个；constant-time 逐个比较）
 	expireDays int
 }
 
@@ -166,7 +166,12 @@ func (s *workerTokenServiceImpl) ValidateWorkerToken(ctx context.Context, token 
 	return &WorkerClaims{
 		WorkerID:   worker.WorkerID,
 		WorkerName: worker.WorkerName,
-		ExpiresAt:  func() time.Time { if worker.TokenExpiresAt != nil { return *worker.TokenExpiresAt }; return time.Time{} }(),
+		ExpiresAt: func() time.Time {
+			if worker.TokenExpiresAt != nil {
+				return *worker.TokenExpiresAt
+			}
+			return time.Time{}
+		}(),
 	}, nil
 }
 

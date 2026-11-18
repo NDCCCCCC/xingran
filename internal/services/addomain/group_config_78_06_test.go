@@ -25,9 +25,10 @@ import (
 // setupGC78DB 在 78-05 7 表 fixture 上追加 sys_config 表（BaseModel 列齐）。
 //
 // 列集照 models.Config gorm tag：
-//   id / created_at / updated_at / deleted_at / created_by / updated_by / version /
-//   config_name / config_key (UNIQUE for setConfigByKey duplicate 防御) / config_value /
-//   config_type / is_system / remark
+//
+//	id / created_at / updated_at / deleted_at / created_by / updated_by / version /
+//	config_name / config_key (UNIQUE for setConfigByKey duplicate 防御) / config_value /
+//	config_type / is_system / remark
 func setupGC78DB(t *testing.T) *gorm.DB {
 	t.Helper()
 	db := setupSync78DB(t)
@@ -157,7 +158,7 @@ func TestGC78_GetGroupSyncConfig_DefaultsAndOverrides(t *testing.T) {
 
 	// (c) 非法值兜底
 	insertSysConfig78(t, db, ConfigGroupMaxConcurrent, "not-a-number") // Atoi 失败 → 保留 default
-	insertSysConfig78(t, db, ConfigGroupSyncBatchSize, "abc")         // 同上
+	insertSysConfig78(t, db, ConfigGroupSyncBatchSize, "abc")          // 同上
 	cfg, err = svc.GetGroupSyncConfig(ctx)
 	require.NoError(t, err)
 	assert.Equal(t, 5, cfg.MaxConcurrent, "Atoi 失败 → 保留 default (5) 而非上次成功值")
@@ -247,7 +248,7 @@ func TestGC78_UpdateGroupSyncConfig_And_Validate(t *testing.T) {
 		Cron:             "", // 非法
 		MemberOU:         "OU=X,DC=example,DC=com",
 		AutoCreateGroups: true,
-		MaxConcurrent:    999, // 非法
+		MaxConcurrent:    999,  // 非法
 		SyncBatchSize:    9999, // 非法
 	}
 	require.NoError(t, svc.UpdateGroupSyncConfig(ctx, invalid),

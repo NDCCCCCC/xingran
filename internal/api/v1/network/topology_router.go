@@ -29,9 +29,9 @@ func SetupTopologyRouter(r *gin.RouterGroup, db *gorm.DB, core *core.Core) {
 		// MAC过滤规则管理
 		rules := topology.Group("/rules")
 		{
-			rules.POST("/list", middleware.RequirePermissions(macRuleRead, core), topologyHandler.ListRules)    // 查询规则列表
-			rules.POST("", middleware.RequireStrictPermissions(macRuleEdit, core), topologyHandler.CreateRule)  // 创建规则
-			rules.POST("/:id", middleware.RequirePermissions(macRuleRead, core), topologyHandler.GetRule)       // 获取规则详情
+			rules.POST("/list", middleware.RequirePermissions(macRuleRead, core), topologyHandler.ListRules)              // 查询规则列表
+			rules.POST("", middleware.RequireStrictPermissions(macRuleEdit, core), topologyHandler.CreateRule)            // 创建规则
+			rules.POST("/:id", middleware.RequirePermissions(macRuleRead, core), topologyHandler.GetRule)                 // 获取规则详情
 			rules.POST("/:id/update", middleware.RequireStrictPermissions(macRuleEdit, core), topologyHandler.UpdateRule) // 更新规则
 			rules.POST("/:id/delete", middleware.RequireStrictPermissions(macRuleEdit, core), topologyHandler.DeleteRule) // 删除规则
 		}

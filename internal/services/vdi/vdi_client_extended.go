@@ -312,10 +312,10 @@ func (c *vdiClientExtendedImpl) BindUser(ctx context.Context, vmID, userID strin
 
 	// 如果需要 rcid，应该从 VM 信息中获取，这里暂时使用 vmID
 	req := struct {
-		RcID    int    `json:"rcid"`
-		VmID    int    `json:"vmid"`
-		Type    string `json:"type"`
-		UserID  string `json:"user_id"`
+		RcID   int    `json:"rcid"`
+		VmID   int    `json:"vmid"`
+		Type   string `json:"type"`
+		UserID string `json:"user_id"`
 	}{
 		Type:   "1", // 1=绑定
 		UserID: userID,
@@ -376,8 +376,8 @@ func (c *vdiClientExtendedImpl) ListResources(ctx context.Context, groupID strin
 	}
 
 	var resp struct {
-		ErrorCode    int          `json:"error_code"`
-		ErrorMessage string       `json:"error_message"`
+		ErrorCode    int    `json:"error_code"`
+		ErrorMessage string `json:"error_message"`
 		Data         struct {
 			Resources []VDIResource `json:"resources"`
 		} `json:"data"`

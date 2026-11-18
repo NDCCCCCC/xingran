@@ -16,8 +16,8 @@ import (
 	"github.com/xingran-next/xingran-go-backend/pkg/cache"
 	"gorm.io/gorm"
 	"gorm.io/gorm/callbacks"
-	gormlogger "gorm.io/gorm/logger"
 	"gorm.io/gorm/clause"
+	gormlogger "gorm.io/gorm/logger"
 	"gorm.io/gorm/schema"
 )
 

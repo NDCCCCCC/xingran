@@ -165,10 +165,10 @@ func dialect148SeedJoinTables(t *testing.T, db *gorm.DB) {
 		require.NoError(t, db.Exec(ddl).Error, "建表失败: %s", ddl)
 	}
 	const (
-		wsLive   = "10000000-0000-0000-0000-000000000001"
-		wsSoft   = "10000000-0000-0000-0000-000000000002" // 软删工位：:351 语义
-		devID    = "20000000-0000-0000-0000-000000000001"
-		portID   = "30000000-0000-0000-0000-000000000001"
+		wsLive = "10000000-0000-0000-0000-000000000001"
+		wsSoft = "10000000-0000-0000-0000-000000000002" // 软删工位：:351 语义
+		devID  = "20000000-0000-0000-0000-000000000001"
+		portID = "30000000-0000-0000-0000-000000000001"
 	)
 	require.NoError(t, db.Exec(`INSERT INTO sys_workstation VALUES (?, '工位-正常', NULL)`, wsLive).Error)
 	// 软删工位（deleted_at 非空）：SkipSoftDelete:true 时仍应被关联到并恢复名称。
@@ -245,7 +245,8 @@ func TestDialect148_ResolveAssociations_ErrorPropagates(t *testing.T) {
 // **实际生成**的 SQL（P1-8 式静态断言）：用真实 SQLite + GORM Query 回调记录每条 SQL，
 // 逐条断言无方言片段、含双方言单侧 CAST、三处关联 IN ? 子句齐全。
 // （实测 golangci-lint 2.12.2 的 forbidigo 只匹配 AST 标识符，不命中字符串字面量；
-//   本断言补上字符串/注释层，是反向变异真正生效的门禁。）
+//
+//	本断言补上字符串/注释层，是反向变异真正生效的门禁。）
 func TestDialect148_ResolveAssociations_DryRunNoDialectToken(t *testing.T) {
 	db := dialect148NewDB(t)
 	dialect148SeedJoinTables(t, db)

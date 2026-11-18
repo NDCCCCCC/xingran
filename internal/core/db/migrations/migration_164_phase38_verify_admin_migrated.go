@@ -8,14 +8,14 @@ import (
 
 // Migrate164Phase38VerifyAdminMigrated Phase 38 (D-02 + D-03): 放宽 sys_ad_config 单管理员列约束 + 幂等补迁账号池。
 //
-// 1. Schema 放宽 (D-02): ALTER admin_username/admin_password DROP NOT NULL —— Phase 38 起新配置不再
-//    写 admin 字段，DB 必须允许空值。GORM AutoMigrate 对既有列 NOT NULL→nullable 的放宽不可靠
-//    （本项目既有 GORM 约束处理踩坑记录），此处显式 ALTER 兜底。
-//    幂等：DROP NOT NULL 对已 nullable 的列为 no-op，每次启动安全执行。
+//  1. Schema 放宽 (D-02): ALTER admin_username/admin_password DROP NOT NULL —— Phase 38 起新配置不再
+//     写 admin 字段，DB 必须允许空值。GORM AutoMigrate 对既有列 NOT NULL→nullable 的放宽不可靠
+//     （本项目既有 GORM 约束处理踩坑记录），此处显式 ALTER 兜底。
+//     幂等：DROP NOT NULL 对已 nullable 的列为 no-op，每次启动安全执行。
 //
-// 2. 数据补迁 (D-03): 对每个启用 + 同步开启且仍持单管理员凭据的 AD 配置，若其账号池为空则补迁一条
-//    （与 migration_162 同款 INSERT）。避免 Phase 38 移除单管理员路径后这些配置登录/同步失败。
-//    幂等：先 count sys_ad_service_accounts，>0 则 skip。
+//  2. 数据补迁 (D-03): 对每个启用 + 同步开启且仍持单管理员凭据的 AD 配置，若其账号池为空则补迁一条
+//     （与 migration_162 同款 INSERT）。避免 Phase 38 移除单管理员路径后这些配置登录/同步失败。
+//     幂等：先 count sys_ad_service_accounts，>0 则 skip。
 //
 // 仅含 ALTER(无索引/约束新增) + INSERT，不与 GORM uni_*_* 命名冲突（CLAUDE.md memory 警示）。
 func Migrate164Phase38VerifyAdminMigrated(db *gorm.DB) error {

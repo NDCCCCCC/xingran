@@ -248,9 +248,9 @@ func TestDutyService_CreateDutyPool_Success(t *testing.T) {
 	seedDutyUser(t, db, "user-1", "alice")
 
 	pool, err := svc.CreateDutyPool(ctx, &services.DutyPoolCreateRequest{
-		PoolName:  "primary-oncall",
+		PoolName:   "primary-oncall",
 		DailyCount: 2,
-		MemberIDs: []string{"user-1"},
+		MemberIDs:  []string{"user-1"},
 	}, "creator-1")
 	require.NoError(t, err)
 	require.NotNil(t, pool)
@@ -389,10 +389,10 @@ func TestDutyService_UpdateDutyPool_Success(t *testing.T) {
 func TestDutyService_UpdateDutyPool_NotFound_Error(t *testing.T) {
 	_, svc, cache := newDutyTestService(t)
 	err := svc.UpdateDutyPool(context.Background(), &services.DutyPoolUpdateRequest{
-		ID:        uuid.NewString(),
-		PoolName:  "ghost",
+		ID:         uuid.NewString(),
+		PoolName:   "ghost",
 		DailyCount: 1,
-		MemberIDs: []string{"any"},
+		MemberIDs:  []string{"any"},
 	}, "updater-1")
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "值班池不存在")
@@ -1035,7 +1035,7 @@ func TestDutyService_ParseInt(t *testing.T) {
 		want  int
 	}{
 		{"empty_string", "", 0},
-		{"short_string_len2", "08", 8},   // CACHEDEF-03 fix: parses all digits
+		{"short_string_len2", "08", 8}, // CACHEDEF-03 fix: parses all digits
 		{"short_string_len3", "123", 123},
 		{"valid_year", "2026", 2026},
 		{"first4_of_longer", "20268", 20268}, // full number parsed

@@ -168,7 +168,6 @@ func TestLoadKnownGroupDNSet_ExcludesSoftDeleted(t *testing.T) {
 	assert.False(t, hasSoft, "软删组不得进入过滤集合")
 }
 
-
 // TestSyncGroupMembers_AllMembersNestedNoEmptySliceError 回归 62-02 生产缺陷:
 // 生产存在成员"全部"是嵌套组的组(CN=CXHUB-人资条线,OU=外网权限,...),
 // 过滤后 kept 为空,GORM Create(空切片) 返回 ErrEmptySlice("empty slice found"),

@@ -38,10 +38,10 @@ type SysDataReconciliation struct {
 	Severity string `gorm:"size:16;not null;column:severity;index:idx_recon_severity,priority:1" json:"severity"`
 
 	// 三路证据 (physical / declared / ad) — 由 Layer 3 检测填充,R1 主要用于审计
-	PhysicalValue  json.RawMessage `gorm:"type:jsonb;column:physical_value" json:"physicalValue,omitempty"`
-	DeclaredValue  json.RawMessage `gorm:"type:jsonb;column:declared_value" json:"declaredValue,omitempty"`
-	ADValue        json.RawMessage `gorm:"type:jsonb;column:ad_value" json:"adValue,omitempty"`
-	ConfidenceScore float64        `gorm:"type:decimal(3,2);column:confidence_score" json:"confidenceScore"`
+	PhysicalValue   json.RawMessage `gorm:"type:jsonb;column:physical_value" json:"physicalValue,omitempty"`
+	DeclaredValue   json.RawMessage `gorm:"type:jsonb;column:declared_value" json:"declaredValue,omitempty"`
+	ADValue         json.RawMessage `gorm:"type:jsonb;column:ad_value" json:"adValue,omitempty"`
+	ConfidenceScore float64         `gorm:"type:decimal(3,2);column:confidence_score" json:"confidenceScore"`
 
 	// 原始快照(检测时刻的全量上下文,R1 用于审计,R5 可能用于半自动修复回滚)
 	RawSnapshot json.RawMessage `gorm:"type:jsonb;not null;column:raw_snapshot" json:"rawSnapshot"`
@@ -56,10 +56,10 @@ type SysDataReconciliation struct {
 	AppliedActions pq.StringArray `gorm:"type:text[];column:applied_actions" json:"appliedActions,omitempty"`
 
 	// 生命周期
-	DetectedAt    time.Time  `gorm:"not null;default:now();column:detected_at;index:idx_recon_detected_at,priority:1" json:"detectedAt"`
-	ResolvedAt    *time.Time `gorm:"column:resolved_at" json:"resolvedAt,omitempty"`
-	ResolvedBy    *string    `gorm:"column:resolved_by" json:"resolvedBy,omitempty"`
-	ResolutionNote *string   `gorm:"type:text;column:resolution_note" json:"resolutionNote,omitempty"`
+	DetectedAt     time.Time  `gorm:"not null;default:now();column:detected_at;index:idx_recon_detected_at,priority:1" json:"detectedAt"`
+	ResolvedAt     *time.Time `gorm:"column:resolved_at" json:"resolvedAt,omitempty"`
+	ResolvedBy     *string    `gorm:"column:resolved_by" json:"resolvedBy,omitempty"`
+	ResolutionNote *string    `gorm:"type:text;column:resolution_note" json:"resolutionNote,omitempty"`
 
 	// 工单 (R2 自动生成工单时回写)
 	WorkorderID *string `gorm:"type:uuid;column:workorder_id" json:"workorderId,omitempty"`

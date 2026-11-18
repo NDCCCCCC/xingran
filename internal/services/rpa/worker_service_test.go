@@ -113,15 +113,15 @@ func newExecutionsTestDB(t *testing.T) *gorm.DB {
 
 // mockRPAExecutionService ExecutionService 接口 mock（*Func 注入）。
 type mockRPAExecutionService struct {
-	CreateFunc      func(ctx context.Context, taskID, taskName, triggeredBy string) (*rpamodels.Execution, error)
-	UpdateFunc      func(ctx context.Context, id string, updates map[string]interface{}) error
-	UpdateProgressF func(ctx context.Context, id string, current, total int, message string) error
-	AddLogFunc      func(ctx context.Context, id string, log string) error
-	CancelFunc      func(ctx context.Context, id string) error
-	ListFunc        func(ctx context.Context, params *ExecutionListParams) (*PageResult, error)
-	GetByIDFunc     func(ctx context.Context, id string) (*rpamodels.Execution, error)
+	CreateFunc          func(ctx context.Context, taskID, taskName, triggeredBy string) (*rpamodels.Execution, error)
+	UpdateFunc          func(ctx context.Context, id string, updates map[string]interface{}) error
+	UpdateProgressF     func(ctx context.Context, id string, current, total int, message string) error
+	AddLogFunc          func(ctx context.Context, id string, log string) error
+	CancelFunc          func(ctx context.Context, id string) error
+	ListFunc            func(ctx context.Context, params *ExecutionListParams) (*PageResult, error)
+	GetByIDFunc         func(ctx context.Context, id string) (*rpamodels.Execution, error)
 	PublishProgressFunc func(ctx context.Context, update *ProgressUpdate) error
-	StatisticsFunc  func(ctx context.Context) (*ExecutionStatisticsResult, error)
+	StatisticsFunc      func(ctx context.Context) (*ExecutionStatisticsResult, error)
 }
 
 func (m *mockRPAExecutionService) Create(ctx context.Context, taskID, taskName, triggeredBy string) (*rpamodels.Execution, error) {

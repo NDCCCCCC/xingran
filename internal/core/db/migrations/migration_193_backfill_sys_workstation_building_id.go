@@ -20,9 +20,10 @@ import (
 //   - migration_192 错把 ops_floors 当成问题(0 缺失 → no-op);本迁移修正方向。
 //
 // 用户 dry-run 验证 (2026-07-01 23:31):
-//   SELECT ... FROM ops_info_points WHERE w.building_id IS NULL;
-//   → 全部命中行的 building_name_via_floor (即 ops_floors.building_id → ops_buildings.name)
-//     都返回"浙商大厦",反推源 100% 完整,本迁移必然 100% 修复。
+//
+//	SELECT ... FROM ops_info_points WHERE w.building_id IS NULL;
+//	→ 全部命中行的 building_name_via_floor (即 ops_floors.building_id → ops_buildings.name)
+//	  都返回"浙商大厦",反推源 100% 完整,本迁移必然 100% 修复。
 //
 // 策略 (方向逆转:
 //   - 对每一个 sys_workstation.building_id IS NULL 的工位,根据其 floor_id 反向查

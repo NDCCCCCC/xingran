@@ -28,10 +28,10 @@ type ExecutionService interface {
 // Status 为字符串(pending/running/success/failed/cancelled/timeout),按真实状态聚合。
 type ExecutionStatisticsResult struct {
 	Total   int64 `json:"total"`
-	Pending int64 `json:"pending"`  // 待执行
-	Running int64 `json:"running"`  // 执行中
-	Success int64 `json:"success"`  // 成功
-	Failed  int64 `json:"failed"`   // 失败
+	Pending int64 `json:"pending"` // 待执行
+	Running int64 `json:"running"` // 执行中
+	Success int64 `json:"success"` // 成功
+	Failed  int64 `json:"failed"`  // 失败
 }
 
 // executionServiceImpl 执行记录服务实现

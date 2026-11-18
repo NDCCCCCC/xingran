@@ -2,14 +2,15 @@
 // 用于在清理后抽样核对保留记录的语义正确性。
 //
 // 验证点:
-//   1. moved / vlan_changed 总数 = 备份表中对应行数(零数据丢失)
-//   2. first-appeared 数量 = backup 表中 distinct (device_id, mac_address) where event_type='appeared'
-//   3. 抽样 5 条 moved 记录,显示前后接口名(应当不同)
-//   4. 抽样 5 条 vlan_changed 记录,显示前后 VLAN
-//   5. 抽样 5 条 first-appeared 记录,确认时间最早
+//  1. moved / vlan_changed 总数 = 备份表中对应行数(零数据丢失)
+//  2. first-appeared 数量 = backup 表中 distinct (device_id, mac_address) where event_type='appeared'
+//  3. 抽样 5 条 moved 记录,显示前后接口名(应当不同)
+//  4. 抽样 5 条 vlan_changed 记录,显示前后 VLAN
+//  5. 抽样 5 条 first-appeared 记录,确认时间最早
 //
 // 用法:
-//   go run ./scripts/ops/mac_purge_verify -backup sys_device_mac_history_purge_backup_20260630_172543
+//
+//	go run ./scripts/ops/mac_purge_verify -backup sys_device_mac_history_purge_backup_20260630_172543
 package main
 
 import (

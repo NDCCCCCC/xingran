@@ -54,13 +54,13 @@ func main() {
 	res := db.Model(&models.ADServiceAccount{}).
 		Where("deleted_at IS NULL").
 		Updates(map[string]interface{}{
-			"status":                 0,    // 0 = 可用
-			"failure_count":          0,    // 清零，避免刚恢复就被旧计数再次熔断
-			"circuit_breaker_until":  nil,  // 清除熔断到期时间
-			"last_failure_at":        nil,  // 清空最近失败时间
-			"manual_unlocked_at":     &now, // 记录为「人工解锁」
-			"manual_unlocked_by":     "ops-reset",
-			"manual_unlock_reason":   "域控侧账号正常，清理本地假熔断状态",
+			"status":                0,    // 0 = 可用
+			"failure_count":         0,    // 清零，避免刚恢复就被旧计数再次熔断
+			"circuit_breaker_until": nil,  // 清除熔断到期时间
+			"last_failure_at":       nil,  // 清空最近失败时间
+			"manual_unlocked_at":    &now, // 记录为「人工解锁」
+			"manual_unlocked_by":    "ops-reset",
+			"manual_unlock_reason":  "域控侧账号正常，清理本地假熔断状态",
 		})
 	if res.Error != nil {
 		fmt.Printf("!! 更新失败: %v\n", res.Error)

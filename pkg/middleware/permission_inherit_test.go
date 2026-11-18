@@ -14,12 +14,12 @@ package middleware
 import (
 	"testing"
 
+	"github.com/glebarez/sqlite"
 	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
 	"github.com/xingran-next/xingran-go-backend/internal/core"
 	"github.com/xingran-next/xingran-go-backend/internal/core/db"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
-	"github.com/stretchr/testify/assert"
-	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 )
 
@@ -105,39 +105,39 @@ func createTables(t *testing.T, db *gorm.DB) {
 //   - 用户拥有 F 型子菜单 (menu_type='F') 的权限时,父菜单权限检查通过(向后兼容)
 func TestPermissionCheck_DoesNotInheritCTypeChild(t *testing.T) {
 	tests := []struct {
-		name           string
-		childType      models.MenuType
-		grantChildPerm bool
+		name            string
+		childType       models.MenuType
+		grantChildPerm  bool
 		grantParentPerm bool
-		expectPass     bool
+		expectPass      bool
 	}{
 		{
-			name:           "C型子菜单有权限_父菜单权限检查应失败",
-			childType:      models.MenuTypeMenu,
-			grantChildPerm: true,
+			name:            "C型子菜单有权限_父菜单权限检查应失败",
+			childType:       models.MenuTypeMenu,
+			grantChildPerm:  true,
 			grantParentPerm: false,
-			expectPass:     false,
+			expectPass:      false,
 		},
 		{
-			name:           "F型子菜单有权限_父菜单权限检查应通过",
-			childType:      models.MenuTypeButton,
-			grantChildPerm: true,
+			name:            "F型子菜单有权限_父菜单权限检查应通过",
+			childType:       models.MenuTypeButton,
+			grantChildPerm:  true,
 			grantParentPerm: false,
-			expectPass:     true,
+			expectPass:      true,
 		},
 		{
-			name:           "无任何子菜单权限_父菜单权限检查应失败",
-			childType:      models.MenuTypeMenu,
-			grantChildPerm: false,
+			name:            "无任何子菜单权限_父菜单权限检查应失败",
+			childType:       models.MenuTypeMenu,
+			grantChildPerm:  false,
 			grantParentPerm: false,
-			expectPass:     false,
+			expectPass:      false,
 		},
 		{
-			name:           "M型子菜单(目录)有权限_不应继承",
-			childType:      models.MenuTypeDir,
-			grantChildPerm: true,
+			name:            "M型子菜单(目录)有权限_不应继承",
+			childType:       models.MenuTypeDir,
+			grantChildPerm:  true,
 			grantParentPerm: false,
-			expectPass:     false,
+			expectPass:      false,
 		},
 	}
 

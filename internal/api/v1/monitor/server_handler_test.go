@@ -23,9 +23,9 @@ import (
 type mockServerService struct {
 	monitorServices.ServerService
 
-	GetServerInfoFunc          func(ctx context.Context, params monitorServices.ServerInfoParams) ([]*models.ServerInfo, int64, error)
+	GetServerInfoFunc           func(ctx context.Context, params monitorServices.ServerInfoParams) ([]*models.ServerInfo, int64, error)
 	GetCurrentServerMetricsFunc func(ctx context.Context) (*monitorServices.SystemMetricsData, error)
-	SaveSystemMetricsFunc      func(ctx context.Context, metrics *models.SystemMetrics) error
+	SaveSystemMetricsFunc       func(ctx context.Context, metrics *models.SystemMetrics) error
 	GetSystemMetricsHistoryFunc func(ctx context.Context, params monitorServices.MetricsHistoryParams) ([]*models.SystemMetrics, int64, error)
 }
 

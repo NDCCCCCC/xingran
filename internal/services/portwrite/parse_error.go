@@ -11,7 +11,7 @@ import (
 // WriteErrorKind 写命令错误分类（D-16）。
 //
 // 用于区分 SSH transport-level 错误（连接失败/超时/EOF） 与设备侧命令拒绝
-//（语法错/参数非法/unrecognized command）。批量 fail-fast 行为依赖此分类。
+// （语法错/参数非法/unrecognized command）。批量 fail-fast 行为依赖此分类。
 type WriteErrorKind int
 
 const (

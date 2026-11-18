@@ -52,9 +52,10 @@ const (
 // setupWSD77DB 建 7 表 sqlite :memory: fixture。
 //
 // 列集 = 被测函数实际引用列(RESEARCH §77-01 7 表清单):
-//   sys_workstation / sys_user / sys_ad_user / sys_ad_computer
-//   (managed_by, original_description, serial_number) / ops_asset
-//   (devicesn, nowuser_name, deptname, mac1, machine_ip) / sys_dept / ops_workstation_device
+//
+//	sys_workstation / sys_user / sys_ad_user / sys_ad_computer
+//	(managed_by, original_description, serial_number) / ops_asset
+//	(devicesn, nowuser_name, deptname, mac1, machine_ip) / sys_dept / ops_workstation_device
 //
 // ops_workstation_device 列集与 models.WorkstationDevice 落库字段一一对应
 // (Confidence/HistoryLastSeen 是 gorm:"-" 不落库)。
@@ -517,10 +518,10 @@ func TestWSD77_GetAssetDevicesByWorkstations(t *testing.T) {
 	ctx := context.Background()
 
 	seedWSD77Workstation(t, db, wsd77WS1, "3f130", wsd77User1)
-	seedWSD77Workstation(t, db, wsd77WS2, "3f131", "")             // 无用户 → 空切片
-	seedWSD77Workstation(t, db, wsd77WS3, "3f132", wsd77User3)     // 用户昵称为空 → 早退
+	seedWSD77Workstation(t, db, wsd77WS2, "3f131", "")         // 无用户 → 空切片
+	seedWSD77Workstation(t, db, wsd77WS3, "3f132", wsd77User3) // 用户昵称为空 → 早退
 	seedWSD77User(t, db, wsd77User1, "zhangsan", "张三", "")
-	seedWSD77User(t, db, wsd77User3, "wangwu", "", "")             // nickname NULL
+	seedWSD77User(t, db, wsd77User3, "wangwu", "", "") // nickname NULL
 	seedWSD77Asset(t, db, wsd77Asset1, "SN-C1", "ThinkPad T14", "笔记本", "AA:11", "张三", "研发部", "10.0.0.1")
 	seedWSD77Asset(t, db, wsd77Asset2, "SN-C2", "OptiPlex 7090", "台式机", "AA:22", "张三", "研发部", "10.0.0.2")
 
@@ -1233,7 +1234,9 @@ func TestWSD77_SetPrimaryAndSaveBySerial(t *testing.T) {
 
 // TestWSD77_mergeBySerial_ThreeStates 合并优先级三态(D-03 有据,
 // 据源 = workstation_device_service.go:53-61 接口注释):
-//   双命中(SN 同时在 sys_ad_computer 与 ops_asset)/ 仅 Asset / 都没有(req fallback)
+//
+//	双命中(SN 同时在 sys_ad_computer 与 ops_asset)/ 仅 Asset / 都没有(req fallback)
+//
 // 断言落库 ops_workstation_device 行字段严格按注释优先级。
 func TestWSD77_mergeBySerial_ThreeStates(t *testing.T) {
 	db := setupWSD77DB(t)

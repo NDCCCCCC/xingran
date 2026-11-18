@@ -27,12 +27,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/scrapli/scrapligo/driver/network"
 	"github.com/scrapli/scrapligo/driver/options"
 	"github.com/scrapli/scrapligo/platform"
 	"github.com/scrapli/scrapligo/transport"
 	"github.com/scrapli/scrapligo/util"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
 )
 
 // factoryFixturePath resolves the absolute path of a fixture under

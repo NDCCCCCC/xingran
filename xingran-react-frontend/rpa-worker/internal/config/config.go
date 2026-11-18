@@ -31,10 +31,10 @@ type WorkerConfig struct {
 
 // BackendConfig 后端 API 配置
 type BackendConfig struct {
-	BaseURL            string        `mapstructure:"base_url"`
-	APIToken           string        `mapstructure:"api_token"`
-	Timeout            time.Duration `mapstructure:"timeout"`
-	HeartbeatInterval  time.Duration `mapstructure:"heartbeat_interval"`
+	BaseURL           string        `mapstructure:"base_url"`
+	APIToken          string        `mapstructure:"api_token"`
+	Timeout           time.Duration `mapstructure:"timeout"`
+	HeartbeatInterval time.Duration `mapstructure:"heartbeat_interval"`
 }
 
 // RedisConfig Redis 配置

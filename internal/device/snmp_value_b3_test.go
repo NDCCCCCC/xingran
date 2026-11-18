@@ -51,4 +51,3 @@ func TestB3_ParseSNMPValue_StringAndOID(t *testing.T) {
 	n := parseSNMPValue(gosnmp.SnmpPDU{Type: gosnmp.Integer, Value: 7})
 	assert.Equal(t, int64(7), n)
 }
-

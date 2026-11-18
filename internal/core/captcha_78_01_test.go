@@ -532,7 +532,10 @@ func TestCap78_GenerateCaptcha_SliderStorage(t *testing.T) {
 	svcInner.GetConfig().Enabled = captcha.CaptchaTypeSlider
 	svcInner.GetConfig().MaxAttempts = 5
 
-	type pair struct{ x, y int; t string }
+	type pair struct {
+		x, y int
+		t    string
+	}
 	p := pair{x: 123, y: 45, t: "tok-fixed"}
 	require.NoError(t, innerMem.SetJSON(ctx, "captcha:data:cap-storage",
 		SliderVerifyData{XPos: p.x, YPos: p.y, Token: p.t}, time.Minute))
@@ -566,7 +569,7 @@ func TestCap78_GenerateCaptcha_SliderStorage(t *testing.T) {
 	require.NoError(t, limMem.SetJSON(ctx, "captcha:data:cap-attempts",
 		SliderVerifyData{XPos: 100, YPos: 50, Token: "tt"}, time.Minute))
 	require.NoError(t, limMem.SetInt(ctx, "captcha:attempts:cap-attempts", 0, time.Minute))
-	assert.Error(t, limSvc.VerifySliderCaptcha(ctx, "cap-attempts", 999, "tt")) // 位置错 +1
+	assert.Error(t, limSvc.VerifySliderCaptcha(ctx, "cap-attempts", 999, "tt"))  // 位置错 +1
 	assert.Error(t, limSvc.VerifySliderCaptcha(ctx, "cap-attempts", 100, "bad")) // token 错 +1
 	// 第 3 次 attempts >= 2 → 拒绝
 	err = limSvc.VerifySliderCaptcha(ctx, "cap-attempts", 100, "tt")

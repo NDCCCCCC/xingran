@@ -10,7 +10,8 @@
 //   - 端口名前缀分布: 列出非标准前缀(全称/异常短名)
 //
 // 用法:
-//   go run ./scripts/ops/verify-format-unify
+//
+//	go run ./scripts/ops/verify-format-unify
 package main
 
 import (
@@ -418,7 +419,7 @@ func checkMACHistoryFormat(ctx context.Context, g *gorm.DB) {
 func isStandardPrefix(prefix string) bool {
 	standardPrefixes := map[string]bool{
 		"GE": true, "XGE": true, "TWE": true, "HGE": true, "FOE": true, "FE": true,
-		"ET": true, // Huawei 25G 短名(2026-07-01 migration 187 大写化)
+		"ET":   true, // Huawei 25G 短名(2026-07-01 migration 187 大写化)
 		"Loop": true, "Vlan": true, "Vlanif": true, "NULL": true,
 		"Eth": true, "Stack": true, "MEth": true, "AggregatePort": true,
 	}

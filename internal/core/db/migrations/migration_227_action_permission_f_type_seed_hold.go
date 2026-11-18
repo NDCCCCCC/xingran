@@ -22,6 +22,7 @@ var actionPermissionFTypeSeedHoldCodes = []string{
 	"ops:doors:delete",
 	"ops:floor-plan:edit",
 }
+
 // F_TYPE_SEED_END
 
 var actionPermissionSeedsHold = []actionPermissionSeed{

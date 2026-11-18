@@ -123,7 +123,9 @@ func (p *staticRateLimitProvider) GetRateLimit(key string, defaultValue int) int
 
 // Check 检查请求是否超过速率限制
 // 参数: key - 唯一标识符（如API Key ID或用户ID）
-//       scope - 作用域（read/write/admin）
+//
+//	scope - 作用域（read/write/admin）
+//
 // 返回: (bool, *RateLimitResult) - 是否允许，速率限制结果
 func (rl *RateLimiter) Check(key string, scope string) (bool, *RateLimitResult) {
 	// 获取作用域限制配置 (D-18: 运行时从 RateLimitProvider 读,

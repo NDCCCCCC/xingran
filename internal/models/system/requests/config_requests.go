@@ -1,9 +1,9 @@
 package requests
 
 import (
-	"github.com/xingran-next/xingran-go-backend/pkg/constants"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/internal/services/base"
+	"github.com/xingran-next/xingran-go-backend/pkg/constants"
 )
 
 // ConfigListParams 参数配置列表查询参数
@@ -60,8 +60,8 @@ type ConfigCreateRequest struct {
 
 // ConfigUpdateRequest 更新参数配置请求
 type ConfigUpdateRequest struct {
-	ID          string            `json:"id"` // ID 从 URL 参数获取，不在请求体验证
-	ConfigName  string            `json:"configName" binding:"required"`
+	ID         string `json:"id"` // ID 从 URL 参数获取，不在请求体验证
+	ConfigName string `json:"configName" binding:"required"`
 	// F-17: 可选,客户端可显式声明 ConfigKey 触发服务端校验
 	// (系统内置参数的 ConfigKey 不可修改;非内置参数本字段被忽略)
 	ConfigKey   string            `json:"configKey,omitempty"`

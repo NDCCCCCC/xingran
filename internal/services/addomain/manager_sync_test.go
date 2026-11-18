@@ -6,9 +6,9 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/glebarez/sqlite"
 	"github.com/stretchr/testify/assert"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
-	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 )
 
@@ -121,7 +121,7 @@ func TestSyncManagersToAD_BasicSync(t *testing.T) {
 	db := setupManagerSyncDB(t)
 	insertEnabledADConfig(db)
 	insertDeptRow(db, "dept-1", "", "0", "leader-1")
-	insertUserRow(db, "leader-1", "boss", "", "CN=boss,DC=x")   // leader 有 ad_dn
+	insertUserRow(db, "leader-1", "boss", "", "CN=boss,DC=x") // leader 有 ad_dn
 	insertUserRow(db, "user-1", "alice", "dept-1", "CN=alice,DC=x")
 
 	var mu sync.Mutex

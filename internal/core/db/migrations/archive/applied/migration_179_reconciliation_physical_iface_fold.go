@@ -1,6 +1,5 @@
 //go:build archive_skip
 
-
 package migrations
 
 import (
@@ -18,9 +17,9 @@ import (
 //   - migration_178 仅做了 LOWER + 空格剥离,
 //     注释声称"GE/Gi/GigabitEthernet → 'ge' 前缀"折叠但实际未实现
 //   - 实际行为:
-//     * GigabitEthernet2/25 → gigabitethernet2/25
-//     * GE2/25             → ge2/25
-//     * Gi2/25             → gi2/25
+//   - GigabitEthernet2/25 → gigabitethernet2/25
+//   - GE2/25             → ge2/25
+//   - Gi2/25             → gi2/25
 //     三者在 SQL 层互不相等,JOIN 永远失败 → physical_user_id 命中率为 0
 //   - workstation_device_service.go GetPhysicalDevices (Phase 45 后续修复版) 已经
 //     用 REGEXP_REPLACE 链 ('gigabitethernet|gigabitether|ge|gi' → 'ge') 真正折叠

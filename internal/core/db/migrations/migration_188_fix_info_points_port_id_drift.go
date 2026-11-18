@@ -28,16 +28,17 @@ import (
 //   - MAC JOIN 结果完全不变
 //
 // 安全护栏:
-//   1. dry-run 默认开启 (MIGRATION_188_DRY_RUN 未设或 != "false" 时只预览不写)
-//   2. 备份表 sys_info_points_port_id_drift_backup (ip.id, old/new port_id, interface_name)
-//   3. affected_rows 上限 2000 (当前 1077, 超限中止)
-//   4. 备份 + UPDATE 包在同一事务, 任一失败整体回滚
-//   5. 后置验证 drift == 0
+//  1. dry-run 默认开启 (MIGRATION_188_DRY_RUN 未设或 != "false" 时只预览不写)
+//  2. 备份表 sys_info_points_port_id_drift_backup (ip.id, old/new port_id, interface_name)
+//  3. affected_rows 上限 2000 (当前 1077, 超限中止)
+//  4. 备份 + UPDATE 包在同一事务, 任一失败整体回滚
+//  5. 后置验证 drift == 0
 //
 // 回滚指引 (log 输出, 需人工执行):
-//   UPDATE ops_info_points ip SET port_id = b.old_port_id
-//     FROM sys_info_points_port_id_drift_backup b WHERE ip.id = b.id;
-//   DROP TABLE sys_info_points_port_id_drift_backup;
+//
+//	UPDATE ops_info_points ip SET port_id = b.old_port_id
+//	  FROM sys_info_points_port_id_drift_backup b WHERE ip.id = b.id;
+//	DROP TABLE sys_info_points_port_id_drift_backup;
 func Migrate188FixInfoPointsPortIdDrift(db *gorm.DB) error {
 	log.Println("Running migration 188: 修复 ops_info_points.port_id 漂移")
 
