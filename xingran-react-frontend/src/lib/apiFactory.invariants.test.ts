@@ -62,7 +62,10 @@ const HARD_TIER = new Set<string>(HARD_TIER_FILES);
  *     （原基线 1 = vmApi.deleteAccount，URL 恰为 /delete 后缀形状）；手写 CRUD 模板残留 0
  */
 const HARD_ALLOWED: Record<string, number> = {
-  "opsApi.ts": 4,
+  // 5 = locationAliasApi 2（update/delete 标准形状）+ workstationDeviceApi 2
+  //     （update/delete）+ managedOrgApi.delete 1（条线部门归属映射，2026-11-18，
+  //     沿 locationAliasApi 手写形态；/delete 后缀形状与 vmApi.deleteAccount 同类）
+  "opsApi.ts": 5,
   "vdiApi.ts": 0,
 };
 
