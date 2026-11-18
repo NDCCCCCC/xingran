@@ -51,8 +51,7 @@ function toOrgTreeData(nodes: Department[]): OrgTreeNode[] {
     value: node.id,
     key: node.id,
     orgLevel: node.orgLevel,
-    children:
-      node.children && node.children.length > 0 ? toOrgTreeData(node.children) : undefined,
+    children: node.children && node.children.length > 0 ? toOrgTreeData(node.children) : undefined,
   }));
 }
 
