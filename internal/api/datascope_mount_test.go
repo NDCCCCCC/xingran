@@ -39,13 +39,14 @@ func datascopeMountRouterSource(t *testing.T) []string {
 var opsReadGroups = []string{
 	"buildings", "floors", "workstations", "locationAlias", "workstationDevices",
 	"assets", "infoPoints", "serverRooms", "dedicatedLines", "roomDevices",
-	"walls", "doors", "texts",
+	"walls", "doors", "texts", "managedOrg",
 }
 
 var opsWriteGroups = []string{
 	"buildingWrites", "floorWrites", "workstationWrites", "locationAliasWrites",
 	"workstationDeviceWrites", "assetWrites", "infoPointWrites", "serverRoomWrites",
 	"dedicatedLineWrites", "roomDeviceWrites", "wallsWrites", "doorsWrites", "textsWrites",
+	"managedOrgWrites",
 }
 
 // findUseLines 返回 `<var>.Use(<prefix>` 命中的行号（1-based）。
@@ -60,13 +61,14 @@ func findUseLines(lines []string, varName, prefix string) []int {
 	return out
 }
 
-// TestDataScopeMount_OpsCoverage 断言 ops 全域 26 个组全部挂载 DataScopePermission，
+// TestDataScopeMount_OpsCoverage 断言 ops 全域 28 个组全部挂载 DataScopePermission，
 // 且读组挂载顺序在权限校验之后（权限 abort 时不会白跑一次 getUserMaxDataScope）。
 func TestDataScopeMount_OpsCoverage(t *testing.T) {
 	lines := datascopeMountRouterSource(t)
 
 	// 1) 既有 5 处（system usersRead/usersWrite/deptsRead/deptsWrite + vdi vms）不得被误删，
-	//    加上 ops 26 处 = 31，再加 v1.55 Phase 149 收口的 roomPhotos 1 处 = 32。
+	//    加上 ops 28 处（26 + 2026-11-18 新增 dept-managed-org 读/写两组）= 33，
+	//    再加 v1.55 Phase 149 收口的 roomPhotos 1 处 = 34。
 	//    v1.55 SCOPE-02：rooms/photos 原先「连 DataScopePermission 都没挂」属接线遗漏
 	//    （见 261109-v154-locked-root-cause-analysis.md §② 根因 1），已按用户 2026-11-09
 	//    裁定「显式豁免面从根源收口」补挂；本守卫随新语义更新，不再把 roomPhotos 当豁免组。
@@ -76,9 +78,9 @@ func TestDataScopeMount_OpsCoverage(t *testing.T) {
 			total++
 		}
 	}
-	const wantTotal = 5 + 26 + 1
+	const wantTotal = 5 + 28 + 1
 	if total != wantTotal {
-		t.Fatalf("DataScopePermission 挂载总数 = %d，期望 %d（既有 5 + ops 读组 13 + ops 写组 13 + v1.55 收口的 roomPhotos 1）；新增/删除挂载必须同步本测试与 ops 域", total, wantTotal)
+		t.Fatalf("DataScopePermission 挂载总数 = %d，期望 %d（既有 5 + ops 读组 14 + ops 写组 14 + v1.55 收口的 roomPhotos 1）；新增/删除挂载必须同步本测试与 ops 域", total, wantTotal)
 	}
 
 	// 2) 26 个组逐一断言已挂载。

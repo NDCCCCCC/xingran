@@ -1158,6 +1158,28 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 			locationAliasDelete.POST("/:id/delete", locationAliasHandler.Delete)
 		}
 
+		// 条线部门 → 管理归属机构映射（scope='permission'，复用 sys_dept_location_alias 表；写组为严格兄弟组 85-03 RBAC-01）
+		managedOrgService := opsServices.NewDeptManagedOrgService(core.DB.GetDB())
+		managedOrgHandler := operations.NewDeptManagedOrgHandler(managedOrgService).WithCore(core)
+		managedOrg := ops.Group("/dept-managed-org")
+		managedOrg.Use(middleware.RequirePermissions([]string{
+			"sys:dept:managed-org:list",
+			"sys:dept:managed-org:add",
+			"sys:dept:managed-org:delete",
+		}, core))
+		managedOrg.Use(middleware.DataScopePermission(core))
+		{
+			managedOrg.POST("/list", managedOrgHandler.List)
+		}
+		managedOrgWrites := ops.Group("/dept-managed-org")
+		managedOrgWrites.Use(middleware.DataScopePermission(core))
+		{
+			managedOrgAdd := strictUserRouteGroup(managedOrgWrites, permission.SysDeptManagedOrgAdd, core)
+			managedOrgAdd.POST("", managedOrgHandler.Create)
+			managedOrgDelete := strictUserRouteGroup(managedOrgWrites, permission.SysDeptManagedOrgDelete, core)
+			managedOrgDelete.POST("/:id/delete", managedOrgHandler.Delete)
+		}
+
 		// 工位设备关联（域码借用 ops:workstation:*；写操作见下方严格兄弟组 85-03 RBAC-01）
 		// task-3 口径记录（G5 借码说明，2026-11-11）：本组无独立 ops:workstation-device:* 码，
 		// 有意借用 ops:workstation:* 域码（工位设备关联属工位域管理面），不新增码、不拆组。

@@ -1519,6 +1519,12 @@ func (d *Database) runAnchorScopeMigration() {
 	if err := d.runAndRecord(252, "dept_org_level_and_anchor_scope", migrations.Migrate252DeptOrgLevelAndAnchorScope); err != nil {
 		applogger.Errorf("机构层级锚点维度迁移失败 (非阻断,留待下次启动): %v", err)
 	}
+
+	// 条线部门管理归属映射按钮权限 seed（v1.54，非阻断 — 按钮权限缺失不阻断启动，
+	// 幂等可重跑；migration_165 建表，253 只 seed 3 条 sys_menu 按钮权限）。
+	if err := d.runAndRecord(253, "dept_managed_org_perms", migrations.Migrate253DeptManagedOrgPerms); err != nil {
+		applogger.Errorf("条线部门归属映射权限 seed 失败 (非阻断,留待下次启动): %v", err)
+	}
 }
 
 // ensureSQLiteJoinTableColumns many2many join 表的列级对齐兜底（task-23）。
@@ -1797,6 +1803,13 @@ func (d *Database) BootstrapMissingTables() error {
 	// 也不会重复执行。
 	if err := d.runAndRecord(252, "dept_org_level_and_anchor_scope", migrations.Migrate252DeptOrgLevelAndAnchorScope); err != nil {
 		return fmt.Errorf("机构层级锚点维度列补建失败: %w", err)
+	}
+
+	// 条线部门管理归属映射按钮权限 seed（v1.54）：SKIP_AUTOMIGRATE 旁路同样要补种。
+	// 该旁路不跑 runMenuConsolidationMigrations（253 正常注册点在其内部），
+	// 幂等（runAndRecord 版本记录 + Migrate253 内部 perms Count 守卫），重复执行无副作用。
+	if err := d.runAndRecord(253, "dept_managed_org_perms", migrations.Migrate253DeptManagedOrgPerms); err != nil {
+		return fmt.Errorf("条线部门归属映射权限 seed 失败: %w", err)
 	}
 
 	// 2) 索引兜底:model tag 未覆盖的索引面,显式 IF NOT EXISTS 幂等补建

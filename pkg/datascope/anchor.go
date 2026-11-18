@@ -18,7 +18,16 @@
 //   - C3：解析失败 fail-closed，绝不回退到用户 dept_id；
 //   - C4：ScopeResult 结构不变（5 字段），各域过滤代码零改动；
 //   - C5：子树展开只复用 queryDeptChildIDs，禁止第二套 ancestors LIKE；
-//   - C7：uuid/varchar 比较统一 CAST(... AS TEXT)。
+//     （C5 豁免：sys_dept_location_alias scope='permission' 的「条线部门→管理归属
+//     机构」映射可作为第二可见集来源——条线部门集合直接并入、不做子树展开，
+//     且全程无 ancestors LIKE，见 queryManagedOrgDeptIDs / resolveManagedOrgFallback）
+//   - C7：uuid/varchar 比较统一 CAST(... AS TEXT)；
+//   - C8（映射来源语义，2026-11-18 增补）：
+//     ① 映射兜底只在 ancestors 链解析 miss 后生效（纯加法：命中链不受影响，
+//        绝不替换/收窄既有解析结果，与 C2 同构）；
+//     ② 映射指向的机构校验失败 → 该来源 fail-closed + 告警，绝不回退 dept_id；
+//     ③ 别名表缺失按"无映射"降级（复用 isMissingTableError，存量零回归）；
+//     ④ 映射查询统一 CAST(... AS TEXT)（并入 C7）。
 package datascope
 
 import (
@@ -52,6 +61,9 @@ const (
 	AnchorReasonExternalMiss AnchorResolveReason = "该用户在部门链中没有标记为外部机构的节点"
 	// AnchorReasonBadMode 锚点模式非法（1/4/未知）。
 	AnchorReasonBadMode AnchorResolveReason = "锚点模式非法"
+	// AnchorReasonManagedOrgInvalid 部门配置了管理归属映射(scope='permission')，
+	// 但映射指向的机构不存在或已删除 —— 按未命中 fail-closed 并告警（C8-③）。
+	AnchorReasonManagedOrgInvalid AnchorResolveReason = "该部门配置的管理归属机构不存在或已删除"
 )
 
 // AnchorPreviewItem 推导预览中的单个任职人结果。
@@ -348,7 +360,9 @@ func resolveAnchorByChain(
 			return "", false, AnchorOK, wErr
 		}
 		if !found {
-			return "", false, AnchorReasonExternalMiss, nil
+			// C8-①：链上解析 miss 后按「条线部门→管理归属机构」映射兜底
+			// （纯加法：仅 miss 时生效，绝不影响链上命中路径）。
+			return resolveManagedOrgFallback(ctx, db, deptID, AnchorReasonExternalMiss)
 		}
 		return hit, true, AnchorOK, nil
 
@@ -372,12 +386,103 @@ func resolveAnchorByChain(
 			return "", false, AnchorOK, wErr
 		}
 		if !found {
-			return "", false, AnchorReasonLevelMiss, nil
+			// C8-①：同上，Level 模式 miss 后走映射兜底。
+			return resolveManagedOrgFallback(ctx, db, deptID, AnchorReasonLevelMiss)
 		}
 		return hit, true, AnchorOK, nil
 	}
 
 	return "", false, AnchorReasonBadMode, nil
+}
+
+// ---------------------------------------------------------------------------
+// 条线部门 → 管理归属机构 映射（scope='permission'，C8 增补来源）
+// ---------------------------------------------------------------------------
+
+// resolveManagedOrgFallback 条线部门映射兜底解析。
+//
+// 语义：某部门挂在独立条线（如「运营服务本部」）下，其 ancestors 链上不存在任何
+// 中支/支公司机构 → 链上解析 miss。若管理员为该部门配置了 scope='permission'
+// 的管理归属映射（如 潜江团客共享作业服务中心 → 潜江中支），则锚点直接取映射的
+// 归属机构（该机构必须真实存在，C8-②）。
+//
+// 调用时机：resolveAnchorByChain 中 ExternalOrg/Level 模式的 miss 分支——
+// 命中链绝不进入本函数，保证"映射只放宽、绝不收窄"（与 C2 同构）。
+//
+// 降级语义（C8-③）：sys_dept_location_alias 表缺失（极端老库）→ 按无映射处理，
+// 返回原 miss reason；映射指向机构不存在/已删除 → fail-closed 返回
+// AnchorReasonManagedOrgInvalid 并告警，绝不回退 dept_id（C3）。
+func resolveManagedOrgFallback(
+	ctx context.Context,
+	db *gorm.DB,
+	deptID string,
+	missReason AnchorResolveReason,
+) (anchorDeptID string, resolved bool, reason AnchorResolveReason, err error) {
+	orgID, found, qErr := queryManagedOrgForDept(ctx, db, deptID)
+	if qErr != nil {
+		return "", false, AnchorOK, qErr
+	}
+	if !found {
+		return "", false, missReason, nil
+	}
+	exists, e := deptExists(ctx, db, orgID)
+	if e != nil {
+		return "", false, AnchorOK, e
+	}
+	if !exists {
+		applogger.Warnf(
+			"[机构锚点] 部门 %s 的管理归属映射指向的机构 %s 不存在或已删除，按未命中 fail-closed 处理",
+			deptID, orgID,
+		)
+		return "", false, AnchorReasonManagedOrgInvalid, nil
+	}
+	return orgID, true, AnchorOK, nil
+}
+
+// queryManagedOrgForDept 按条线部门反查管理归属机构。
+//
+// 返回 found=false 的情形：无映射行 / 别名表缺失（降级，调用方按原 miss 继续）。
+// JOIN sys_dept 保证映射行指向的 dept_id 本身未被软删。
+func queryManagedOrgForDept(ctx context.Context, db *gorm.DB, deptID string) (orgID string, found bool, err error) {
+	qErr := db.WithContext(ctx).Raw(`
+		SELECT CAST(a.location_id AS TEXT)
+		FROM sys_dept_location_alias a
+		JOIN sys_dept d ON CAST(d.id AS TEXT) = a.dept_id AND d.deleted_at IS NULL
+		WHERE CAST(a.dept_id AS TEXT) = ? AND a.scope = 'permission' AND a.deleted_at IS NULL
+		LIMIT 1
+	`, deptID).Scan(&orgID).Error
+	if qErr != nil {
+		if isMissingTableError(qErr) {
+			// C8-③：别名表缺失 → 无映射降级（存量零回归）。
+			applogger.Warnf("[机构锚点] sys_dept_location_alias 不可查询，管理归属映射兜底本次跳过：%v", qErr)
+			return "", false, nil
+		}
+		return "", false, fmt.Errorf("查询管理归属映射失败: %w", qErr)
+	}
+	return orgID, orgID != "", nil
+}
+
+// queryManagedOrgDeptIDs 取挂到指定机构(orgID)的全部条线部门 ID（方向②：
+// 中支管理员的可见集要包含「行政上挂条线、管理上属本机构」的部门）。
+//
+// C5 豁免来源：本集合直接并入可见集，不做子树展开、不引入第二套 ancestors LIKE；
+// 统一 CAST(... AS TEXT)（C7）。
+func queryManagedOrgDeptIDs(ctx context.Context, db *gorm.DB, orgID string) ([]string, error) {
+	var ids []string
+	qErr := db.WithContext(ctx).Raw(`
+		SELECT CAST(a.dept_id AS TEXT)
+		FROM sys_dept_location_alias a
+		JOIN sys_dept d ON CAST(d.id AS TEXT) = a.dept_id AND d.deleted_at IS NULL
+		WHERE CAST(a.location_id AS TEXT) = ? AND a.scope = 'permission' AND a.deleted_at IS NULL
+	`, orgID).Scan(&ids).Error
+	if qErr != nil {
+		if isMissingTableError(qErr) {
+			applogger.Warnf("[机构锚点] sys_dept_location_alias 不可查询，条线部门并入本次跳过：%v", qErr)
+			return nil, nil
+		}
+		return nil, fmt.Errorf("查询条线部门映射失败: %w", qErr)
+	}
+	return ids, nil
 }
 
 // ---------------------------------------------------------------------------
@@ -596,6 +701,19 @@ func ResolveAnchorGrants(ctx context.Context, db *gorm.DB, userID string) ([]str
 			continue
 		}
 		collected = append(collected, ids...)
+
+		// C8 方向②：锚点机构子树展开后，并入挂到该机构的条线部门
+		// （行政上挂独立条线、管理上属本机构的部门，如「潜江团客共享作业服务中心」
+		// 对潜江中支管理员可见）。表缺失/查询失败按降级跳过，不中断其它来源。
+		managedIDs, mErr := queryManagedOrgDeptIDs(ctx, db, anchorID)
+		if mErr != nil {
+			applogger.Warnf(
+				"[机构锚点] 条线部门映射查询失败，已跳过（user_id=%s, anchor=%s）: %v",
+				userID, anchorID, mErr,
+			)
+			continue
+		}
+		collected = append(collected, managedIDs...)
 	}
 
 	return normalizeIDs(collected), nil

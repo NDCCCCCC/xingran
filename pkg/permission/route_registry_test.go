@@ -216,6 +216,8 @@ var strictWriteGroups = map[string]PermissionCode{
 	"/ops/location-alias":                              OpsLocationAliasAdd,
 	"/ops/location-alias/:id/update":                   OpsLocationAliasEdit,
 	"/ops/location-alias/:id/delete":                   OpsLocationAliasDelete,
+	"/ops/dept-managed-org":                            SysDeptManagedOrgAdd,
+	"/ops/dept-managed-org/:id/delete":                 SysDeptManagedOrgDelete,
 	"/ops/walls":                                       OpsWallAdd,
 	"/ops/walls/:id/update":                            OpsWallEdit,
 	"/ops/walls/:id/delete":                            OpsWallDelete,

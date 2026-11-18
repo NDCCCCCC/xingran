@@ -41,6 +41,11 @@ export const queryKeys = {
     byLocation: (locationId: string) => ["location-alias", "by-location", locationId] as const,
     list: (params?: Record<string, unknown>) => ["location-alias", "list", params ?? {}] as const,
   },
+  // 条线部门管理归属机构映射（权限数据范围域）
+  managedOrg: {
+    all: ["managed-org"] as const,
+    list: (params?: Record<string, unknown>) => ["managed-org", "list", params ?? {}] as const,
+  },
   // Sprint 1 Fix #5 (Vercel audit): widget polling → React Query
   widget: {
     all: ["widget"] as const,

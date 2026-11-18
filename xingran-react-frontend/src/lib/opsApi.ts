@@ -234,6 +234,40 @@ export const locationAliasApi = {
   },
 };
 
+// ==================== 条线部门管理归属机构映射（权限数据范围域） ====================
+
+// 映射记录（后端复用 sys_dept_location_alias 表，scope='permission' 行）
+export interface ManagedOrg {
+  id: string;
+  deptId: string;
+  locationId: string;
+  scope: string;
+  remark?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  /** 条线部门名（后端 List JOIN sys_dept 产出，仅列表接口返回） */
+  originDeptName?: string;
+  /** 管理归属机构名（后端 List JOIN sys_dept 产出，仅列表接口返回） */
+  locationDeptName?: string;
+}
+
+export const managedOrgApi = {
+  list: async (params: { pageNum?: number; pageSize?: number } = {}) => {
+    return await post<PageResponse<ManagedOrg>>("/ops/dept-managed-org/list", {
+      pageNum: params.pageNum ?? 1,
+      pageSize: params.pageSize ?? 10,
+    });
+  },
+
+  create: async (data: { deptId: string; orgId: string; remark?: string }) => {
+    return await post<ManagedOrg>("/ops/dept-managed-org", data);
+  },
+
+  delete: async (id: string) => {
+    return await post(`/ops/dept-managed-org/${id}/delete`, {});
+  },
+};
+
 // ==================== 机房管理 ====================
 
 export interface ServerRoomListParams extends PageParams {
