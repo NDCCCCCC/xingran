@@ -87,6 +87,7 @@ GLOBAL 目标（仅记录，不执行）：若未来要抬，必须先证明 4 �
 | 2026-11-12 | `pages/ad-domain` | 33.4 | 36.2 | 36.73%（479/1304） | 基线轮 `npm run test:coverage` → 593 files / 4161 tests 全绿；`check-frontend-coverage.sh` → GATE_EXIT=0（45/45 目录 >= floor）；`npm run lint:ci` → 通过 | 基线轮实测高出 floor 3.33pp，按 §2.3 上调到 `实测-0.5pp` 的一位（36.2），仍留 0.53pp 噪声余量 |
 | 2026-11-12 | `pages/vdi` | 31.1 | 31.1（保持） | 31.62%（160/506） | 同上 | `31.62 - 0.5 = 31.12 → 31.1` = 现值，按 §2.3 本轮无上调空间，登记为「已复核、不抬」而非静默跳过 |
 | 2026-11-12 | `GLOBAL` | 3.8 | 3.8（保持） | 加权 63.01%（14710/23345） | 同上 | 本轮按要求不强抬；目标/前置条件见 §4 |
+| 2026-11-18 | `components/system` | （未登记） | **31.1**（新增目录登记，见 §6） | 31.65%（25/79） | `npx vitest run --coverage` → Test Files 全绿 / EXIT=0；`check-frontend-coverage.sh coverage/coverage-final.json .coverage-fe-floors` → gate 通过（GLOBAL + 全目录 >= floor）；`npm run type-check` / `npm run lint` / `npm run format:check` / `npx vitest run` 全绿 | PR #107 新增 `src/components/system/`（AnchorPreviewPanel / AnchorScopeFields / UserPermissionPreviewPanel，多为 JSX，难测）。按 §2 规则「新增目录必须登记」，ratchet 初值 = 实测 31.65 - 0.5 = 31.15 → 31.1（一位），留出噪声余量；不贴实测值 |
 
 > 注：本轮新增 4 组冒烟测试落在 `pages/monitor`（日志清空 login 分支）、
 > `pages/workorder`（周期工单 4 端点）、`pages/system`（RestoreModal 二次确认）、
@@ -94,3 +95,25 @@ GLOBAL 目标（仅记录，不执行）：若未来要抬，必须先证明 4 �
 > `pages/ad-domain` / `pages/vdi` 的实测数值，故这两行以基线轮实测为证据。
 > 新增测试同时让 `pages/monitor` / `pages/workorder` / `pages/system` / `pages/login`
 > 的现有 floor 更安全，但按 §2.3 本轮不为它们上调（避免一次改动抬太多行）。
+
+## 6. PR #107 — 新增 `components/system` 目录登记（2026-11-18）
+
+PR #107 引入 `src/components/system/`（AnchorPreviewPanel / AnchorScopeFields /
+UserPermissionPreviewPanel），门脚本按 `components/<二级目录>` 双计（D-04/D-05）
+产生新 key `components/system`，触发方向 b「未登记 floor」违规。
+
+- **实测**：`components/system 31.65%（25/79 stmts）` —— 组件以 JSX 渲染与
+  antd 浮层为主，按 §2 规则允许以合理低 floor 登记（不强制补难测组件渲染用例）。
+- **登记值**：`31.1` = `round1(31.65 - 0.5)`（D-06 噪声余量，下限 0），不贴实测。
+- **同轮配套测试**（本次一并把关目录拉回 floor 之上）：
+  - `xingran-react-frontend/src/constants/anchor.test.ts`（新建，28 用例）
+    — 覆盖 anchor.ts 全部导出函数的所有分支。
+  - `xingran-react-frontend/src/lib/__tests__/systemAnchorApi.test.ts`（新建，22 用例）
+    — mock `@/lib/api` post，覆盖预览 API + normalizeAnchorPreview 全分支。
+- **实测覆盖率变化**：
+  - `constants` 83.59%（107/128）→ **96.88%（124/128）**，floor 95.2% 满足；
+  - `lib` 91.89%（974/1060）→ **94.25%（999/1060）**，floor 93.8% 满足。
+- **最终 gate**：`check-frontend-coverage.sh` → GLOBAL PASS + 全目录 PASS（含新登记的
+  `components/system 31.65% >= 31.1%`），退出码 0。
+- **floors 只升不降**：本轮仅**新增一行**，未下调/删除任何既有行；`constants` /
+  `lib` 现值保持不变（实测上扬让其更安全，按 §2.3 本轮不为它们上调）。

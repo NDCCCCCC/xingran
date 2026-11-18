@@ -34,9 +34,7 @@ export function normalizeAnchorPreview(raw: unknown): AnchorPreviewResult {
   const unresolved = unresolvedFromItems ?? unresolvedFallback ?? [];
 
   const totalCount =
-    typeof data.totalCount === "number"
-      ? data.totalCount
-      : (items?.length ?? unresolved.length);
+    typeof data.totalCount === "number" ? data.totalCount : (items?.length ?? unresolved.length);
   const unresolvedCount =
     typeof data.unresolvedCount === "number" ? data.unresolvedCount : unresolved.length;
   const resolvedCount =
@@ -66,10 +64,7 @@ export async function previewRoleAnchor(roleId: string): Promise<AnchorPreviewRe
   if (!roleId || roleId === "undefined" || roleId === "null") {
     throw new Error("无效的角色 ID，无法预览机构授权范围");
   }
-  const result = await post<AnchorPreviewResult>(
-    `/system/roles/${roleId}/anchor-preview`,
-    {}
-  );
+  const result = await post<AnchorPreviewResult>(`/system/roles/${roleId}/anchor-preview`, {});
   return normalizeAnchorPreview(result.data);
 }
 
@@ -98,7 +93,7 @@ export async function previewUserPermission(params: {
   // （user_permission_preview.go 仅初始化部分字段），面板直接 .length 会
   // TypeError 白屏。这里统一归一化为数组，与 normalizeAnchorPreview 同法。
   const d = result.data;
-  const arr = <T,>(v: T[] | null | undefined): T[] => (Array.isArray(v) ? v : []);
+  const arr = <T>(v: T[] | null | undefined): T[] => (Array.isArray(v) ? v : []);
   return {
     ...d,
     permissions: arr(d.permissions),
@@ -123,9 +118,6 @@ export async function previewPostAnchor(postId: string): Promise<AnchorPreviewRe
   if (!postId || postId === "undefined" || postId === "null") {
     throw new Error("无效的岗位 ID，无法预览机构授权范围");
   }
-  const result = await post<AnchorPreviewResult>(
-    `/system/posts/${postId}/anchor-preview`,
-    {}
-  );
+  const result = await post<AnchorPreviewResult>(`/system/posts/${postId}/anchor-preview`, {});
   return normalizeAnchorPreview(result.data);
 }

@@ -329,7 +329,10 @@ describe("useDeptTree", () => {
     await waitFor(() => expect(second.result.current.data?.[0]?.deptName).toBe("武汉中支（收口）"));
 
     // 两个账号的缓存条目并存，互不覆盖
-    const keys = queryClient.getQueryCache().getAll().map((q) => JSON.stringify(q.queryKey));
+    const keys = queryClient
+      .getQueryCache()
+      .getAll()
+      .map((q) => JSON.stringify(q.queryKey));
     expect(keys.some((k) => k.includes("user-a"))).toBe(true);
     expect(keys.some((k) => k.includes("user-b"))).toBe(true);
     mocks.currentUserID = "user-a";

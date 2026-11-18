@@ -160,13 +160,10 @@ const PostManagement: FC = () => {
   };
 
   // 锚点受控变更（成对抛值；切模式时参数已由 AnchorScopeFields 按形状清空）
-  const handleAnchorChange = useCallback(
-    ({ mode, param }: { mode: AnchorMode; param: string }) => {
-      setAnchorMode(mode);
-      setAnchorParam(retargetAnchorParam(mode, param));
-    },
-    []
-  );
+  const handleAnchorChange = useCallback(({ mode, param }: { mode: AnchorMode; param: string }) => {
+    setAnchorMode(mode);
+    setAnchorParam(retargetAnchorParam(mode, param));
+  }, []);
 
   // 行删（经 createDeleteAction→ConfirmDelete；失败 confirmDelete 内 handleApiError 后 rethrow）
   const handleDelete = async (id: string) => {

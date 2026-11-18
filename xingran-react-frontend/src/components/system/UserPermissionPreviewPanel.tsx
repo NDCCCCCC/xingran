@@ -89,16 +89,24 @@ export function UserPermissionPreviewPanel({
 
   const anchorColumns = [
     {
-      title: "来源", dataIndex: "source", key: "source", width: 70,
-      render: (v: string) => <Tag color={v === "role" ? "blue" : "green"}>{v === "role" ? "角色" : "岗位"}</Tag>,
+      title: "来源",
+      dataIndex: "source",
+      key: "source",
+      width: 70,
+      render: (v: string) => (
+        <Tag color={v === "role" ? "blue" : "green"}>{v === "role" ? "角色" : "岗位"}</Tag>
+      ),
     },
     { title: "名称", dataIndex: "sourceName", key: "sourceName" },
     { title: "锚点模式", dataIndex: "modeLabel", key: "modeLabel" },
     {
-      title: "结果", key: "result",
+      title: "结果",
+      key: "result",
       render: (_: unknown, r: UserAnchorSource) =>
         r.resolved ? (
-          <Text type="success">命中「{r.anchorDeptName || r.anchorDeptId}」· 子树 {r.deptCount} 部门</Text>
+          <Text type="success">
+            命中「{r.anchorDeptName || r.anchorDeptId}」· 子树 {r.deptCount} 部门
+          </Text>
         ) : (
           <Text type="warning">未命中：{r.reason || "无匹配机构"}</Text>
         ),
@@ -116,11 +124,18 @@ export function UserPermissionPreviewPanel({
   return (
     <div style={{ marginTop: 8, padding: "8px 0" }}>
       <Space direction="vertical" style={{ width: "100%" }} size="small">
-        <Button icon={<EyeOutlined />} onClick={handlePreview} loading={loading} disabled={disabled} size="small">
+        <Button
+          icon={<EyeOutlined />}
+          onClick={handlePreview}
+          loading={loading}
+          disabled={disabled}
+          size="small"
+        >
           权限预览（菜单权限树 / 部门树 / 数据范围）
         </Button>
         <Text type="secondary" style={{ fontSize: 12 }}>
-          按当前选择的部门 / 角色 / 岗位模拟解析，保存前即可确认该用户能看到的菜单与机构数据（树中勾选即为将获得的权限）。
+          按当前选择的部门 / 角色 /
+          岗位模拟解析，保存前即可确认该用户能看到的菜单与机构数据（树中勾选即为将获得的权限）。
         </Text>
 
         {error && <Alert type="error" showIcon message={error} />}
@@ -163,7 +178,11 @@ export function UserPermissionPreviewPanel({
                 extra={result.allDepts ? <Tag color="orange">全库可见</Tag> : undefined}
               >
                 {result.allDepts ? (
-                  <Alert type="info" showIcon message="该用户为全库可见（数据范围=全部数据），机构授权不参与。" />
+                  <Alert
+                    type="info"
+                    showIcon
+                    message="该用户为全库可见（数据范围=全部数据），机构授权不参与。"
+                  />
                 ) : result.deptIds.length ? (
                   <Tree
                     checkable

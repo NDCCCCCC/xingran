@@ -7,7 +7,9 @@ import { createDeleteAction } from "@/components/shared/ActionButtons";
 import { PERMISSION_CODES } from "@/constants/permissionCodes";
 import { getStatusText, getDeviceTypeText, type DeviceTypeOption } from "./constants";
 
-export const getRoomDeviceColumns = (deviceTypeOptions: DeviceTypeOption[] = []): ColumnsType<RoomDevice> => [
+export const getRoomDeviceColumns = (
+  deviceTypeOptions: DeviceTypeOption[] = []
+): ColumnsType<RoomDevice> => [
   {
     title: "设备名称",
     dataIndex: "name",

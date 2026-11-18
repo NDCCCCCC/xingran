@@ -4,7 +4,12 @@ import { EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import type { RoomDevice } from "@/types";
 import { useActionPermission } from "@/components/shared";
 import { confirmDelete } from "@/components/shared/confirmDelete";
-import { cardActionStyle, getStatusText, getDeviceTypeText, type DeviceTypeOption } from "../constants";
+import {
+  cardActionStyle,
+  getStatusText,
+  getDeviceTypeText,
+  type DeviceTypeOption,
+} from "../constants";
 
 type ActionDecision = ReturnType<ReturnType<typeof useActionPermission>["decide"]>;
 

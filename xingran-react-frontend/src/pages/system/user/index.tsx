@@ -260,10 +260,7 @@ function getUserTableColumns(props: UserTableColumnsProps): ColumnsType<User> {
       // 后端 models.User.Posts 为 many2many sys_user_post；列表接口是否回填取决于
       // 后端实现（未回填时退化为 postIds + 岗位名称映射查表，仍展示「—」为最终兜底）。
       render: (
-        posts:
-          | string[]
-          | Array<{ id?: string; postName?: string; postCode?: string }>
-          | undefined,
+        posts: string[] | Array<{ id?: string; postName?: string; postCode?: string }> | undefined,
         record
       ) => {
         const list: Array<string | { id?: string; postName?: string; postCode?: string }> =
@@ -277,7 +274,9 @@ function getUserTableColumns(props: UserTableColumnsProps): ColumnsType<User> {
               const rawId = typeof post === "string" ? post : post.id;
               const postName =
                 typeof post === "string"
-                  ? (rawId ? (postNameMap[rawId] ?? rawId) : "—")
+                  ? rawId
+                    ? (postNameMap[rawId] ?? rawId)
+                    : "—"
                   : post.postName || post.postCode || "-";
               return (
                 <span key={rawId ?? index} className="xr-tag xr-tag-green">

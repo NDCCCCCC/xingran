@@ -13,11 +13,7 @@ import { post } from "@/lib/api";
 import {} from "@/utils/errorHandler";
 import { confirmDelete } from "@/components/shared/confirmDelete";
 import { queryKeys } from "@/lib/queryKeys";
-import {
-  normalizeAnchorMode,
-  normalizeAnchorParam,
-  retargetAnchorParam,
-} from "@/constants/anchor";
+import { normalizeAnchorMode, normalizeAnchorParam, retargetAnchorParam } from "@/constants/anchor";
 import type { AnchorMode } from "@/types/system";
 
 export interface UseRoleActionsParams {
@@ -219,9 +215,7 @@ export function useRoleActions(params: UseRoleActionsParams): UseRoleActionsRetu
           // 机构锚点维度（与 dataScope 正交，契约 §二 2.2）：
           // 只允许 0/2/3/5；模式不需要参数时一律提交空串（防止残留脏参数）。
           // 取值优先级：外部受控 state（页面 AnchorScopeFields）→ 表单值（兼容旧调用方）
-          anchorMode: normalizeAnchorMode(
-            anchorMode ?? (values.anchorMode as number | undefined)
-          ),
+          anchorMode: normalizeAnchorMode(anchorMode ?? (values.anchorMode as number | undefined)),
           anchorParam: retargetAnchorParam(
             normalizeAnchorMode(anchorMode ?? (values.anchorMode as number | undefined)),
             anchorParam || (typeof values.anchorParam === "string" ? values.anchorParam : "")

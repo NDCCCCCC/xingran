@@ -112,7 +112,10 @@ export function isAnchorDeptParam(param?: string | null): boolean {
  * 校验 (mode, param) 组合是否合法（前端侧与后端 `ValidateAnchor` 对齐的预检）。
  * mode=0/3 不携带参数；mode=2 必须 UUID；mode=5 必须 "1"~"4"。
  */
-export function isValidAnchorConfig(mode: number | undefined | null, param?: string | null): boolean {
+export function isValidAnchorConfig(
+  mode: number | undefined | null,
+  param?: string | null
+): boolean {
   const m = normalizeAnchorMode(mode);
   if (m === 0 || m === 3) return true;
   if (m === 2) return isAnchorDeptParam(param);

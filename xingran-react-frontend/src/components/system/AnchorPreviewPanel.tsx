@@ -114,7 +114,8 @@ export function AnchorPreviewPanel({
     setLoading(true);
     setError(null);
     try {
-      const next = kind === "role" ? await previewRoleAnchor(targetId) : await previewPostAnchor(targetId);
+      const next =
+        kind === "role" ? await previewRoleAnchor(targetId) : await previewPostAnchor(targetId);
       if (seq !== requestSeq.current) return;
       setResult(next);
     } catch (e) {
