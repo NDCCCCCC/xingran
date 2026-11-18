@@ -10,8 +10,10 @@
  */
 
 import { useQuery, useQueryClient, type UseQueryResult } from "@tanstack/react-query";
-import { getDeptTree, type SimpleDept } from "@/lib/dutyApi";
+import { post } from "@/lib/api";
+import type { SimpleDept } from "@/lib/dutyApi";
 import { queryKeys } from "@/lib/queryKeys";
+import { useAuthStore } from "@/store/authStore";
 
 /**
  * Department tree node. We keep the helper's `SimpleDept` shape as the
@@ -24,12 +26,24 @@ interface DeptTreeResponse {
   data?: DeptTreeNode[];
 }
 
-export function useDeptTree(): UseQueryResult<DeptTreeNode[]> {
+export function useDeptTree(options?: { scoped?: boolean }): UseQueryResult<DeptTreeNode[]> {
+  const scoped = options?.scoped ?? false;
+  // v1.54 修复：queryKey 必须带当前登录人 ID。
+  // 部门树（尤其 scoped 收口形态）的内容依赖"当前登录者"的数据范围——同一浏览器
+  // 里超管退出后换机构管理员登录，若 key 相同会命中 React Query 缓存里的超管全量树
+  // （gcTime 30min），导致新账号看到全量部门（用户列表 412 已收口但树仍全量的真因）。
+  // 带上 userID 后切账号自动隔离缓存条目，无需用户手动清缓存。
+  const userID = useAuthStore((s) => s.user?.id) ?? "anonymous";
   return useQuery({
-    queryKey: queryKeys.dept.tree(),
+    // scoped 与全量树**分开缓存**：同一登录人两种结果并存（如超管的两个条目内容
+    // 相同，但普通用户的 scoped 条目是收口后的子树）。共享一条缓存会让先加载的
+    // 形态污染后加载的消费者。
+    queryKey: [...(scoped ? [...queryKeys.dept.tree(), "scoped"] : queryKeys.dept.tree()), userID],
     queryFn: async () => {
-      // getDeptTree() returns the tree structure directly (established pattern)
-      const res = (await getDeptTree()) as DeptTreeResponse;
+      // scoped: true —— 后端按登录人数据范围/机构锚点收口部门树（v1.54）。
+      // 语义见后端 internal/services/system/department_service.go filterDeptTreeByScope。
+      const body = scoped ? { scoped: true } : {};
+      const res = (await post("/system/departments/tree", body)) as DeptTreeResponse;
       return (res.data ?? []) as DeptTreeNode[];
     },
     staleTime: 5 * 60 * 1000,

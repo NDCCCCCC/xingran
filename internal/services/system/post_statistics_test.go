@@ -24,7 +24,9 @@ func TestPostService_Statistics(t *testing.T) {
 			post_name TEXT,
 			status INTEGER DEFAULT 0,
 			deleted_at DATETIME,
-			created_at DATETIME
+			created_at DATETIME,
+			anchor_mode INTEGER DEFAULT 0,
+			anchor_param TEXT DEFAULT ''
 		)
 	`).Error)
 

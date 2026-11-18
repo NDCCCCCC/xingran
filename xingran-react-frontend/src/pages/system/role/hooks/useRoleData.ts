@@ -10,6 +10,7 @@ import { useState, useCallback, useEffect } from "react";
 import type { TreeDataNode } from "antd";
 import type { Key } from "antd/es/table/interface";
 import { post } from "@/lib/api";
+import type { AnchorMode } from "@/types/system";
 
 // 菜单树节点类型（后端返回）
 interface MenuTreeNode {
@@ -48,6 +49,10 @@ export interface UseRoleDataReturn {
   checkedDeptKeys: Key[];
   currentDataScope: number;
 
+  // 机构锚点（与 dataScope 正交的独立维度，契约 §二 2.2）
+  anchorMode: AnchorMode;
+  anchorParam: string;
+
   // Setters
   setMenuTree: React.Dispatch<React.SetStateAction<TreeDataNode[]>>;
   setDeptTree: React.Dispatch<React.SetStateAction<TreeDataNode[]>>;
@@ -55,6 +60,8 @@ export interface UseRoleDataReturn {
   setCheckedMenuKeys: React.Dispatch<React.SetStateAction<Key[]>>;
   setCheckedDeptKeys: React.Dispatch<React.SetStateAction<Key[]>>;
   setCurrentDataScope: React.Dispatch<React.SetStateAction<number>>;
+  /** 一次性设置锚点模式 + 参数（受控组件成对抛值，避免中间态） */
+  setAnchorScope: React.Dispatch<React.SetStateAction<{ mode: AnchorMode; param: string }>>;
 
   // 数据加载方法
   loadStatistics: () => void;
@@ -73,6 +80,11 @@ export function useRoleData(): UseRoleDataReturn {
   const [checkedMenuKeys, setCheckedMenuKeys] = useState<Key[]>([]);
   const [checkedDeptKeys, setCheckedDeptKeys] = useState<Key[]>([]);
   const [currentDataScope, setCurrentDataScope] = useState<number>(1);
+  // 机构锚点（受控成对值）；与 dataScope 无耦合，切换数据范围不影响锚点
+  const [anchorScope, setAnchorScope] = useState<{ mode: AnchorMode; param: string }>({
+    mode: 0,
+    param: "",
+  });
 
   // 加载统计数据: 调用专用统计端点(COUNT 聚合),不再用 pageSize:1000 全量列表的
   // .length 充当总数——system 模块 MaxPageSize=100 会把请求钳到 100,角色 >100 时
@@ -141,12 +153,15 @@ export function useRoleData(): UseRoleDataReturn {
     checkedMenuKeys,
     checkedDeptKeys,
     currentDataScope,
+    anchorMode: anchorScope.mode,
+    anchorParam: anchorScope.param,
     setMenuTree,
     setDeptTree,
     setStatistics,
     setCheckedMenuKeys,
     setCheckedDeptKeys,
     setCurrentDataScope,
+    setAnchorScope,
     loadStatistics,
     loadMenuTree,
     loadDeptTree,

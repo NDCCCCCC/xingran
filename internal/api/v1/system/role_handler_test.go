@@ -55,7 +55,9 @@ func setupRoleTestDB(t *testing.T) *gorm.DB {
 			deleted_at DATETIME,
 			created_by TEXT,
 			updated_by TEXT,
-			version INTEGER DEFAULT 0
+			version INTEGER DEFAULT 0,
+			anchor_mode INTEGER DEFAULT 0,
+			anchor_param TEXT DEFAULT ''
 		)
 	`).Error)
 	require.NoError(t, db.Exec(`
@@ -93,7 +95,8 @@ func setupRoleTestDB(t *testing.T) *gorm.DB {
 			status INTEGER DEFAULT 0,
 			created_at DATETIME,
 			updated_at DATETIME,
-			deleted_at DATETIME
+			deleted_at DATETIME,
+			org_level INTEGER DEFAULT 0
 		)
 	`).Error)
 	return db

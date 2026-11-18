@@ -45,7 +45,8 @@ func setupDeptCacheDB(t *testing.T) *gorm.DB {
 			deleted_at DATETIME,
 			created_by TEXT,
 			updated_by TEXT,
-			version INTEGER DEFAULT 0
+			version INTEGER DEFAULT 0,
+			org_level INTEGER DEFAULT 0
 		)
 	`).Error)
 	require.NoError(t, db.Exec(`

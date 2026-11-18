@@ -74,9 +74,11 @@ const DutyPoolPage: FC = () => {
     message.success(msg);
   };
 
-  // 部门树数据 — 全项目共享 ['dept','tree'] 缓存条目 (D-LOCKED: 单一数据源 useDeptTree)
-  // 仅用于 DepartmentTreeSelect 的 departments prop(展示部门树)。用户筛选改走后端 recursiveDeptId。
-  const { data: depts = [] } = useDeptTree();
+  // 部门树数据 — scoped 独立缓存条目 (D-LOCKED: 单一数据源 useDeptTree)
+  // scoped: true（v1.54）—— 值班池归属部门是"向部门发起业务动作"，机构管理员
+  // 只能在本机构子树内建/看值班池。仅用于 DepartmentTreeSelect 的 departments prop；
+  // 用户筛选走后端 recursiveDeptId（后端会按数据范围收口）。
+  const { data: depts = [] } = useDeptTree({ scoped: true });
   // 值班成员候选:用 React Query 自动查询选中的部门(+子部门)用户。
   // 监听 editForm.deptId 字段(Form.useWatch)——onChange 选部门 / handleEdit 回填都自动触发。
   // React Query 自动处理:去重(同 deptId 并发合并)+ 竞态(快速切换部门时最新 wins)+ 缓存(回切即时显示)。

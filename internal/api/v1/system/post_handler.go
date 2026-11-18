@@ -293,3 +293,33 @@ func (h *PostHandler) GetAllEnabled(c *gin.Context) {
 
 	response.Success(c, posts)
 }
+
+// PreviewAnchor 机构锚点推导预览（只读，不记操作日志）
+// @Summary 岗位机构锚点推导预览
+// @Description 按岗位当前 anchorMode/anchorParam 计算全部任职人是否命中锚点；
+//
+//	返回 {mode,param,resolvedCount,unresolvedCount,totalCount,items,unresolved,warnings}
+//
+// @Tags 岗位管理
+// @Accept json
+// @Produce json
+// @Param id path string true "岗位ID"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Router /system/posts/:id/anchor-preview [post]
+func (h *PostHandler) PreviewAnchor(c *gin.Context) {
+	id := c.Param("id")
+	if id == "" {
+		response.Error(c, apperrors.ParamMissing("岗位ID"))
+		return
+	}
+
+	result, err := h.service.PreviewAnchor(c.Request.Context(), id)
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+
+	// 只读端点：不记 operlog（审计只覆盖写操作）。
+	response.Success(c, result)
+}

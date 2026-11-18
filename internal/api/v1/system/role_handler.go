@@ -276,5 +276,35 @@ func (h *RoleHandler) GetAllEnabled(c *gin.Context) {
 	response.Success(c, simplifiedRoles)
 }
 
+// PreviewAnchor 机构锚点推导预览（只读，不记操作日志）
+// @Summary 角色机构锚点推导预览
+// @Description 按角色当前 anchorMode/anchorParam 计算全部任职人是否命中锚点；
+//
+//	返回 {mode,param,resolvedCount,unresolvedCount,totalCount,items,unresolved,warnings}
+//
+// @Tags 角色管理
+// @Accept json
+// @Produce json
+// @Param id path string true "角色ID"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Router /system/roles/:id/anchor-preview [post]
+func (h *RoleHandler) PreviewAnchor(c *gin.Context) {
+	id := c.Param("id")
+	if id == "" {
+		response.Error(c, apperrors.ParamMissing("角色ID"))
+		return
+	}
+
+	result, err := h.service.PreviewAnchor(c.Request.Context(), id)
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+
+	// 只读端点：不记 operlog（审计只覆盖写操作）。
+	response.Success(c, result)
+}
+
 // ==================== 辅助函数 ====================
 // parseInt 函数已在 user_handler.go 中定义

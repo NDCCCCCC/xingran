@@ -59,7 +59,7 @@ export function LocationAliasDrawer({ open, onClose }: LocationAliasDrawerProps)
   const permDelete = permGate.decide(PERMISSION_CODES.opsLocationAlias.delete);
 
   // 数据:部门树(SimpleDept 形状,与 DeptTreeNode 结构兼容 — title/value/key + isExternalOrg)
-  const { data: deptTreeData = [] } = useDeptTree();
+  const { data: deptTreeData = [] } = useDeptTree({ scoped: true });
 
   // 数据:alias 分页列表
   const {

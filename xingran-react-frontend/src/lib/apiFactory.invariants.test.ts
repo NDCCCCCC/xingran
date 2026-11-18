@@ -87,6 +87,7 @@ const EXPECTED_FILES = [
   "notificationConfigApi.ts",
   "opsApi.ts",
   "profileApi.ts",
+  "systemAnchorApi.ts", // v1.54 机构锚点预览 API（角色/岗位/用户权限预览，plain-literal URL 无 CRUD 后缀，warning 档登记 0）
   "vdiApi.ts",
   "workorderApi.ts",
 ];
@@ -117,6 +118,7 @@ const WARNING_WHITELIST: Record<string, number> = {
   "api/networkApi": 0, // post 类 write* 包装全为 plain-literal URL 不含 CRUD 后缀;exportMACHistory/batchExport 为薄壳调用 download.ts,不满足「单 return 直调传输函数」口径（D-100-6 收敛后归 download 域）
   "api/macHeatmapApi": 0, // 单函数 plain-literal URL,无 CRUD 后缀模板形状
   adDriftAlertApi: 0, // v1.54 Phase 144 ALRT-03：5 个 POST /system/ad-drift-alert/* 端点，plain-literal URL 无 CRUD 后缀，非 createResourceApi 形状
+  systemAnchorApi: 0, // v1.54 机构锚点预览：role/post anchor-preview + users/permission-preview，plain-literal URL 无 CRUD 后缀，非 createResourceApi 形状
 };
 
 interface TemplateHit {

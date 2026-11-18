@@ -47,6 +47,15 @@ interface DeptTreeProps {
    * 且不会因前端缓存/旧规则把越权部门显示出来。
    */
   visibleDeptIds?: string[];
+  /**
+   * 请求后端按登录人数据范围/机构锚点**收口**部门树（v1.54，Scoped opt-in）。
+   *
+   * 仅管理视图传 true（系统用户、部门管理）：机构管理员只会看到自己所在机构
+   * 子树（+祖先路径），不再看到全库部门。配置类场景（角色自定义数据范围勾选、
+   * 岗位锚点部门选择、ops 页面选择器）**必须保持 false**——管理员需要全树才能
+   * 正确配置。scoped 与全量树在后端是同一端点的两种形态，前端按 queryKey 分开缓存。
+   */
+  scoped?: boolean;
 }
 
 // 模块级稳定空数组：useDeptTree 加载期(data===undefined)的兜底，保证 rawDept/treeData 引用稳定，
@@ -59,13 +68,14 @@ const DeptTree: FC<DeptTreeProps> = ({
   style,
   externalOnly = false,
   visibleDeptIds,
+  scoped = false,
 }) => {
   // 数据层: 消费 canonical hook (Phase 37 收敛)。不再内部 post fetch。
   // ⚠️ 必须用模块级稳定常量 EMPTY_DEPTS 兜底，绝不能用内联 []：加载期 data===undefined 时内联 []
   // 每次渲染都是新引用 → treeData 每次新引用 → rc-tree(@rc-component/tree) 的 onVisibleChange 对空
   // 列表 every()=true → onMotionEnd → setPrevData(新[]) 永不 Object.is bail → React #185 死循环
   // （冷刷新整页空白，工位页等"繁忙"页面先触发）。见 memory rc-tree-virtual-motion-infinite-loop。
-  const { data, isLoading: loading } = useDeptTree();
+  const { data, isLoading: loading } = useDeptTree({ scoped });
   const rawDept = data ?? EMPTY_DEPTS;
 
   // 把 SimpleDept[] 窄化为本地 RawDept[] (运行时同对象, 仅 TS 类型层面加 isExternalOrg 字段)。

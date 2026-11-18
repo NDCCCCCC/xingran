@@ -15,7 +15,7 @@ import { AppInput, AppSelect, AppTextArea } from "@/components/ui";
 import type { FormInstance } from "antd/es/form";
 import { UserOutlined } from "@ant-design/icons";
 import type { DeptUser, ParentOption, Department } from "../types";
-import { STATUS_OPTIONS, EXTERNAL_ORG_OPTIONS } from "../constants";
+import { STATUS_OPTIONS, EXTERNAL_ORG_OPTIONS, ORG_LEVEL_OPTIONS } from "../constants";
 
 export interface DeptEditModalProps {
   open: boolean;
@@ -153,6 +153,20 @@ export function DeptEditModal({
             showSearch={false}
             // as const 只读元组 → antd options 需可变数组
             options={[...EXTERNAL_ORG_OPTIONS]}
+          />
+        </Form.Item>
+        <Form.Item
+          name="orgLevel"
+          label="机构层级"
+          initialValue={0}
+          tooltip="机构层级仅用于数据权限锚点定位，不影响其它功能"
+        >
+          {/* 形态分类器②④：机构层级固定枚举（业务禁搜） */}
+          <AppSelect
+            allowClear
+            showSearch={false}
+            // as const 只读元组 → antd options 需可变数组
+            options={[...ORG_LEVEL_OPTIONS]}
           />
         </Form.Item>
         <Form.Item name="status" label="状态" initialValue={0}>

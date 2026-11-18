@@ -111,6 +111,7 @@ export function useDiscoveryData(params: UseDiscoveryDataParams): UseDiscoveryDa
       const result = await post<PageResponse<Department>>("/system/departments/list", {
         current: 1,
         pageSize: 50,
+        scoped: true, // v1.54：部门列表按登录人数据范围收口
       });
       setDepartments(result.data?.list || []);
     } catch (error) {

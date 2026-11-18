@@ -48,18 +48,23 @@ func (p *PostListParams) GetOffset() int {
 
 // PostCreateRequest 创建岗位请求
 type PostCreateRequest struct {
-	PostCode string            `json:"postCode" binding:"required"`
-	PostName string            `json:"postName" binding:"required"`
-	PostSort int               `json:"postSort"`
-	Status   models.PostStatus `json:"status"`
-	Remark   *string           `json:"remark"`
+	PostCode string `json:"postCode" binding:"required"`
+	PostName string `json:"postName" binding:"required"`
+	PostSort int    `json:"postSort"`
+	// AnchorMode / AnchorParam 岗位级机构锚点（只允许 0/2/3/5，见契约 §二 2.2）。
+	AnchorMode  int               `json:"anchorMode"`
+	AnchorParam string            `json:"anchorParam"`
+	Status      models.PostStatus `json:"status"`
+	Remark      *string           `json:"remark"`
 }
 
 // PostUpdateRequest 更新岗位请求
 type PostUpdateRequest struct {
-	ID       string            `json:"id"` // ID 从 URL 参数获取，不在请求体验证
-	PostName string            `json:"postName" binding:"required"`
-	PostSort int               `json:"postSort"`
-	Status   models.PostStatus `json:"status"`
-	Remark   *string           `json:"remark"`
+	ID          string            `json:"id"` // ID 从 URL 参数获取，不在请求体验证
+	PostName    string            `json:"postName" binding:"required"`
+	PostSort    int               `json:"postSort"`
+	AnchorMode  int               `json:"anchorMode"`
+	AnchorParam string            `json:"anchorParam"`
+	Status      models.PostStatus `json:"status"`
+	Remark      *string           `json:"remark"`
 }

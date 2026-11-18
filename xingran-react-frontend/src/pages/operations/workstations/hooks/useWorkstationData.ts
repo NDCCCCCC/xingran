@@ -49,7 +49,8 @@ export function useWorkstationData(
   setUserOptions: React.Dispatch<React.SetStateAction<UserOption[]>>
 ): UseWorkstationDataReturn {
   // canonical 部门树 hook:共享 ['dept','tree'] 缓存(5min stale, 30min gc, refetchOnWindowFocus:false)
-  const { data: rawDept = [] } = useDeptTree();
+  // scoped:true（v1.54）——工位页部门数据按登录人范围收口（左树+所属机构/部门下拉）。
+  const { data: rawDept = [] } = useDeptTree({ scoped: true });
 
   const loadStatistics = useCallback(
     async (orgId?: string) => {

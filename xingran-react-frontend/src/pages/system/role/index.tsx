@@ -17,6 +17,12 @@ import type { Role } from "@/types";
 import { STATUS_OPTIONS, DATA_SCOPE_OPTIONS, DEFAULT_FORM_VALUES } from "./constants";
 import { getRoleColumns } from "./columns";
 import { useRoleData, useRoleActions } from "./hooks";
+import { AnchorScopeFields } from "@/components/system/AnchorScopeFields";
+import { AnchorPreviewPanel } from "@/components/system/AnchorPreviewPanel";
+import { retargetAnchorParam } from "@/constants/anchor";
+import type { SimpleDept } from "@/lib/dutyApi";
+import type { TreeDataNode } from "antd";
+import type { AnchorMode } from "@/types/system";
 import { usePagination } from "@/hooks/usePagination";
 import { useTableManager } from "@/hooks/useTableManager";
 import { createSorterMeta } from "@/utils/tableHelpers";
@@ -91,7 +97,7 @@ const RoleManagement: FC<RoleManagementProps> = ({ onEditFormReady }) => {
     sorterMetas,
   });
 
-  // 辅助数据 Hook（菜单树 / 部门树 / 统计 / 权限勾选）
+  // 辅助数据 Hook（菜单树 / 部门树 / 统计 / 权限勾选 / 机构锚点）
   const {
     menuTree,
     deptTree,
@@ -99,9 +105,12 @@ const RoleManagement: FC<RoleManagementProps> = ({ onEditFormReady }) => {
     checkedMenuKeys,
     checkedDeptKeys,
     currentDataScope,
+    anchorMode,
+    anchorParam,
     setCheckedMenuKeys,
     setCheckedDeptKeys,
     setCurrentDataScope,
+    setAnchorScope,
     loadStatistics,
     loadMenuTree,
     loadDeptTree,
@@ -199,6 +208,9 @@ const RoleManagement: FC<RoleManagementProps> = ({ onEditFormReady }) => {
     setCheckedDeptKeys,
     currentDataScope,
     setCurrentDataScope,
+    anchorMode,
+    anchorParam,
+    setAnchorScope,
   });
 
   // 初始化加载（loadStatistics 由 useRoleData 内部 useEffect 自动触发；分页由 handleTableChange 驱动）
@@ -231,6 +243,27 @@ const RoleManagement: FC<RoleManagementProps> = ({ onEditFormReady }) => {
     loadRoles();
     loadStatistics();
   };
+
+  // 机构锚点受控变更（与 dataScope 完全独立：切换数据范围不影响锚点，反之亦然）
+  const handleAnchorChange = useCallback(
+    ({ mode, param }: { mode: AnchorMode; param: string }) => {
+      setAnchorScope({ mode, param: retargetAnchorParam(mode, param) });
+    },
+    [setAnchorScope]
+  );
+
+  // 机构授权（mode=2）的部门树数据源：直接复用 useRoleData.loadDeptTree 已加载的
+  // deptTree（同一端点 /system/departments/tree-select，只是 TreeDataNode 形态），
+  // 转成 SimpleDept 树给 AnchorScopeFields 用 —— 不额外发请求、不引入 QueryClient 依赖。
+  const anchorDepartments = useMemo<SimpleDept[]>(() => {
+    const toSimple = (nodes: TreeDataNode[]): SimpleDept[] =>
+      nodes.map((node) => ({
+        id: String(node.key ?? ""),
+        deptName: String(node.title ?? ""),
+        children: node.children ? toSimple(node.children as TreeDataNode[]) : undefined,
+      }));
+    return toSimple(deptTree);
+  }, [deptTree]);
 
   // 表格列
   const columns = getRoleColumns({
@@ -469,6 +502,33 @@ const RoleManagement: FC<RoleManagementProps> = ({ onEditFormReady }) => {
               </Card>
             </Col>
           </Row>
+
+          {/* 机构授权（可选）—— 与上方「数据权限」是两个独立维度：
+              锚点只在角色原有范围之外叠加（宽者胜），绝不参与 MAX(data_scope) 排序（契约 C1/C2）。 */}
+          <Card title="机构授权（可选）" size="small" style={{ marginTop: 16 }}>
+            <div
+              style={{
+                color: "var(--theme-text-tertiary)",
+                fontSize: 12,
+                marginBottom: 8,
+              }}
+            >
+              机构授权与上方「数据范围」是两个相互独立的维度：数据范围决定角色本身的可见范围，
+              机构授权按任职人所在机构动态锚定并**额外叠加**（宽者胜）。未命中不会回退到本部门。
+            </div>
+            <AnchorScopeFields
+              mode={anchorMode}
+              param={anchorParam}
+              onChange={handleAnchorChange}
+              departments={anchorDepartments}
+            />
+            <AnchorPreviewPanel
+              kind="role"
+              targetId={editingRole?.id}
+              mode={anchorMode}
+              param={anchorParam}
+            />
+          </Card>
         </Form>
       </Modal>
     </div>

@@ -133,3 +133,55 @@ const (
 	ConfigIsSystemNo  ConfigIsSystem = 0 // 否
 	ConfigIsSystemYes ConfigIsSystem = 1 // 是
 )
+
+// OrgLevel 机构层级枚举（sys_dept.org_level）
+//
+// 业务背景：系统三层机构架构「分公司 → 中支 → 支公司」。部门树用 ancestors
+// 物化路径表达上下级，但节点自身**没有**层级语义；`is_external_org` 只回答
+// 「有没有职场」，`sys_manager_org.org_type` 属于经理同步域。数据权限需要
+// 「这是第几级机构」这个判据来定位锚点，故在 sys_dept 上显式标注。
+//
+// 0=非机构（普通部门/科室，默认值，保证存量数据零回归）。
+//
+// 注意：本字段**只**用于数据权限锚点定位，不参与任何其它业务分支判定。
+type OrgLevel int
+
+const (
+	OrgLevelNone    OrgLevel = 0 // 非机构（普通部门/科室）
+	OrgLevelBranch  OrgLevel = 1 // 分公司（如 湖北分公司）
+	OrgLevelSubBang OrgLevel = 2 // 中支（如 武汉中支）
+	OrgLevelOffice  OrgLevel = 3 // 支公司（如 硚口支公司）
+	OrgLevelSite    OrgLevel = 4 // 网点/班组（预留）
+)
+
+// AnchorMode 数据权限锚点模式（sys_role.anchor_mode / sys_post.anchor_mode）
+//
+// 定位：与 DataScope 正交的**独立维度**，决定"可见集的锚点从哪来"。
+// 绝不可并入 DataScope 枚举 —— getUserMaxDataScope 用 MAX(data_scope) 取
+// 数值最大（最窄）档，新增更高数值会把 All(1) 用户静默收窄（静默降权事故）。
+// 故锚点维度独立解析后与角色维度**取并集（宽者胜）**。
+//
+// 值 1（相对层深）与 4（sys_manager_org 经理机构）已论证弃用：
+//   - 1 被 5 取代：固定深度无法让一个岗位自适应三层，且依赖树深度规整；
+//   - 4 依赖未治理的机构表（无种子数据，空表时全员未命中）。
+//
+// 编号保留原始设计值以便追溯；保存时收到 1/4 必须拒绝。
+type AnchorMode int
+
+const (
+	AnchorModeNone        AnchorMode = 0 // 不参与机构授权（默认）
+	AnchorModeDept        AnchorMode = 2 // 显式锚点：anchor_param = dept_id，展开其子树
+	AnchorModeExternalOrg AnchorMode = 3 // 沿 ancestors 由近到远找第一个 is_external_org=1 的节点
+	AnchorModeLevel       AnchorMode = 5 // 沿 ancestors 由近到远找第一个 org_level == anchor_param 的节点
+)
+
+// IsValidAnchorMode 判断锚点模式是否在已实现集合内（0/2/3/5）。
+// 1 与 4 为弃用编号，恒返回 false。
+func IsValidAnchorMode(m AnchorMode) bool {
+	switch m {
+	case AnchorModeNone, AnchorModeDept, AnchorModeExternalOrg, AnchorModeLevel:
+		return true
+	default:
+		return false
+	}
+}

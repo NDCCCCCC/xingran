@@ -25,6 +25,8 @@ type PostService interface {
 	InvalidatePostCache(ctx context.Context) error
 	// Statistics 岗位统计(专用 COUNT 聚合,不依赖分页列表,不受 MaxPageSize=100 钳制)。
 	Statistics(ctx context.Context) (*PostStatisticsResult, error)
+	// PreviewAnchor 机构锚点推导预览（契约 §六，只读）。
+	PreviewAnchor(ctx context.Context, postID string) (*AnchorPreviewResponse, error)
 }
 
 // PostStatisticsResult 岗位统计结果(status: 0=正常 1=停用)。
@@ -83,12 +85,20 @@ func (s *postService) Create(ctx context.Context, req *requests.PostCreateReques
 		return fmt.Errorf("岗位编码已存在")
 	}
 
+	// 配置期校验（契约 §五 防静默第 1 道防线），必须在写库之前。
+	// 与角色侧共用 validateAnchorForWrite（内部委托 datascope.ValidateAnchor）。
+	if err := validateAnchorForWrite(ctx, s.db, req.AnchorMode, req.AnchorParam); err != nil {
+		return err
+	}
+
 	post := models.Post{
-		PostCode: req.PostCode,
-		PostName: req.PostName,
-		PostSort: req.PostSort,
-		Status:   req.Status,
-		Remark:   toStringPtr(req.Remark),
+		PostCode:    req.PostCode,
+		PostName:    req.PostName,
+		PostSort:    req.PostSort,
+		AnchorMode:  models.AnchorMode(req.AnchorMode),
+		AnchorParam: sanitizeAnchorParam(req.AnchorMode, req.AnchorParam),
+		Status:      req.Status,
+		Remark:      toStringPtr(req.Remark),
 	}
 
 	if err := s.db.WithContext(ctx).Create(&post).Error; err != nil {
@@ -104,14 +114,23 @@ func (s *postService) Update(ctx context.Context, req *requests.PostUpdateReques
 	var post models.Post
 	if err := s.db.WithContext(ctx).First(&post, "id = ?", req.ID).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
+			// 保持既有错误语义（未经 task-3 授权改为 apperrors.PostNotFound，
+			// 那会改变 HTTP 状态码并影响既有测试断言）。
 			return fmt.Errorf("岗位不存在")
 		}
 		return fmt.Errorf("查询岗位失败: %w", err)
 	}
 
+	// 配置期校验（同 Create）。
+	if err := validateAnchorForWrite(ctx, s.db, req.AnchorMode, req.AnchorParam); err != nil {
+		return err
+	}
+
 	// 更新岗位信息
 	post.PostName = req.PostName
 	post.PostSort = req.PostSort
+	post.AnchorMode = models.AnchorMode(req.AnchorMode)
+	post.AnchorParam = sanitizeAnchorParam(req.AnchorMode, req.AnchorParam)
 	post.Status = req.Status
 	post.Remark = toStringPtr(req.Remark)
 
@@ -243,4 +262,41 @@ func (s *postService) GetEnabledWithCache(ctx context.Context) ([]*models.Post, 
 // InvalidatePostCache 失效岗位缓存（无缓存版本，空操作）
 func (s *postService) InvalidatePostCache(ctx context.Context) error {
 	return nil
+}
+
+// PreviewAnchor 计算「岗位当前锚点配置对全部任职人是否命中」（岗位详情页预览）。
+//
+// 与角色侧共用 buildAnchorPreview（同一套契约 §六 输出结构）。
+func (s *postService) PreviewAnchor(ctx context.Context, postID string) (*AnchorPreviewResponse, error) {
+	// 同角色侧：直接查库而非带缓存的 GetByID，避免 30min TTL 导致预览显示旧配置。
+	var post models.Post
+	if err := s.db.WithContext(ctx).First(&post, "id = ?", postID).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			// 保持既有错误语义（getService Update/Delete 同样返回普通 error）。
+			return nil, fmt.Errorf("岗位不存在")
+		}
+		return nil, fmt.Errorf("查询岗位失败: %w", err)
+	}
+
+	ids, err := listPostAssigneeIDs(ctx, s.db, postID)
+	if err != nil {
+		return nil, err
+	}
+
+	return buildAnchorPreview(ctx, s.db, post.AnchorMode, post.AnchorParam, ids)
+}
+
+// listPostAssigneeIDs 取岗位**全部**任职人（契约 §六：不看 status）。
+func listPostAssigneeIDs(ctx context.Context, db *gorm.DB, postID string) ([]string, error) {
+	var rows []struct{ UserID string }
+	if err := db.WithContext(ctx).Raw(
+		`SELECT CAST(user_id AS TEXT) AS user_id
+		   FROM sys_user_post
+		  WHERE CAST(post_id AS TEXT) = ?`,
+		postID,
+	).Scan(&rows).Error; err != nil {
+		// sys_user_post 在极端老库可能缺失 —— 与非致命降级口径一致（见 datascope）。
+		return nil, fmt.Errorf("查询岗位任职人失败: %w", err)
+	}
+	return normalizeUserIDs(rows), nil
 }

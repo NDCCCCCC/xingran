@@ -29,6 +29,7 @@ import {
 } from "@ant-design/icons";
 import type { RoomDevice } from "@/types";
 import { useSidebarDeptFilter } from "@/hooks/useSidebarDeptFilter";
+import { useDict } from "@/hooks/useDict";
 import { createSorterMeta } from "@/utils/tableHelpers";
 import { PageTable, useActionPermission } from "@/components/shared";
 import type { PageTableRenderContext } from "@/components/shared";
@@ -64,6 +65,17 @@ const RoomDeviceManagement: FC = () => {
   });
 
   const searchFormRef = useRef<FormInstance | null>(null);
+
+  // 设备类型字典（device_type）— 替代原硬编码 ROOM_DEVICE_TYPE_OPTIONS / DEVICE_TYPE_OPTIONS
+  const { data: deviceTypeDict } = useDict("device_type");
+  const deviceTypeOptions = useMemo(
+    () =>
+      (deviceTypeDict ?? [])
+        .filter((item) => item.status === 0)
+        .sort((a, b) => (a.dictSort ?? 0) - (b.dictSort ?? 0))
+        .map((item) => ({ label: item.dictLabel, value: item.dictValue })),
+    [deviceTypeDict]
+  );
 
   // 业务逻辑 hook
   const {
@@ -143,8 +155,8 @@ const RoomDeviceManagement: FC = () => {
   );
 
   const searchFields = useMemo(
-    () => getRoomDeviceSearchFields({ selectedDeptId, roomSelectOptions }),
-    [selectedDeptId, roomSelectOptions]
+    () => getRoomDeviceSearchFields({ selectedDeptId, roomSelectOptions, deviceTypeOptions }),
+    [selectedDeptId, roomSelectOptions, deviceTypeOptions]
   );
 
   const extraFilters = useMemo(
@@ -160,7 +172,7 @@ const RoomDeviceManagement: FC = () => {
     [handleDeptSelect]
   );
 
-  const columns = useMemo(() => getRoomDeviceColumns(), []);
+  const columns = useMemo(() => getRoomDeviceColumns(deviceTypeOptions), [deviceTypeOptions]);
 
   const rowActions = useMemo(
     () => getRoomDeviceRowActions(openModal, handleDelete),
@@ -298,6 +310,7 @@ const RoomDeviceManagement: FC = () => {
               permDelete={permDelete}
               openModal={openModal}
               handleDelete={handleDelete}
+              deviceTypeOptions={deviceTypeOptions}
             />
           </Card>
         )}
@@ -308,6 +321,7 @@ const RoomDeviceManagement: FC = () => {
           form={deviceForm}
           submitting={submitting}
           roomSelectOptions={roomSelectOptions}
+          deviceTypeOptions={deviceTypeOptions}
           onOk={handleSave}
           onCancel={closeModal}
         />

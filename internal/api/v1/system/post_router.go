@@ -32,6 +32,9 @@ func SetupPostRouter(r *gin.RouterGroup, core *core.Core) {
 	r.POST("/statistics", handler.Statistics)
 	r.POST("/all", handler.GetAll)
 	r.POST("/enabled", handler.GetAllEnabled)
+	// 机构锚点推导预览（契约 §六）：只读，故留在读组 —— 自动继承
+	// system:post:list/view 的 ANY-of，无需改 router.go。
+	r.POST("/:id/anchor-preview", handler.PreviewAnchor)
 	r.POST("/:id", handler.GetByID)
 }
 

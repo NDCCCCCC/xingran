@@ -3,10 +3,14 @@ package models
 // Role 角色模型
 type Role struct {
 	BaseModel
-	RoleName          string     `gorm:"uniqueIndex;size:50;not null" json:"roleName"`
-	RoleKey           string     `gorm:"uniqueIndex;size:50;not null" json:"roleKey"`
-	RoleSort          int        `gorm:"default:0" json:"roleSort"`
-	DataScope         DataScope  `gorm:"default:1" json:"dataScope"`
+	RoleName  string    `gorm:"uniqueIndex;size:50;not null" json:"roleName"`
+	RoleKey   string    `gorm:"uniqueIndex;size:50;not null" json:"roleKey"`
+	RoleSort  int       `gorm:"default:0" json:"roleSort"`
+	DataScope DataScope `gorm:"default:1" json:"dataScope"`
+	// AnchorMode / AnchorParam 是**与 DataScope 正交**的机构锚点维度。
+	// 绝不参与 getUserMaxDataScope 的 MAX(data_scope) 排序（见 models.AnchorMode 注释）。
+	AnchorMode        AnchorMode `gorm:"default:0" json:"anchorMode"`
+	AnchorParam       string     `gorm:"size:64;default:''" json:"anchorParam"`
 	MenuCheckStrictly bool       `gorm:"default:true" json:"menuCheckStrictly"`
 	DeptCheckStrictly bool       `gorm:"default:true" json:"deptCheckStrictly"`
 	Status            RoleStatus `gorm:"default:0" json:"status"`

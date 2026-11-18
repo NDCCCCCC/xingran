@@ -165,6 +165,8 @@ const DepartmentManagement: FC = () => {
         orderNum: values.orderNum,
         status: values.status,
         isExternalOrg: values.isExternalOrg,
+        // 机构层级（契约 §2.1）：数据权限锚点定位用；未设置时按 0=非机构 提交
+        orgLevel: values.orgLevel ?? 0,
         remark: values.remark || "",
         ...(values.leader && {
           leader: values.leader,

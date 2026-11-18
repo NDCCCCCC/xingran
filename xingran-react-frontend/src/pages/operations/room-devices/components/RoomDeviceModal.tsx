@@ -3,7 +3,7 @@ import { Modal, Form, Row, Col, InputNumber, DatePicker } from "antd";
 import type { FormInstance } from "antd";
 import type { RoomDevice } from "@/types";
 import { AppInput, AppSelect, AppTextArea } from "@/components/ui";
-import { ROOM_DEVICE_TYPE_OPTIONS, ROOM_DEVICE_STATUS_OPTIONS } from "../constants";
+import { ROOM_DEVICE_STATUS_OPTIONS, type DeviceTypeOption } from "../constants";
 
 export interface RoomDeviceModalProps {
   visible: boolean;
@@ -11,6 +11,7 @@ export interface RoomDeviceModalProps {
   form: FormInstance;
   submitting: boolean;
   roomSelectOptions: Array<{ label: string; value: string }>;
+  deviceTypeOptions?: DeviceTypeOption[];
   onOk: () => void;
   onCancel: () => void;
 }
@@ -21,6 +22,7 @@ export const RoomDeviceModal: FC<RoomDeviceModalProps> = ({
   form,
   submitting,
   roomSelectOptions,
+  deviceTypeOptions = [],
   onOk,
   onCancel,
 }) => {
@@ -76,7 +78,7 @@ export const RoomDeviceModal: FC<RoomDeviceModalProps> = ({
             allowClear
             placeholder="请选择设备类型"
             showSearch={false}
-            options={ROOM_DEVICE_TYPE_OPTIONS}
+            options={deviceTypeOptions}
           />
         </Form.Item>
         <Row gutter={16}>

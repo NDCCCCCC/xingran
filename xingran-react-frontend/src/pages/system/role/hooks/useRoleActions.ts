@@ -13,6 +13,12 @@ import { post } from "@/lib/api";
 import {} from "@/utils/errorHandler";
 import { confirmDelete } from "@/components/shared/confirmDelete";
 import { queryKeys } from "@/lib/queryKeys";
+import {
+  normalizeAnchorMode,
+  normalizeAnchorParam,
+  retargetAnchorParam,
+} from "@/constants/anchor";
+import type { AnchorMode } from "@/types/system";
 
 export interface UseRoleActionsParams {
   loadRoles: () => Promise<void>;
@@ -25,6 +31,19 @@ export interface UseRoleActionsParams {
   setCheckedDeptKeys: React.Dispatch<React.SetStateAction<Key[]>>;
   currentDataScope: number;
   setCurrentDataScope: React.Dispatch<React.SetStateAction<number>>;
+  /**
+   * 机构锚点当前值（受控外部 state，不在 antd Form 内），保存时优先取这两个字段。
+   * 与 dataScope 完全独立：绝不参与 `MAX(data_scope)` 排序（契约 C1）。
+   * 可选：不传时回退读表单值（兼容既有测试/调用方）。
+   */
+  anchorMode?: AnchorMode;
+  anchorParam?: string;
+  /**
+   * 机构锚点受控状态同步（可选）。
+   * 编辑回显时把 record 上的 anchorMode/anchorParam 灌进 useRoleData，
+   * 供 AnchorScopeFields 受控渲染；不传时锚点区域保持初始值（0/空）。
+   */
+  setAnchorScope?: React.Dispatch<React.SetStateAction<{ mode: AnchorMode; param: string }>>;
 }
 
 export interface UseRoleActionsReturn {
@@ -61,6 +80,9 @@ export function useRoleActions(params: UseRoleActionsParams): UseRoleActionsRetu
     setCheckedDeptKeys,
     currentDataScope: _currentDataScope,
     setCurrentDataScope,
+    anchorMode,
+    anchorParam,
+    setAnchorScope,
   } = params;
 
   const [editingRole, setEditingRole] = useState<Role | null>(null);
@@ -82,7 +104,9 @@ export function useRoleActions(params: UseRoleActionsParams): UseRoleActionsRetu
     setEditingRole(null);
     setPendingFormData(null);
     setEditModalVisible(true);
-  }, []);
+    // 新增：锚点归零，避免沿用上一条编辑记录的残留锚点
+    setAnchorScope?.({ mode: 0, param: "" });
+  }, [setAnchorScope]);
 
   // 编辑角色
   const handleEdit = useCallback(
@@ -100,6 +124,9 @@ export function useRoleActions(params: UseRoleActionsParams): UseRoleActionsRetu
         ...record,
         menuIds,
         deptIds,
+        // 机构锚点：后端字段 anchorMode/anchorParam（缺省视为 0/空），显式落到表单
+        anchorMode: normalizeAnchorMode(record.anchorMode),
+        anchorParam: normalizeAnchorParam(record.anchorMode, record.anchorParam),
       };
 
       // 同时更新 ref 和 state
@@ -108,9 +135,15 @@ export function useRoleActions(params: UseRoleActionsParams): UseRoleActionsRetu
       pendingFormDataRef.current = formData;
       setPendingFormData(formData);
 
+      // 机构锚点回显：受控组件读的是 useRoleData 的 anchorMode/anchorParam
+      setAnchorScope?.({
+        mode: formData.anchorMode,
+        param: formData.anchorParam,
+      });
+
       setEditModalVisible(true);
     },
-    [loadRoleMenus, loadRoleDepts]
+    [loadRoleMenus, loadRoleDepts, setAnchorScope]
   );
 
   // 删除角色
@@ -183,6 +216,16 @@ export function useRoleActions(params: UseRoleActionsParams): UseRoleActionsRetu
           roleKey: values.roleKey as string,
           roleSort: parseInt(String(values.roleSort)) || 0,
           dataScope: (values.dataScope as number) || 1,
+          // 机构锚点维度（与 dataScope 正交，契约 §二 2.2）：
+          // 只允许 0/2/3/5；模式不需要参数时一律提交空串（防止残留脏参数）。
+          // 取值优先级：外部受控 state（页面 AnchorScopeFields）→ 表单值（兼容旧调用方）
+          anchorMode: normalizeAnchorMode(
+            anchorMode ?? (values.anchorMode as number | undefined)
+          ),
+          anchorParam: retargetAnchorParam(
+            normalizeAnchorMode(anchorMode ?? (values.anchorMode as number | undefined)),
+            anchorParam || (typeof values.anchorParam === "string" ? values.anchorParam : "")
+          ),
           menuCheckStrictly: true,
           deptCheckStrictly: true,
           status: parseInt(String(values.status)) || 0,
@@ -210,7 +253,7 @@ export function useRoleActions(params: UseRoleActionsParams): UseRoleActionsRetu
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [editingRole, loadRoles, loadStatistics, invalidateAllRoles]
+    [editingRole, loadRoles, loadStatistics, invalidateAllRoles, anchorMode, anchorParam]
   );
 
   // 数据范围变更

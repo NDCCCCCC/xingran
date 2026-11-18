@@ -3,6 +3,7 @@ package system
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/xingran-next/xingran-go-backend/internal/core/security"
@@ -12,6 +13,7 @@ import (
 	"github.com/xingran-next/xingran-go-backend/internal/services/base"
 	"github.com/xingran-next/xingran-go-backend/pkg/datascope"
 	apperrors "github.com/xingran-next/xingran-go-backend/pkg/errors"
+	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"gorm.io/gorm"
 )
 
@@ -359,6 +361,36 @@ func (s *userService) GetByID(ctx context.Context, id string) (*models.User, err
 	// 填充角色信息
 	s.fillUserRoles(ctx, &user)
 
+	// 填充岗位信息（P-7 修复：详情接口此前只填角色，走详情编辑的路径会丢岗位，
+	// 前端「岗位」多选回显会空）。
+	//
+	// 注意不能复用 fillUserPosts(切片) —— 它按值接收 []models.User，回填只作用于
+	// 副本，对单个 user 无效。此处直接一条 JOIN 查询并赋值，语义与列表回填一致
+	// （软删岗位过滤、CAST AS TEXT 双方言、空切片而非 nil）。
+	var detailPosts []models.Post
+	if err := s.db.WithContext(ctx).Raw(`
+		SELECT CAST(p.id AS TEXT) AS id,
+		       COALESCE(p.post_code, '') AS post_code,
+		       COALESCE(p.post_name, '') AS post_name,
+		       COALESCE(p.post_sort, 0) AS post_sort,
+		       COALESCE(p.status, 0) AS status,
+		       COALESCE(p.anchor_mode, 0) AS anchor_mode,
+		       COALESCE(p.anchor_param, '') AS anchor_param
+		  FROM sys_user_post up
+		  INNER JOIN sys_post p ON CAST(p.id AS TEXT) = CAST(up.post_id AS TEXT)
+		 WHERE CAST(up.user_id AS TEXT) = ? AND p.deleted_at IS NULL
+		 ORDER BY COALESCE(p.post_sort, 0) ASC
+	`, user.ID).Scan(&detailPosts).Error; err != nil {
+		// 缺表/异常 → 空切片，不让详情接口失败（与列表回填同口径）。
+		applogger.Warnf("[用户详情] 回填岗位失败（user_id=%s）: %v", user.ID, err)
+		detailPosts = nil
+	}
+	if detailPosts == nil {
+		user.Posts = []models.Post{}
+	} else {
+		user.Posts = detailPosts
+	}
+
 	return &user, nil
 }
 
@@ -545,12 +577,114 @@ func (s *userService) List(ctx context.Context, params requests.UserListParams) 
 	// 构建部门路径
 	s.buildDepartmentPaths(ctx, list)
 
+	// 回填岗位（列表「岗位」列的数据来源）。
+	// 显式按当前页 userIDs 做**一次** sys_user_post ⋈ sys_post 批量查询再分组，
+	// 不用 Preload("Posts")：Preload 是"查询父表 + 按父 ID 回查关联"，对分页
+	// 列表会退化成 N+1（每页 N 条用户 → N 条关联查询）。此处固定 1 条额外 SQL。
+	s.fillUserPosts(ctx, list)
+
 	return &PageResult{
 		List:     list,
 		Total:    total,
 		Current:  params.Current,
 		PageSize: params.PageSize,
 	}, nil
+}
+
+// fillUserPosts 为当前页用户批量回填 Posts（models.User.Posts，gorm many2many:sys_user_post）。
+//
+// 设计要点：
+//   - **一次 SQL**：sys_user_post ⋈ sys_post，按 user_id 分组后回填；只对当前页
+//     userIDs 查，避免全表扫（分页场景下页大小 ≤ MaxListPageSize）。
+//   - **失败降级**：sys_post / sys_user_post 在极端老库或精简测试夹具中可能缺表，
+//     此时把 Posts 置为空切片并只记 WARN，绝不让列表主流程失败（列表是高频读接口）。
+//   - **空切片而非 nil**：JSON 里是 `[]` 而不是 `null`，前端 `posts ?? postIds ?? []`
+//     不会因 null 走到兜底分支。
+//   - CAST(... AS TEXT)：user_id/post_id 在 PG 是 uuid、在 SQLite 是 TEXT，
+//     统一转文本比较保证双方言一致（契约 C7）。
+func (s *userService) fillUserPosts(ctx context.Context, users []models.User) {
+	if len(users) == 0 {
+		return
+	}
+
+	userIDs := make([]string, 0, len(users))
+	for i := range users {
+		users[i].Posts = []models.Post{}
+		if users[i].ID != "" {
+			userIDs = append(userIDs, users[i].ID)
+		}
+	}
+	if len(userIDs) == 0 {
+		return
+	}
+
+	// 只取列表展示与前端表单回显需要的列；软删岗位不展示（deleted_at IS NULL）。
+	var rows []struct {
+		UserID      string
+		ID          string
+		PostCode    string
+		PostName    string
+		PostSort    int
+		Status      int
+		AnchorMode  int
+		AnchorParam string
+	}
+	queryErr := s.db.WithContext(ctx).Raw(`
+		SELECT CAST(up.user_id AS TEXT) AS user_id,
+		       CAST(p.id AS TEXT) AS id,
+		       COALESCE(p.post_code, '') AS post_code,
+		       COALESCE(p.post_name, '') AS post_name,
+		       COALESCE(p.post_sort, 0) AS post_sort,
+		       COALESCE(p.status, 0) AS status,
+		       COALESCE(p.anchor_mode, 0) AS anchor_mode,
+		       COALESCE(p.anchor_param, '') AS anchor_param
+		  FROM sys_user_post up
+		  INNER JOIN sys_post p ON CAST(p.id AS TEXT) = CAST(up.post_id AS TEXT)
+		 WHERE CAST(up.user_id AS TEXT) IN ? AND p.deleted_at IS NULL
+		 ORDER BY p.post_sort ASC
+	`, userIDs).Scan(&rows).Error
+	if queryErr != nil {
+		// 缺表（老库/精简夹具）→ 静默降级；其它错误记 WARN 但仍不影响列表。
+		if !isMissingTableErr(queryErr) {
+			applogger.Warnf("回填用户岗位失败（列表已正常返回，岗位列可能为空）: %v", queryErr)
+		}
+		return
+	}
+	if len(rows) == 0 {
+		return
+	}
+
+	byUser := make(map[string][]models.Post, len(userIDs))
+	for _, r := range rows {
+		byUser[r.UserID] = append(byUser[r.UserID], models.Post{
+			BaseModel:   models.BaseModel{ID: r.ID},
+			PostCode:    r.PostCode,
+			PostName:    r.PostName,
+			PostSort:    r.PostSort,
+			AnchorMode:  models.AnchorMode(r.AnchorMode),
+			AnchorParam: r.AnchorParam,
+			Status:      models.PostStatus(r.Status),
+		})
+	}
+	for i := range users {
+		if posts, ok := byUser[users[i].ID]; ok {
+			users[i].Posts = posts
+		}
+	}
+}
+
+// isMissingTableErr 判断是否"表不存在"类错误（老库/精简测试夹具的降级依据）。
+//
+// 与 pkg/datascope 内部同名判断同口径：SQLite 报 "no such table"，
+// PostgreSQL 报 "does not exist" / "undefined table"。
+func isMissingTableErr(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "no such table") ||
+		strings.Contains(msg, "does not exist") ||
+		strings.Contains(msg, "undefined table")
 }
 
 // Statistics 统计用户总数及启停状态计数(status: 0=正常, 1=停用)。
@@ -576,23 +710,45 @@ func (s *userService) Statistics(ctx context.Context) (*UserStatisticsResult, er
 
 // applyUserDataScope 对用户列表查询应用 data_scope 过滤（PMODEL-01 / v1.52 Phase 130）。
 //
+// v1.54 修复（2026-11-17 生产实测）：本函数此前在 service 层**自行 Resolve**，
+// 只按角色档位（MAX data_scope）解析——中间件 Merge 后注入 ctx 的 ScopeResult
+// （含机构锚点维度）被完全忽略。后果：锚点命中（预览 resolved=1）但用户列表
+// 仍按 Self 只见自己——两条通道分歧。现改为**优先消费 ctx 注入**（中间件
+// Resolve+ResolveAnchorGrants+Merge 的最终结果 = 唯一真实源），未注入时
+// （内部任务/单测直接调 service）才回退老通道，行为不回退。
+//
 // v1.52 Phase 130：部门集展开已收敛到 pkg/datascope.ScopeProvider 单一真实源，
-// 本函数只负责「把 Resolve 得到的可见集应用到 sys_user 查询」，不再内联任何
-// sys_dept / sys_role_dept 展开逻辑（禁止内联复制，DS-01）。
+// 本函数只负责「把可见集应用到 sys_user 查询」，不内联任何展开逻辑（DS-01）。
 //
 // 保留的行为契约（不得改变 /system/users 现有行为）：
-//   - DataScopeAll(1) / 0（零值：未挂中间件或超管）→ 不过滤（旧行为零变化，超管零回归）
-//   - 空 scopeUserID（非 All/0）→ 1=0 空集
-//   - DataScopeSelf(5) → sys_user.id = ?（按用户主键；不是 dept_id = userID 的错位形态）
+//   - All / 0（零值：未挂中间件或超管）→ 不过滤（超管零回归）
+//   - Self → sys_user.id = ?（按用户主键；不是 dept_id = userID 的错位形态）
 //   - 未知 / 异常枚举 → fail-closed（1=0 空集）
 //   - 过滤必须在 Count 之前插入（调用点 List:452 / StatisticsWithDataScope:639）
-//
-// 应用规则（ScopeResult → SQL）：
-//   - All / Resolve 失败 → 不过滤 / 1=0（fail-closed，不因基建异常放行全库）
-//   - FailClosed → 1=0
-//   - HookSelfUser → sys_user.id = ?
-//   - 其余（Custom/Dept/DeptChild）→ dept_id IN (Resolve 展开后的 DeptIDs)；空集 → 1=0
 func (s *userService) applyUserDataScope(query *gorm.DB, ctx context.Context, scopeUserID string, dataScope models.DataScope) *gorm.DB {
+	// v1.54：优先消费中间件 Merge 后的注入结果（含机构锚点维度，宽者胜）。
+	// Merge 已保证：All 优先、与角色维度并集、全空 fail-closed——应用规则与
+	// 老通道逐条对齐，只是数据源换成最终结果。
+	if r, ok := datascope.FromContext(ctx); ok {
+		if r.All {
+			return query
+		}
+		if r.FailClosed {
+			return query.Where("1=0")
+		}
+		if r.ResourceHook == datascope.HookSelfUser {
+			if r.UserID == "" {
+				return query.Where("1=0")
+			}
+			return query.Where("sys_user.id = ?", r.UserID)
+		}
+		if len(r.DeptIDs) == 0 {
+			return query.Where("1=0")
+		}
+		return query.Where("dept_id IN ?", r.DeptIDs)
+	}
+
+	// ---- 以下为回退通道：ctx 未注入 ScopeResult（内部任务 / 直接调 service 的单测）----
 	// All / 0 特判短路：不查部门集、不展开、不过滤（超管零回归硬要求）。
 	if dataScope == models.DataScopeAll || dataScope == 0 {
 		return query

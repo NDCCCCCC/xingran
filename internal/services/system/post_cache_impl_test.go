@@ -39,7 +39,9 @@ func setupPostCacheDB(t *testing.T) *gorm.DB {
 			deleted_at DATETIME,
 			created_by TEXT,
 			updated_by TEXT,
-			version INTEGER DEFAULT 0
+			version INTEGER DEFAULT 0,
+			anchor_mode INTEGER DEFAULT 0,
+			anchor_param TEXT DEFAULT ''
 		)
 	`).Error)
 	return db

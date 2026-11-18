@@ -27,7 +27,8 @@ interface DepartmentOption {
  */
 export function useDepartmentData() {
   // canonical hook:数据由 React Query 自动获取(5min stale, 共享缓存),无需手动触发
-  const { data: rawDept = [], isLoading: loading } = useDeptTree();
+  // scoped:true（v1.54）——楼宇/楼层共用部门数据按登录人范围收口。
+  const { data: rawDept = [], isLoading: loading } = useDeptTree({ scoped: true });
 
   // SimpleDept 形状已与 DepartmentOption 兼容(id/deptName/children),
   // 仅做结构窄化。运行时数据不变。
