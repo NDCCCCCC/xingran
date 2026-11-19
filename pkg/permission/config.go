@@ -522,6 +522,10 @@ func GetRoutePermissions() []RoutePermission {
 		{"/network/ports/write/preview", "POST", NetworkPortWrite, "端口写 dry-run 命令预览"},
 		// v1.51 端口写审计分页查询（Phase 127 PWX-04 前置，复用同一权限）
 		{"/network/ports/write/audit/list", "POST", NetworkPortWrite, "端口写审计查询"},
+		// v1.57 审计页设备/端口选择器（只读最小读面，复用同一权限；
+		// 审计员通常无 network:device:list / network:port:query，不得改走列表端点）
+		{"/network/ports/write/audit/device-options", "POST", NetworkPortWrite, "端口写审计-设备选项"},
+		{"/network/ports/write/audit/port-options", "POST", NetworkPortWrite, "端口写审计-端口选项"},
 		// v1.51 trunk native/allowed + hybrid 端口写（Phase 124 PWX-01，复用同一权限）
 		{"/network/ports/write/trunk", "POST", NetworkPortWrite, "trunk/hybrid VLAN 端口写"},
 		// v1.51 端口安全（Phase 125 PWX-02，复用同一权限）

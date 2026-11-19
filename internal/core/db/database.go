@@ -1213,6 +1213,11 @@ func (d *Database) AutoMigrate() error {
 		if err := d.runAndRecord(232, "port_write_audit_batch_id", migrations.Migrate232PortWriteAuditBatchID); err != nil {
 			applogger.Errorf("端口写审计 batch_id 列迁移失败 (非阻断,留待下次启动): %v", err)
 		}
+		// v1.57：端口写审计名称快照列 + 历史回填（二期，审计页 UUID → 名称）。
+		// 列缺失时查询层回退实时补名，功能可用但失去历史名称固化；非阻断。
+		if err := d.runAndRecord(254, "port_write_audit_name_snapshot", migrations.Migrate254PortWriteAuditNameSnapshot); err != nil {
+			applogger.Errorf("端口写审计名称快照列迁移失败 (非阻断,留待下次启动): %v", err)
+		}
 		// 用户偏好空值归一化 (双方言幂等, quick-261102-m94)。**非阻断**：
 		// PG 侧因 CHECK 约束本就无违规行(空串在写入时即被拦下),该迁移实为 no-op;
 		// SQLite 侧修历史残留的空串行。失败只影响历史行的读取,不影响新写入路径。
@@ -1385,6 +1390,11 @@ func (d *Database) AutoMigrate() error {
 		if err := d.runAndRecord(232, "port_write_audit_batch_id", migrations.Migrate232PortWriteAuditBatchID); err != nil {
 			applogger.Errorf("端口写审计 batch_id 列迁移失败 (非阻断,留待下次启动): %v", err)
 		}
+		// v1.57：端口写审计名称快照列 + 历史回填（二期，审计页 UUID → 名称）。
+		// 列缺失时查询层回退实时补名，功能可用但失去历史名称固化；非阻断。
+		if err := d.runAndRecord(254, "port_write_audit_name_snapshot", migrations.Migrate254PortWriteAuditNameSnapshot); err != nil {
+			applogger.Errorf("端口写审计名称快照列迁移失败 (非阻断,留待下次启动): %v", err)
+		}
 		// 用户偏好空值归一化 (双方言幂等, quick-261102-m94)。**非阻断**：
 		// PG 侧因 CHECK 约束本就无违规行(空串在写入时即被拦下),该迁移实为 no-op;
 		// SQLite 侧修历史残留的空串行。失败只影响历史行的读取,不影响新写入路径。
@@ -1429,6 +1439,11 @@ func (d *Database) AutoMigrate() error {
 		}
 		if err := d.runAndRecord(232, "port_write_audit_batch_id", migrations.Migrate232PortWriteAuditBatchID); err != nil {
 			applogger.Errorf("端口写审计 batch_id 列迁移失败 (非阻断,留待下次启动): %v", err)
+		}
+		// v1.57：端口写审计名称快照列 + 历史回填（二期，审计页 UUID → 名称）。
+		// 列缺失时查询层回退实时补名，功能可用但失去历史名称固化；非阻断。
+		if err := d.runAndRecord(254, "port_write_audit_name_snapshot", migrations.Migrate254PortWriteAuditNameSnapshot); err != nil {
+			applogger.Errorf("端口写审计名称快照列迁移失败 (非阻断,留待下次启动): %v", err)
 		}
 		// sqlite-recon-normalized-view (2026-08-18): 补建 reconciliation 三视图
 		// (PG 侧由上方 175/176 迁移块创建 MV+前置 VIEW;sqlite 分支不执行 PG-only
@@ -1810,6 +1825,14 @@ func (d *Database) BootstrapMissingTables() error {
 	// 幂等（runAndRecord 版本记录 + Migrate253 内部 perms Count 守卫），重复执行无副作用。
 	if err := d.runAndRecord(253, "dept_managed_org_perms", migrations.Migrate253DeptManagedOrgPerms); err != nil {
 		return fmt.Errorf("条线部门归属映射权限 seed 失败: %w", err)
+	}
+
+	// 端口写审计名称快照列（v1.57）：BootstrapMissingTables 用 CreateTable 从 model
+	// 派生只建缺失表，**不会给已存在的表补列**；缺列时 audit/list 的 GORM SELECT
+	// 会报 42703。幂等（HasColumn 守卫 + 回填只动空值行），重复执行无副作用。
+	// 失败阻断：列缺失会让审计页整体不可用。
+	if err := d.runAndRecord(254, "port_write_audit_name_snapshot", migrations.Migrate254PortWriteAuditNameSnapshot); err != nil {
+		return fmt.Errorf("端口写审计名称快照列补建失败: %w", err)
 	}
 
 	// 2) 索引兜底:model tag 未覆盖的索引面,显式 IF NOT EXISTS 幂等补建

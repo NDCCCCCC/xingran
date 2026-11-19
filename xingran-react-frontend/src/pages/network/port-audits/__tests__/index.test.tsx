@@ -13,8 +13,12 @@ import { App } from "antd";
 import type { PortWriteAuditRow, PortWriteAuditListResult } from "@/types/network";
 
 const mockListPortWriteAudits = vi.fn();
+const mockDeviceOptions = vi.fn();
+const mockPortOptions = vi.fn();
 vi.mock("@/lib/api/networkApi", () => ({
   listPortWriteAudits: (...args: unknown[]) => mockListPortWriteAudits(...args),
+  listPortWriteAuditDeviceOptions: (...args: unknown[]) => mockDeviceOptions(...args),
+  listPortWriteAuditPortOptions: (...args: unknown[]) => mockPortOptions(...args),
 }));
 
 import PortWriteAuditsPage from "../index";
@@ -48,6 +52,11 @@ function makeResult(list: PortWriteAuditRow[]): PortWriteAuditListResult {
 describe("PortWriteAuditsPage — PWX-04", () => {
   beforeEach(() => {
     mockListPortWriteAudits.mockReset();
+    mockDeviceOptions.mockReset();
+    mockPortOptions.mockReset();
+    // v1.57 选择器默认空选项（不影响列表断言）；个别用例可覆盖
+    mockDeviceOptions.mockResolvedValue({ list: [], total: 0, current: 1, pageSize: 50 });
+    mockPortOptions.mockResolvedValue({ list: [], total: 0, current: 1, pageSize: 50 });
   });
 
   it("渲染分页表 + 状态 Tag", async () => {
@@ -83,6 +92,64 @@ describe("PortWriteAuditsPage — PWX-04", () => {
     expect(screen.getByText("变更后 (afterValue)")).toBeInTheDocument();
     // before/after 各渲染一份 adminStatus 快照
     expect(screen.getAllByText(/adminStatus/).length).toBe(2);
+  });
+
+  it("v1.57 列表展示设备名称/IP 与接口名/端口描述，不再直接展示裸 UUID", async () => {
+    mockListPortWriteAudits.mockResolvedValue(
+      makeResult([
+        makeRow({
+          deviceName: "核心交换机-01",
+          deviceIp: "10.1.1.1",
+          interfaceName: "GE0/0/1",
+          portDescription: "上行到核心",
+          nameFromSnapshot: true,
+        }),
+      ])
+    );
+
+    render(<PortWriteAuditsPage />, { wrapper: Wrapper });
+
+    expect(await screen.findByText("核心交换机-01")).toBeInTheDocument();
+    expect(screen.getByText("10.1.1.1")).toBeInTheDocument();
+    expect(screen.getByText("GE0/0/1")).toBeInTheDocument();
+    expect(screen.getByText("上行到核心")).toBeInTheDocument();
+    // UUID 不再作为单元格主文本出现
+    expect(screen.queryByText("device-1")).toBeNull();
+    expect(screen.queryByText("port-1")).toBeNull();
+  });
+
+  it("v1.57 名称缺失时显示兜底文案（已删除设备 / 未采集）", async () => {
+    mockListPortWriteAudits.mockResolvedValue(makeResult([makeRow()]));
+
+    render(<PortWriteAuditsPage />, { wrapper: Wrapper });
+
+    expect(await screen.findByText("已删除设备")).toBeInTheDocument();
+    expect(screen.getByText("未采集/已删除")).toBeInTheDocument();
+  });
+
+  it("v1.57 设备选择后按 deviceId 预取端口选项（联动 + 提交参数）", async () => {
+    mockListPortWriteAudits.mockResolvedValue(makeResult([]));
+    mockDeviceOptions.mockResolvedValue({
+      list: [{ value: "dev-1", label: "核心交换机-01", ipAddress: "10.1.1.1" }],
+      total: 1,
+      current: 1,
+      pageSize: 50,
+    });
+    mockPortOptions.mockResolvedValue({
+      list: [{ value: "port-1", label: "GE0/0/1", interfaceName: "GE0/0/1", description: "上行" }],
+      total: 1,
+      current: 1,
+      pageSize: 50,
+    });
+
+    render(<PortWriteAuditsPage />, { wrapper: Wrapper });
+    await waitFor(() => {
+      expect(mockDeviceOptions).toHaveBeenCalled();
+    });
+    // 设备选项预取走 device-options（不是 /network/devices/list，避免审计员 403）
+    expect(mockDeviceOptions).toHaveBeenCalledWith({ current: 1, pageSize: 50 });
+    // 初始未选设备 → 不请求端口选项
+    expect(mockPortOptions).not.toHaveBeenCalled();
   });
 
   it("API 失败时空态兜底不白屏", async () => {

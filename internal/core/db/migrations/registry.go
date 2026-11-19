@@ -81,6 +81,9 @@ var ActiveMigrations = []struct {
 	// duty/pools 菜单状态归位：所有未软删 C 行统一 visible=0/status=1，
 	// 消除 228 历史激活与存量重复行造成的双入口。按维护约定同步登记。
 	{249, "duty_pools_menu_state"},
+	// v1.57：端口写审计名称快照列 + 历史回填（审计页 UUID → 名称二期）。
+	// 按维护约定同步登记。
+	{254, "port_write_audit_name_snapshot"},
 }
 
 // ReconcileResult 对账结果：registry 与库内 sys_schema_migrations 记录的差异。

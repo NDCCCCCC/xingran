@@ -493,6 +493,19 @@ export interface PortWriteAuditRow {
   operator: string;
   operLogId?: string | null;
   createdAt: string;
+
+  /**
+   * v1.57 名称可读性：后端已补的设备/端口可读名称。
+   * - deviceName/interfaceName 空串 = 快照与实时表都查不到（前端显示兜底文案 + UUID）
+   * - deviceIp 用于区分重名设备，可空
+   * - portDescription 为端口描述，可空
+   * - nameFromSnapshot=true 表示名称取自审计行快照（操作当时），false 表示实时补名
+   */
+  deviceName?: string;
+  deviceIp?: string;
+  interfaceName?: string;
+  portDescription?: string;
+  nameFromSnapshot?: boolean;
 }
 
 /** 端口写审计分页查询请求（契约 30a80c94: current 从 1 起, pageSize 上限 100, 时间 RFC3339） */
@@ -508,11 +521,54 @@ export interface PortWriteAuditListRequest {
   endTime?: string;
   /** 契约 9a1ea4d7: 等值过滤——PORTW-03 断线对账精确拉取该批次审计行 */
   batchId?: string;
+  /** v1.57: 按设备名称模糊过滤（与 deviceId 同时给出取交集） */
+  deviceName?: string;
+  /** v1.57: 按接口名模糊过滤（与 portId 同时给出取交集） */
+  interfaceName?: string;
 }
 
 /** 端口写审计分页响应 (项目分页约定: list/total/current/pageSize) */
 export interface PortWriteAuditListResult {
   list: PortWriteAuditRow[];
+  total: number;
+  current: number;
+  pageSize: number;
+}
+
+/** v1.57 审计页选择器查询参数（设备/端口共用） */
+export interface PortWriteAuditOptionRequest {
+  /** 端口选择器必填：接口名跨设备重名，禁止全局裸选 */
+  deviceId?: string;
+  /** 名称模糊搜索（设备名/IP、接口名/描述） */
+  keyword?: string;
+  current?: number;
+  pageSize?: number;
+}
+
+/** v1.57 审计页设备选择器选项 */
+export interface PortWriteAuditDeviceOption {
+  value: string;
+  label: string;
+  ipAddress?: string;
+}
+
+/** v1.57 审计页端口选择器选项 */
+export interface PortWriteAuditPortOption {
+  value: string;
+  label: string;
+  description?: string;
+  interfaceName: string;
+}
+
+export interface PortWriteAuditDeviceOptionResult {
+  list: PortWriteAuditDeviceOption[];
+  total: number;
+  current: number;
+  pageSize: number;
+}
+
+export interface PortWriteAuditPortOptionResult {
+  list: PortWriteAuditPortOption[];
   total: number;
   current: number;
   pageSize: number;

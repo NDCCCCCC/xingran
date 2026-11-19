@@ -311,25 +311,51 @@ func (h *PortWriteHandler) execSinglePort(
 	// 关键分支：result.Status=="failed" 不走 response.Error，继续 audit + operlog + 200
 	// (RESEARCH §3.3, PATTERNS.md §4d 末行)
 
-	// D-04 写 audit 行（Path C 第 1 步：先 INSERT 拿 audit_id）
-	auditRow := buildAuditRow(result, beforeValue, deviceID, operator)
-	if createErr := h.core.GetDB().Create(auditRow).Error; createErr != nil {
-		// audit 写入失败不阻塞响应（与 batch 路径一致），但记录告警。
-		log.Printf("port_write audit insert failed portID=%s action=%s: %v", portID, action, createErr)
-	}
-
-	// 查 device_name + interface_name 用于 oper_param 可读性（UUID 不便阅读）；
-	// 查询失败用 deviceID/PortID fallback，不阻塞响应。
+	// 查 device_name + ip_address：一次性取回，同时供 v1.57 审计快照与 oper_param
+	// 可读性使用（UUID 不便阅读）。查询失败用 deviceID fallback，不阻塞响应。
 	deviceName := deviceID
+	deviceIP := ""
+	deviceFound := false
 	if deviceID != "" {
 		var dev models.NetworkDevice
-		if err := h.core.GetDB().Select("device_name").Where("id = ?", deviceID).First(&dev).Error; err == nil && dev.DeviceName != "" {
-			deviceName = dev.DeviceName
+		if err := h.core.GetDB().Select("device_name, ip_address").Where("id = ?", deviceID).First(&dev).Error; err == nil {
+			deviceFound = true
+			if dev.DeviceName != "" {
+				deviceName = dev.DeviceName
+			}
+			deviceIP = dev.IPAddress
 		}
 	}
 	interfaceName := port.InterfaceName
+	portDescription := port.Description
+	portFound := portFindErr == nil && port.InterfaceName != ""
 	if interfaceName == "" {
 		interfaceName = portID // fallback：端口行不存在
+	}
+
+	// D-04 写 audit 行（Path C 第 1 步：先 INSERT 拿 audit_id）
+	// v1.57：一并落名称快照（设备名/IP、接口名/描述），审计页不展示裸 UUID。
+	snap := auditNameSnapshot{
+		DeviceName:      deviceName,
+		DeviceIP:        deviceIP,
+		InterfaceName:   interfaceName,
+		PortDescription: portDescription,
+	}
+	if !deviceFound {
+		// 设备行查不到时 deviceName 仍是 UUID fallback，不能当名称快照落库 ——
+		// 否则审计页会把 UUID 当名称展示、且永久固化错误值。留空走实时兜底。
+		snap.DeviceName = ""
+		snap.DeviceIP = ""
+	}
+	if !portFound {
+		// 同上：端口采集行缺失时 interfaceName 是 UUID fallback。
+		snap.InterfaceName = ""
+		snap.PortDescription = ""
+	}
+	auditRow := buildAuditRowWithSnapshot(result, beforeValue, deviceID, operator, snap)
+	if createErr := h.core.GetDB().Create(auditRow).Error; createErr != nil {
+		// audit 写入失败不阻塞响应（与 batch 路径一致），但记录告警。
+		log.Printf("port_write audit insert failed portID=%s action=%s: %v", portID, action, createErr)
 	}
 
 	// Path C 第 2 步：把 audit_id 嵌 operlog oper_param（audit.oper_log_id 列保持 NULL）
@@ -412,6 +438,12 @@ func (h *PortWriteHandler) BatchWrite(c *gin.Context) {
 	// 预 SELECT before_value 一次取齐（按 portID 索引），避免 N+1 查询
 	beforeMap := preloadBeforeValues(h.core.GetDB(), all)
 
+	// v1.57：设备名称/IP + 端口描述也一次取齐（批量 2 条 SQL），
+	// 供每条审计行落名称快照；查不到的行留空，查询层再实时兜底。
+	devName, devIP, devFound := loadDeviceNameAndIP(h.core.GetDB(), req.DeviceID)
+	portNames := loadPortInterfaceNames(h.core.GetDB(), req.PortIDs)
+	portDescMap := loadPortDescriptions(h.core.GetDB(), req.PortIDs)
+
 	// DEBT-02：批量审计行单事务原子提交 —— 消灭「部分写入」孤儿审计行。
 	// 业务语义：批量写已对设备生效（SSH 不可回滚），审计行是唯一 DB 记录，
 	// 全有或全无优于部分写入（部分丢失时 oper_param 的 audit_ids 与实际行数
@@ -422,7 +454,15 @@ func (h *PortWriteHandler) BatchWrite(c *gin.Context) {
 		if len(beforeValue) == 0 {
 			beforeValue = json.RawMessage([]byte("{}"))
 		}
-		auditRow := buildAuditRow(&pr, beforeValue, req.DeviceID, operator)
+		snap := auditNameSnapshot{PortDescription: portDescMap[pr.PortID]}
+		if devFound {
+			snap.DeviceName = devName
+			snap.DeviceIP = devIP
+		}
+		if name, ok := portNames[pr.PortID]; ok && name != "" {
+			snap.InterfaceName = name
+		}
+		auditRow := buildAuditRowWithSnapshot(&pr, beforeValue, req.DeviceID, operator, snap)
 		auditRow.BatchID = result.BatchID // Phase 122 收尾：batch 级精确对账
 		auditRows = append(auditRows, auditRow)
 	}
@@ -435,15 +475,11 @@ func (h *PortWriteHandler) BatchWrite(c *gin.Context) {
 		auditIDs = []string{}
 	}
 
-	// 查 device_name + portID→interface_name 用于 oper_param 可读性（UUID 不便阅读）；
-	// 查询失败用 deviceID/PortID fallback，不阻塞响应。
+	// oper_param 设备名复用上方已查结果（UUID 不便阅读）；查不到时回落 deviceID。
 	deviceName := req.DeviceID
-	var dev models.NetworkDevice
-	if err := h.core.GetDB().Select("device_name").Where("id = ?", req.DeviceID).First(&dev).Error; err == nil && dev.DeviceName != "" {
-		deviceName = dev.DeviceName
+	if devFound && devName != "" {
+		deviceName = devName
 	}
-	portNames := loadPortInterfaceNames(h.core.GetDB(), req.PortIDs)
-
 	// Path C：汇总 operlog 行 oper_param 含 device_name + 各分类接口名 + audit_ids 完整列表
 	batchSummary := buildBatchSummaryOperParam(
 		string(req.Action),
@@ -628,6 +664,28 @@ func buildAfterValue(action portcollection.PortAction, pr *portwrite.PortResult)
 //
 // OperLogID：nil（Path C 强制，audit.oper_log_id 列保持 NULL）
 func buildAuditRow(pr *portwrite.PortResult, beforeValue json.RawMessage, deviceID, operator string) *models.PortWriteAudit {
+	return buildAuditRowWithSnapshot(pr, beforeValue, deviceID, operator, auditNameSnapshot{})
+}
+
+// auditNameSnapshot 审计行名称快照来源（v1.57 二期）。
+//
+// 由 caller 在写审计行前一次性查好（单端口 1 次、批量 2 次），buildAuditRowWithSnapshot
+// 只做赋值 —— 保持 buildAuditRow 纯函数性质，避免在构造器里发查询。
+//
+// 空值语义：字段为空表示"写审计时查不到该主数据"，落库为空串，
+// 查询层会用实时表兜底补名（见 portwrite.enrichAuditRows）。
+type auditNameSnapshot struct {
+	DeviceName      string
+	DeviceIP        string
+	InterfaceName   string
+	PortDescription string
+}
+
+// buildAuditRowWithSnapshot 在 buildAuditRow 基础上落名称快照（v1.57）。
+//
+// 快照是审计不可变事实：设备改名/删除、端口改描述或采集行被清理后，
+// 历史审计仍显示"操作当时"的名称。
+func buildAuditRowWithSnapshot(pr *portwrite.PortResult, beforeValue json.RawMessage, deviceID, operator string, snap auditNameSnapshot) *models.PortWriteAudit {
 	afterValue := buildAfterValue(pr.Action, pr)
 	if pr.Status == "skipped" {
 		afterValue = beforeValue
@@ -667,6 +725,12 @@ func buildAuditRow(pr *portwrite.PortResult, beforeValue json.RawMessage, device
 		FailureReason:  failureReason,
 		Operator:       operator,
 		// OperLogID: nil（Path C 强制，audit.oper_log_id 列保持 NULL）
+
+		// v1.57 名称快照（设备名/IP、接口名/描述）：审计页不展示裸 UUID。
+		DeviceNameSnapshot:      snap.DeviceName,
+		DeviceIPSnapshot:        snap.DeviceIP,
+		InterfaceNameSnapshot:   snap.InterfaceName,
+		PortDescriptionSnapshot: snap.PortDescription,
 	}
 }
 
@@ -739,6 +803,37 @@ func loadPortInterfaceNames(db *gorm.DB, portIDs []string) map[string]string {
 	}
 	for _, p := range ports {
 		out[p.ID] = p.InterfaceName
+	}
+	return out
+}
+
+// loadDeviceNameAndIP v1.57：一次查询取设备名称 + 管理 IP（审计名称快照用）。
+//
+// found=false 表示设备行不存在（或查询失败）—— caller 必须留空快照而不是把
+// deviceId 当名称落库，否则审计页会把 UUID 当名称永久固化。
+func loadDeviceNameAndIP(db *gorm.DB, deviceID string) (name, ip string, found bool) {
+	if deviceID == "" {
+		return "", "", false
+	}
+	var dev models.NetworkDevice
+	if err := db.Select("device_name, ip_address").Where("id = ?", deviceID).First(&dev).Error; err != nil {
+		return "", "", false
+	}
+	return dev.DeviceName, dev.IPAddress, true
+}
+
+// loadPortDescriptions v1.57：一次 SELECT 取齐 batch 涉及的端口描述（按 portID 索引）。
+func loadPortDescriptions(db *gorm.DB, portIDs []string) map[string]string {
+	out := make(map[string]string, len(portIDs))
+	if len(portIDs) == 0 {
+		return out
+	}
+	var ports []models.DevicePortStatus
+	if err := db.Select("id, description").Where("id IN ?", portIDs).Find(&ports).Error; err != nil {
+		return out
+	}
+	for _, p := range ports {
+		out[p.ID] = p.Description
 	}
 	return out
 }

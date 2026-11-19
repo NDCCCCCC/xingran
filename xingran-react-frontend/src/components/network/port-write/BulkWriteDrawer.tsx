@@ -262,7 +262,9 @@ export function BulkWriteDrawer({
                   ...prev,
                   events: rows.map((r, i) => ({
                     portId: r.portId,
-                    interfaceName: r.portId,
+                    // v1.57：audit 已补可读接口名，对账进度显示真实接口名而非 UUID；
+                    // 历史行快照与实时表都缺失时才回退 portId（不伪造接口名）。
+                    interfaceName: r.interfaceName || r.portId,
                     index: i + 1,
                     status: r.status,
                     message: r.failureReason ?? undefined,

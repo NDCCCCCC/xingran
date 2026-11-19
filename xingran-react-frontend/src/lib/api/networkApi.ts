@@ -8,6 +8,9 @@ import type {
   PortWritePreviewResult,
   PortWriteAuditListRequest,
   PortWriteAuditListResult,
+  PortWriteAuditOptionRequest,
+  PortWriteAuditDeviceOptionResult,
+  PortWriteAuditPortOptionResult,
 } from "@/types/network";
 
 /**
@@ -342,6 +345,38 @@ export const listPortWriteAudits = async (
 };
 
 /**
+ * 审计页设备选择器 — v1.57
+ * - 端点: POST /network/ports/write/audit/device-options
+ * - 权限: 复用组级 network:port:write（审计员通常无 network:device:list，故不走设备列表端点）
+ * - 返回最小读面: id / 设备名称 / IP；含已软删设备（历史审计行可能指向它们）
+ */
+export const listPortWriteAuditDeviceOptions = async (
+  req: PortWriteAuditOptionRequest = {}
+): Promise<PortWriteAuditDeviceOptionResult> => {
+  const result = await post<PortWriteAuditDeviceOptionResult>(
+    "/network/ports/write/audit/device-options",
+    req
+  );
+  return result.data!;
+};
+
+/**
+ * 审计页端口选择器 — v1.57
+ * - 端点: POST /network/ports/write/audit/port-options
+ * - deviceId 必填（接口名跨设备重名，后端缺参返 400）
+ * - 返回 id / 接口名 / 描述，供"GE0/0/1（上行到核心）"可辨识标签
+ */
+export const listPortWriteAuditPortOptions = async (
+  req: PortWriteAuditOptionRequest & { deviceId: string }
+): Promise<PortWriteAuditPortOptionResult> => {
+  const result = await post<PortWriteAuditPortOptionResult>(
+    "/network/ports/write/audit/port-options",
+    req
+  );
+  return result.data!;
+};
+
+/**
  * 单端口 trunk 写 — v1.51 Phase 125 面板三合一（PortWriteModal 接入）
  * - 端点: POST /network/ports/write/trunk（单端点三动作, 权限 network:port:write）
  * - action ∈ trunk_set_native | trunk_set_allowed | trunk_set_hybrid
@@ -486,6 +521,9 @@ export default {
   previewBatchWritePorts,
   // v1.51 Phase 127 PWX-04 端口写审计明细
   listPortWriteAudits,
+  // v1.57 审计页设备/端口选择器
+  listPortWriteAuditDeviceOptions,
+  listPortWriteAuditPortOptions,
   // v1.51 Phase 125 单端口 trunk（PortWriteModal 三动作）
   writeTrunk,
   // Phase 56 v1.20.1 端口写操作扩展
