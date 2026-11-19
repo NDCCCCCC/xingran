@@ -24,8 +24,9 @@ import NetworkExport from "@/components/shared/NetworkExport";
 import {
   BatchExportModal,
   confirmDelete,
-  useActionPermission,
+  FilterBar,
   StatCards,
+  useActionPermission,
 } from "@/components/shared";
 import { usePagination } from "@/hooks/usePagination";
 import { PERMISSION_CODES } from "@/constants/permissionCodes";
@@ -387,14 +388,55 @@ const CredentialManagement: FC = () => {
 
       {/* 搜索表单和操作按钮 */}
       <Card style={{ marginBottom: 16 }}>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-start",
-            flexWrap: "wrap",
-            gap: "16px",
-          }}
+        <FilterBar
+          actions={
+            <Space>
+              {/* Phase 86 W3：新增入口 —— ready 无码不渲染；未就绪渲染但 disabled + 提示 */}
+              {permAdd.visible && (
+                <Button
+                  type="primary"
+                  icon={<PlusOutlined />}
+                  onClick={handleAdd}
+                  aria-label="新增"
+                  title={permAdd.hint ?? "新增"}
+                  disabled={permAdd.disabled}
+                >
+                  新增
+                </Button>
+              )}
+              {/* Phase 86 W3：批量删除 —— 条件渲染（networkCredential.delete） */}
+              {permDelete.visible && selectedRowKeys.length > 0 && (
+                <Button
+                  aria-label="批量删除"
+                  title={permDelete.hint ?? "批量删除"}
+                  icon={<DeleteOutlined />}
+                  style={{ color: "var(--theme-error)" }}
+                  onClick={handleBatchDelete}
+                  disabled={permDelete.disabled}
+                >
+                  批量删除 ({selectedRowKeys.length})
+                </Button>
+              )}
+              {/* Phase 86 W3：批量导出 —— 门控点 = `<NetworkExport>` 组件元素本身
+                  （「导出」按钮在 `NetworkExport.tsx:120` 组件内部，页面上无独立触发按钮）。
+                  ready 无 networkCredential.export → 整个组件（含其内部「导出」按钮）不在 DOM。 */}
+              {permExport.visible && (
+                <span title={permExport.hint} aria-disabled={permExport.disabled || undefined}>
+                  <NetworkExport
+                    entityType="credentials"
+                    entityName="授权凭证"
+                    filters={Object.fromEntries(
+                      Object.entries(searchForm.getFieldsValue() as Record<string, unknown>).filter(
+                        ([, v]) => v !== undefined && v !== null && v !== ""
+                      )
+                    )}
+                    current={paginationProps?.current ?? 1}
+                    pageSize={paginationProps?.pageSize ?? 10}
+                  />
+                </span>
+              )}
+            </Space>
+          }
         >
           <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
             <Form.Item name="searchCredentialName" label="凭证名称">
@@ -444,64 +486,18 @@ const CredentialManagement: FC = () => {
               </Space>
             </Form.Item>
           </Form>
-          <Space>
-            {/* Phase 86 W3：新增入口 —— ready 无码不渲染；未就绪渲染但 disabled + 提示 */}
-            {permAdd.visible && (
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                onClick={handleAdd}
-                aria-label="新增"
-                title={permAdd.hint ?? "新增"}
-                disabled={permAdd.disabled}
-              >
-                新增
-              </Button>
-            )}
-            {/* Phase 86 W3：批量删除 —— 条件渲染（networkCredential.delete） */}
-            {permDelete.visible && selectedRowKeys.length > 0 && (
-              <Button
-                aria-label="批量删除"
-                title={permDelete.hint ?? "批量删除"}
-                icon={<DeleteOutlined />}
-                style={{ color: "var(--theme-error)" }}
-                onClick={handleBatchDelete}
-                disabled={permDelete.disabled}
-              >
-                批量删除 ({selectedRowKeys.length})
-              </Button>
-            )}
-            {/* Phase 86 W3：批量导出 —— 门控点 = `<NetworkExport>` 组件元素本身
-                （「导出」按钮在 `NetworkExport.tsx:120` 组件内部，页面上无独立触发按钮）。
-                ready 无 networkCredential.export → 整个组件（含其内部「导出」按钮）不在 DOM。 */}
-            {permExport.visible && (
-              <span title={permExport.hint} aria-disabled={permExport.disabled || undefined}>
-                <NetworkExport
-                  entityType="credentials"
-                  entityName="授权凭证"
-                  filters={Object.fromEntries(
-                    Object.entries(searchForm.getFieldsValue() as Record<string, unknown>).filter(
-                      ([, v]) => v !== undefined && v !== null && v !== ""
-                    )
-                  )}
-                  current={paginationProps?.current ?? 1}
-                  pageSize={paginationProps?.pageSize ?? 10}
-                />
-              </span>
-            )}
-          </Space>
-          {/* 批量导出 Modal */}
+        </FilterBar>
+        {/* 批量导出 Modal */}
 
-          <BatchExportModal
-            visible={batchModalVisible}
+        <BatchExportModal
+          visible={batchModalVisible}
 
-            onConfirm={handleBatchExport}
+          onConfirm={handleBatchExport}
 
-            onCancel={() => setBatchModalVisible(false)}
+          onCancel={() => setBatchModalVisible(false)}
 
-            loading={batchExporting}
-          />
-        </div>
+          loading={batchExporting}
+        />
       </Card>
 
       {/* 凭证表格 */}

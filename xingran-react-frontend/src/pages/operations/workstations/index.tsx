@@ -35,7 +35,7 @@ import { usePagination } from "@/hooks/usePagination";
 import { useDict, type DictItem } from "@/hooks/useDict";
 import { useSidebarDeptFilter } from "@/hooks/useSidebarDeptFilter";
 import { useAliasByLocation } from "@/hooks/useAliasByLocation";
-import { ExcelImportLazy } from "@/components/shared";
+import { ExcelImportLazy, FilterBar } from "@/components/shared";
 import { useActionPermission } from "@/components/shared";
 import { PERMISSION_CODES } from "@/constants/permissionCodes";
 import ExcelExport from "@/components/shared/ExcelExport";
@@ -812,14 +812,128 @@ const WorkstationManagement: FC = () => {
           ]}
         />
         <Card style={{ marginBottom: 16 }}>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "flex-start",
-              flexWrap: "wrap",
-              gap: "16px",
-            }}
+          <FilterBar
+            actions={
+              <Space>
+                <Radio.Group
+                  value={viewMode}
+                  onChange={(e) => setViewMode(e.target.value)}
+                  buttonStyle="solid"
+                >
+                  <Radio.Button value="table">
+                    <TableOutlined /> 表格
+                  </Radio.Button>
+                  <Radio.Button value="card">
+                    <AppstoreOutlined /> 卡片
+                  </Radio.Button>
+                  {/* Phase 86 W2：平面图视图是**可保存的编辑器** —— 拖动工位会调
+                      `workstationApi.updatePositions`（`useWorkstationView.ts:60`）写工位位置，
+                      因此与 floors 平面图同一口径：归 `opsWorkstation.edit`。
+                      ready 无码 → 不渲染该视图入口；未就绪 → 渲染但 disabled + hint。 */}
+                  {permEdit.visible && (
+                    <Radio.Button
+                      value="floorplan"
+                      disabled={permEdit.disabled}
+                      title={permEdit.hint}
+                    >
+                      <BgColorsOutlined /> 平面图
+                    </Radio.Button>
+                  )}
+                </Radio.Group>
+                {/* Excel 导入/导出的门控点 = 触发按钮（modal 容器 :929/:936 保留无条件渲染） */}
+                {permImport.visible && (
+                  <Button
+                    icon={<ImportOutlined />}
+                    onClick={() => setImportVisible(true)}
+                    disabled={permImport.disabled}
+                    title={permImport.hint}
+                  >
+                    导入
+                  </Button>
+                )}
+                {/* quick 260713-df0: 工位导入辅助 — 下载 sys_dept dept_name|code 映射表,
+                    用户填 Excel 时不必再翻部门列表查 dept_code
+                    Phase 86 W2（NEW-02）：这是**导出类写入口**（数据外带面 —— 下载 sys_dept
+                    的 dept_name|code 映射表），不因「不是 ExcelExport 容器」而被排除
+                    → 归 opsWorkstation.export */}
+                {permExport.visible && (
+                  <Button
+                    icon={<DownloadOutlined />}
+                    onClick={() => deptApi.exportMapping()}
+                    disabled={permExport.disabled}
+                    title={permExport.hint}
+                  >
+                    下载部门映射表
+                  </Button>
+                )}
+                {/* quick-261106-wsb: 按人员反推部门（存量工位批量回填）。
+                    独立权限项 opsWorkstation.backfill（批量全库写不与 edit 共用）。
+                    预览 + 确认两步，纠正不一致默认关闭。 */}
+                {permBackfill.visible && (
+                  <Button
+                    icon={<DeploymentUnitOutlined />}
+                    onClick={() => void backfillDept.open()}
+                    disabled={permBackfill.disabled || backfillDept.loading}
+                    loading={backfillDept.loading}
+                    title={
+                      permBackfill.hint ?? "按工位绑定的用户，反推并回填所属部门（先预览再确认）"
+                    }
+                  >
+                    按人员反推部门
+                  </Button>
+                )}
+                {permExport.visible && (
+                  <Button
+                    icon={<ExportOutlined />}
+                    onClick={() => {
+                      setExportFilters(buildSearchParams({ searchForm }));
+                      setExportVisible(true);
+                    }}
+                    disabled={permExport.disabled}
+                    title={permExport.hint}
+                  >
+                    导出
+                  </Button>
+                )}
+                {/* alias 抽屉入口：旧式 `canListAlias` 已迁为三态 helper */}
+                {permAliasList.visible && (
+                  <Button
+                    icon={<SettingOutlined />}
+                    onClick={() => setAliasDrawerOpen(true)}
+                    disabled={permAliasList.disabled}
+                    title={permAliasList.hint}
+                  >
+                    映射
+                  </Button>
+                )}
+                {selectedRowKeys.length > 0 && permDelete.visible && (
+                  <Button
+                    icon={<DeleteOutlined />}
+                    style={{ color: "var(--theme-error)" }}
+                    onClick={() =>
+                      handleBatchDelete(selectedRowKeys, handleSuccess, resetSelection)
+                    }
+                    disabled={permDelete.disabled}
+                    title={permDelete.hint}
+                  >
+                    批量删除 ({selectedRowKeys.length})
+                  </Button>
+                )}
+                {permAdd.visible && (
+                  <Button
+                    type="primary"
+                    icon={<PlusOutlined />}
+                    onClick={() => {
+                      handleOpenModal(undefined);
+                    }}
+                    disabled={permAdd.disabled}
+                    title={permAdd.hint}
+                  >
+                    新增工位
+                  </Button>
+                )}
+              </Space>
+            }
           >
             <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
               <Form.Item name="floorId" label="所属楼层">
@@ -867,124 +981,8 @@ const WorkstationManagement: FC = () => {
                 </Space>
               </Form.Item>
             </Form>
-            <Space>
-              <Radio.Group
-                value={viewMode}
-                onChange={(e) => setViewMode(e.target.value)}
-                buttonStyle="solid"
-              >
-                <Radio.Button value="table">
-                  <TableOutlined /> 表格
-                </Radio.Button>
-                <Radio.Button value="card">
-                  <AppstoreOutlined /> 卡片
-                </Radio.Button>
-                {/* Phase 86 W2：平面图视图是**可保存的编辑器** —— 拖动工位会调
-                    `workstationApi.updatePositions`（`useWorkstationView.ts:60`）写工位位置，
-                    因此与 floors 平面图同一口径：归 `opsWorkstation.edit`。
-                    ready 无码 → 不渲染该视图入口；未就绪 → 渲染但 disabled + hint。 */}
-                {permEdit.visible && (
-                  <Radio.Button
-                    value="floorplan"
-                    disabled={permEdit.disabled}
-                    title={permEdit.hint}
-                  >
-                    <BgColorsOutlined /> 平面图
-                  </Radio.Button>
-                )}
-              </Radio.Group>
-              {/* Excel 导入/导出的门控点 = 触发按钮（modal 容器 :929/:936 保留无条件渲染） */}
-              {permImport.visible && (
-                <Button
-                  icon={<ImportOutlined />}
-                  onClick={() => setImportVisible(true)}
-                  disabled={permImport.disabled}
-                  title={permImport.hint}
-                >
-                  导入
-                </Button>
-              )}
-              {/* quick 260713-df0: 工位导入辅助 — 下载 sys_dept dept_name|code 映射表,
-                  用户填 Excel 时不必再翻部门列表查 dept_code
-                  Phase 86 W2（NEW-02）：这是**导出类写入口**（数据外带面 —— 下载 sys_dept
-                  的 dept_name|code 映射表），不因「不是 ExcelExport 容器」而被排除
-                  → 归 opsWorkstation.export */}
-              {permExport.visible && (
-                <Button
-                  icon={<DownloadOutlined />}
-                  onClick={() => deptApi.exportMapping()}
-                  disabled={permExport.disabled}
-                  title={permExport.hint}
-                >
-                  下载部门映射表
-                </Button>
-              )}
-              {/* quick-261106-wsb: 按人员反推部门（存量工位批量回填）。
-                  独立权限项 opsWorkstation.backfill（批量全库写不与 edit 共用）。
-                  预览 + 确认两步，纠正不一致默认关闭。 */}
-              {permBackfill.visible && (
-                <Button
-                  icon={<DeploymentUnitOutlined />}
-                  onClick={() => void backfillDept.open()}
-                  disabled={permBackfill.disabled || backfillDept.loading}
-                  loading={backfillDept.loading}
-                  title={
-                    permBackfill.hint ?? "按工位绑定的用户，反推并回填所属部门（先预览再确认）"
-                  }
-                >
-                  按人员反推部门
-                </Button>
-              )}
-              {permExport.visible && (
-                <Button
-                  icon={<ExportOutlined />}
-                  onClick={() => {
-                    setExportFilters(buildSearchParams({ searchForm }));
-                    setExportVisible(true);
-                  }}
-                  disabled={permExport.disabled}
-                  title={permExport.hint}
-                >
-                  导出
-                </Button>
-              )}
-              {/* alias 抽屉入口：旧式 `canListAlias` 已迁为三态 helper */}
-              {permAliasList.visible && (
-                <Button
-                  icon={<SettingOutlined />}
-                  onClick={() => setAliasDrawerOpen(true)}
-                  disabled={permAliasList.disabled}
-                  title={permAliasList.hint}
-                >
-                  映射
-                </Button>
-              )}
-              {selectedRowKeys.length > 0 && permDelete.visible && (
-                <Button
-                  icon={<DeleteOutlined />}
-                  style={{ color: "var(--theme-error)" }}
-                  onClick={() => handleBatchDelete(selectedRowKeys, handleSuccess, resetSelection)}
-                  disabled={permDelete.disabled}
-                  title={permDelete.hint}
-                >
-                  批量删除 ({selectedRowKeys.length})
-                </Button>
-              )}
-              {permAdd.visible && (
-                <Button
-                  type="primary"
-                  icon={<PlusOutlined />}
-                  onClick={() => {
-                    handleOpenModal(undefined);
-                  }}
-                  disabled={permAdd.disabled}
-                  title={permAdd.hint}
-                >
-                  新增工位
-                </Button>
-              )}
-            </Space>
-          </div>
+          </FilterBar>
+
           {selectedRowKeys.length > 0 && (
             <Alert
               title={

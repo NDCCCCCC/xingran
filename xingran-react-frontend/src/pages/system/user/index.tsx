@@ -33,9 +33,10 @@ import { usePagination } from "@/hooks/usePagination";
 import { useDict, type DictItem } from "@/hooks/useDict";
 import { handleApiError, handleSuccess } from "@/utils/errorHandler";
 import {
-  DepartmentTreeSelect,
-  StatCards,
   confirmDelete,
+  DepartmentTreeSelect,
+  FilterBar,
+  StatCards,
   useActionPermission,
 } from "@/components/shared";
 import type { ActionPermissionDecision } from "@/components/shared";
@@ -892,14 +893,56 @@ const UserManagement: FC = () => {
           <div>
             {/* 搜索表单（原型 .filter-bar：label + 输入框一排；导入/新增按钮在右侧） */}
             <Card style={{ marginBottom: 14 }}>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "flex-start",
-                  flexWrap: "wrap",
-                  gap: "16px",
-                }}
+              <FilterBar
+                actions={
+                  <Space>
+                    {selectedRowKeys.length > 0 && permRemove.visible && (
+                      <Button
+                        icon={<DeleteOutlined />}
+                        onClick={handleBatchDelete}
+                        disabled={permRemove.disabled}
+                        title={permRemove.hint}
+                        style={{
+                          color: "var(--theme-error)",
+                        }}
+                      >
+                        批量删除 ({selectedRowKeys.length})
+                      </Button>
+                    )}
+                    {permImport.visible && (
+                      <Button
+                        icon={<ImportOutlined />}
+                        onClick={() => setImportModalVisible(true)}
+                        disabled={permImport.disabled}
+                        title={permImport.hint}
+                      >
+                        导入用户
+                      </Button>
+                    )}
+                    {permExport.visible && (
+                      <Button
+                        icon={<ExportOutlined />}
+                        onClick={handleExportUsers}
+                        loading={exporting}
+                        disabled={permExport.disabled || exporting}
+                        title={permExport.hint}
+                      >
+                        导出用户
+                      </Button>
+                    )}
+                    {permAdd.visible && (
+                      <Button
+                        type="primary"
+                        icon={<PlusOutlined />}
+                        onClick={handleAddUser}
+                        disabled={permAdd.disabled}
+                        title={permAdd.hint}
+                      >
+                        新增用户
+                      </Button>
+                    )}
+                  </Space>
+                }
               >
                 <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
                   <Form.Item name="username" label="用户名">
@@ -928,54 +971,8 @@ const UserManagement: FC = () => {
                     </Space>
                   </Form.Item>
                 </Form>
-                <Space>
-                  {selectedRowKeys.length > 0 && permRemove.visible && (
-                    <Button
-                      icon={<DeleteOutlined />}
-                      onClick={handleBatchDelete}
-                      disabled={permRemove.disabled}
-                      title={permRemove.hint}
-                      style={{
-                        color: "var(--theme-error)",
-                      }}
-                    >
-                      批量删除 ({selectedRowKeys.length})
-                    </Button>
-                  )}
-                  {permImport.visible && (
-                    <Button
-                      icon={<ImportOutlined />}
-                      onClick={() => setImportModalVisible(true)}
-                      disabled={permImport.disabled}
-                      title={permImport.hint}
-                    >
-                      导入用户
-                    </Button>
-                  )}
-                  {permExport.visible && (
-                    <Button
-                      icon={<ExportOutlined />}
-                      onClick={handleExportUsers}
-                      loading={exporting}
-                      disabled={permExport.disabled || exporting}
-                      title={permExport.hint}
-                    >
-                      导出用户
-                    </Button>
-                  )}
-                  {permAdd.visible && (
-                    <Button
-                      type="primary"
-                      icon={<PlusOutlined />}
-                      onClick={handleAddUser}
-                      disabled={permAdd.disabled}
-                      title={permAdd.hint}
-                    >
-                      新增用户
-                    </Button>
-                  )}
-                </Space>
-              </div>
+              </FilterBar>
+
               {selectedRowKeys.length > 0 && (
                 <Alert
                   title={

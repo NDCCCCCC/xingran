@@ -1,0 +1,111 @@
+/* ========================================
+   窄屏自适应排版层（响应式统一口径）
+   ========================================
+   口径：宽屏视觉零变化，只在可用宽度不足时改变排版；不改断点以上任何规则。
+   由 src/index.css 顶部 @import 引入（独立成文件，避免挤占 index.css 行数预算）。
+
+   1) 表格：全局 `.ant-table { overflow: hidden }` 会裁掉超宽内容且不产生滚动条，
+      列因此被挤压成逐字竖排（部门管理 / 端口审计历史故障）。改为内容区横向滚动，
+      外层圆角裁剪仍由 .ant-table-container 承担。
+   2) 表头单元格永不逐字折行；列宽交给 columns.width / scroll.x 决定。
+   3) 筛选区：inline 表单在窄宽下改用等宽栅格 —— 标签上置、控件铺满，
+      消除「标签与控件参差、按钮漂浮」的错位。
+   ======================================== */
+
+.ant-table-content {
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.ant-table-thead > tr > th {
+  white-space: nowrap;
+}
+
+/* ---------- 筛选卡片：左表单 + 右操作按钮 ---------- */
+.xr-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.xr-filter-bar__form {
+  /* 用 min-width 表达「至少 640px 才与按钮同排」，不用 flex-basis/width：
+     二者在 column 方向会被当作主轴尺寸，反过来把卡片撑高 */
+  flex: 1 1 auto;
+  min-width: 640px;
+}
+
+.xr-filter-bar__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+@media (max-width: 1440px) {
+  /* 窄宽改为纯块级堆叠：flex + wrap + column 组合会产生异常的主轴尺寸解析 */
+  .xr-filter-bar {
+    display: block;
+  }
+
+  .xr-filter-bar > .xr-filter-bar__actions {
+    margin-top: 12px;
+  }
+
+  .xr-filter-bar__form {
+    flex: 0 1 auto;
+    min-width: 0;
+  }
+
+  .ant-form-inline {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 12px 16px;
+    align-items: start;
+  }
+
+  .ant-form-inline > .ant-form-item {
+    margin: 0;
+    min-width: 0;
+  }
+
+  .ant-form-inline > .ant-form-item > .ant-form-item-row {
+    flex-wrap: nowrap;
+    flex-direction: column;
+  }
+
+  .ant-form-inline > .ant-form-item .ant-form-item-label {
+    width: 100%;
+    padding: 0 0 4px;
+    text-align: left;
+  }
+
+  .ant-form-inline > .ant-form-item .ant-form-item-label > label {
+    height: auto;
+    line-height: 1.4;
+  }
+
+  .ant-form-inline > .ant-form-item .ant-form-item-control {
+    width: 100%;
+    min-width: 0;
+  }
+
+  /* 控件铺满栅格列：用 flex 拉伸覆盖内联 width，无需 !important */
+  .ant-form-inline > .ant-form-item .ant-form-item-control-input-content {
+    display: flex;
+    min-width: 0;
+  }
+
+  .ant-form-inline > .ant-form-item .ant-form-item-control-input-content > * {
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  /* 操作按钮组自身占一列时靠左排列，按钮不被拉伸 */
+  .ant-form-inline > .ant-form-item .ant-form-item-control-input-content > .ant-space {
+    flex: 0 0 auto;
+  }
+}

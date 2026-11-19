@@ -25,7 +25,7 @@ import { formatDateTime } from "@/utils/datetime";
 import type { DictType, DictData } from "@/types";
 import ActionButtons from "@/components/shared/ActionButtons";
 import { confirmDelete } from "@/components/shared/confirmDelete";
-import { StatCards } from "@/components/shared";
+import { FilterBar, StatCards } from "@/components/shared";
 import { usePagination } from "@/hooks/usePagination";
 import { useServerSort, resolveSorter } from "@/hooks/useServerSort";
 import type { SortOrder } from "@/hooks/useServerSort";
@@ -502,14 +502,32 @@ const DictManagement: FC = () => {
 
                 {/* 搜索表单和操作按钮 */}
                 <Card style={{ marginBottom: 16 }}>
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "flex-start",
-                      flexWrap: "wrap",
-                      gap: "16px",
-                    }}
+                  <FilterBar
+                    actions={
+                      <Space>
+                        {selectedRowKeys.length > 0 && (
+                          <Button
+                            icon={<DeleteOutlined />}
+                            style={{ color: "var(--theme-error)" }}
+                            onClick={() =>
+                              handleBatchDeleteType(selectedRowKeys, setSelectedRowKeys)
+                            }
+                          >
+                            批量删除 ({selectedRowKeys.length})
+                          </Button>
+                        )}
+                        <Button
+                          type="primary"
+                          icon={<PlusOutlined />}
+                          onClick={() => openTypeModal(undefined, typeForm)}
+                        >
+                          新增类型
+                        </Button>
+                        <Button icon={<ReloadOutlined />} onClick={handleRefreshCache}>
+                          刷新缓存
+                        </Button>
+                      </Space>
+                    }
                   >
                     <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
                       <Form.Item name="dictName" label="字典名称">
@@ -559,28 +577,8 @@ const DictManagement: FC = () => {
                         </Space>
                       </Form.Item>
                     </Form>
-                    <Space>
-                      {selectedRowKeys.length > 0 && (
-                        <Button
-                          icon={<DeleteOutlined />}
-                          style={{ color: "var(--theme-error)" }}
-                          onClick={() => handleBatchDeleteType(selectedRowKeys, setSelectedRowKeys)}
-                        >
-                          批量删除 ({selectedRowKeys.length})
-                        </Button>
-                      )}
-                      <Button
-                        type="primary"
-                        icon={<PlusOutlined />}
-                        onClick={() => openTypeModal(undefined, typeForm)}
-                      >
-                        新增类型
-                      </Button>
-                      <Button icon={<ReloadOutlined />} onClick={handleRefreshCache}>
-                        刷新缓存
-                      </Button>
-                    </Space>
-                  </div>
+                  </FilterBar>
+
                   {selectedRowKeys.length > 0 && (
                     <Alert
                       title={
@@ -639,14 +637,30 @@ const DictManagement: FC = () => {
 
                 {/* 搜索表单和操作按钮 */}
                 <Card style={{ marginBottom: 16 }}>
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "flex-start",
-                      flexWrap: "wrap",
-                      gap: "16px",
-                    }}
+                  <FilterBar
+                    actions={
+                      <Space>
+                        {selectedRowKeys.length > 0 && (
+                          <Button
+                            icon={<DeleteOutlined />}
+                            style={{ color: "var(--theme-error)" }}
+                            onClick={() =>
+                              handleBatchDeleteData(selectedRowKeys, setSelectedRowKeys)
+                            }
+                          >
+                            批量删除 ({selectedRowKeys.length})
+                          </Button>
+                        )}
+                        <Button
+                          type="primary"
+                          icon={<PlusOutlined />}
+                          onClick={() => openDataModal(undefined, dataForm)}
+                          disabled={!selectedType}
+                        >
+                          新增数据
+                        </Button>
+                      </Space>
+                    }
                   >
                     <Form form={dataSearchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
                       <Form.Item label="字典类型">
@@ -704,26 +718,8 @@ const DictManagement: FC = () => {
                         </Space>
                       </Form.Item>
                     </Form>
-                    <Space>
-                      {selectedRowKeys.length > 0 && (
-                        <Button
-                          icon={<DeleteOutlined />}
-                          style={{ color: "var(--theme-error)" }}
-                          onClick={() => handleBatchDeleteData(selectedRowKeys, setSelectedRowKeys)}
-                        >
-                          批量删除 ({selectedRowKeys.length})
-                        </Button>
-                      )}
-                      <Button
-                        type="primary"
-                        icon={<PlusOutlined />}
-                        onClick={() => openDataModal(undefined, dataForm)}
-                        disabled={!selectedType}
-                      >
-                        新增数据
-                      </Button>
-                    </Space>
-                  </div>
+                  </FilterBar>
+
                   {selectedRowKeys.length > 0 && (
                     <Alert
                       title={

@@ -25,8 +25,9 @@ import NetworkExport from "@/components/shared/NetworkExport";
 import {
   BatchExportModal,
   ErrorAlertWithRetry,
-  useActionPermission,
+  FilterBar,
   StatCards,
+  useActionPermission,
 } from "@/components/shared";
 import { PERMISSION_CODES } from "@/constants/permissionCodes";
 
@@ -244,14 +245,55 @@ const TemplateManagement: FC = () => {
 
       {/* 搜索表单和操作按钮 */}
       <Card style={{ marginBottom: 16 }}>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-start",
-            flexWrap: "wrap",
-            gap: "16px",
-          }}
+        <FilterBar
+          actions={
+            <Space>
+              {/* Phase 86 W3：新增入口 —— ready 无码不渲染；未就绪渲染但 disabled + 提示 */}
+              {permAdd.visible && (
+                <Button
+                  aria-label="新增模板"
+                  title={permAdd.hint ?? "新增模板"}
+                  type="primary"
+                  icon={<PlusOutlined />}
+                  onClick={() => openModal(undefined, editForm)}
+                  disabled={permAdd.disabled}
+                >
+                  新增
+                </Button>
+              )}
+              {/* Phase 86 W3：批量删除 —— 条件渲染（networkTemplate.delete） */}
+              {permDelete.visible && (
+                <Button
+                  aria-label="批量删除"
+                  title={permDelete.hint ?? "批量删除"}
+                  danger
+                  icon={<DeleteOutlined />}
+                  onClick={() => handleBatchDelete(selectedRowKeys, handleSuccess)}
+                  disabled={permDelete.disabled || selectedRowKeys.length === 0}
+                >
+                  批量删除
+                </Button>
+              )}
+              {/* Phase 86 W3：批量导出 —— 门控点 = `<NetworkExport>` 组件元素本身
+                  （「导出」按钮在 `NetworkExport.tsx:120` 组件内部，页面上无独立触发按钮）。
+                  ready 无 networkTemplate.export → 整个组件（含其内部「导出」按钮）不在 DOM。 */}
+              {permExport.visible && (
+                <span title={permExport.hint} aria-disabled={permExport.disabled || undefined}>
+                  <NetworkExport
+                    entityType="templates"
+                    entityName="配置模板"
+                    filters={Object.fromEntries(
+                      Object.entries(searchForm.getFieldsValue() as Record<string, unknown>).filter(
+                        ([, v]) => v !== undefined && v !== null && v !== ""
+                      )
+                    )}
+                    current={paginationProps?.current ?? 1}
+                    pageSize={paginationProps?.pageSize ?? 10}
+                  />
+                </span>
+              )}
+            </Space>
+          }
         >
           <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
             <Form.Item name="templateName" label="模板名称">
@@ -318,64 +360,18 @@ const TemplateManagement: FC = () => {
               </Space>
             </Form.Item>
           </Form>
-          <Space>
-            {/* Phase 86 W3：新增入口 —— ready 无码不渲染；未就绪渲染但 disabled + 提示 */}
-            {permAdd.visible && (
-              <Button
-                aria-label="新增模板"
-                title={permAdd.hint ?? "新增模板"}
-                type="primary"
-                icon={<PlusOutlined />}
-                onClick={() => openModal(undefined, editForm)}
-                disabled={permAdd.disabled}
-              >
-                新增
-              </Button>
-            )}
-            {/* Phase 86 W3：批量删除 —— 条件渲染（networkTemplate.delete） */}
-            {permDelete.visible && (
-              <Button
-                aria-label="批量删除"
-                title={permDelete.hint ?? "批量删除"}
-                danger
-                icon={<DeleteOutlined />}
-                onClick={() => handleBatchDelete(selectedRowKeys, handleSuccess)}
-                disabled={permDelete.disabled || selectedRowKeys.length === 0}
-              >
-                批量删除
-              </Button>
-            )}
-            {/* Phase 86 W3：批量导出 —— 门控点 = `<NetworkExport>` 组件元素本身
-                （「导出」按钮在 `NetworkExport.tsx:120` 组件内部，页面上无独立触发按钮）。
-                ready 无 networkTemplate.export → 整个组件（含其内部「导出」按钮）不在 DOM。 */}
-            {permExport.visible && (
-              <span title={permExport.hint} aria-disabled={permExport.disabled || undefined}>
-                <NetworkExport
-                  entityType="templates"
-                  entityName="配置模板"
-                  filters={Object.fromEntries(
-                    Object.entries(searchForm.getFieldsValue() as Record<string, unknown>).filter(
-                      ([, v]) => v !== undefined && v !== null && v !== ""
-                    )
-                  )}
-                  current={paginationProps?.current ?? 1}
-                  pageSize={paginationProps?.pageSize ?? 10}
-                />
-              </span>
-            )}
-          </Space>
-          {/* 批量导出 Modal */}
+        </FilterBar>
+        {/* 批量导出 Modal */}
 
-          <BatchExportModal
-            visible={batchModalVisible}
+        <BatchExportModal
+          visible={batchModalVisible}
 
-            onConfirm={handleBatchExport}
+          onConfirm={handleBatchExport}
 
-            onCancel={() => setBatchModalVisible(false)}
+          onCancel={() => setBatchModalVisible(false)}
 
-            loading={batchExporting}
-          />
-        </div>
+          loading={batchExporting}
+        />
       </Card>
 
       {/* 模板表格 */}

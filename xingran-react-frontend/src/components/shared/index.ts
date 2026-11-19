@@ -70,6 +70,10 @@ export type { ConfirmDeleteOptions } from "./confirmDelete";
 export { default as PageTable } from "./PageTable";
 export type { PageTableProps, PageTableRequest, PageTableRenderContext } from "./PageTable";
 
+// 列表页筛选卡片统一骨架（窄屏栅格化：标签上置 + 控件铺满）
+export { default as FilterBar } from "./FilterBar";
+export type { FilterBarProps } from "./FilterBar";
+
 // Phase 66：SearchForm（schema 驱动搜索区）
 export { SearchForm } from "./SearchForm";
 export type { SearchFormProps, SearchField, SearchFieldOption } from "./SearchForm";

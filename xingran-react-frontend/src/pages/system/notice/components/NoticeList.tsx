@@ -14,7 +14,7 @@ import {
 import type { ColumnsType } from "antd/es/table";
 import type { TableProps } from "antd";
 import ActionButtons from "@/components/shared/ActionButtons";
-import { confirmDelete } from "@/components/shared";
+import { confirmDelete, FilterBar } from "@/components/shared";
 import type { Notice } from "@/types/notice";
 import {
   PRIORITY_COLORS,
@@ -282,14 +282,19 @@ export const NoticeList: React.FC<NoticeListProps> = ({
     <>
       {/* 搜索表单和操作按钮 */}
       <Card style={{ marginBottom: 16 }}>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-start",
-            flexWrap: "wrap",
-            gap: "16px",
-          }}
+        <FilterBar
+          actions={
+            <Space>
+              {selectedRowKeys.length > 0 && (
+                <Button danger icon={<DeleteOutlined />} onClick={onBatchDelete}>
+                  批量删除 ({selectedRowKeys.length})
+                </Button>
+              )}
+              <Button type="primary" icon={<PlusOutlined />} onClick={onAdd}>
+                新增公告
+              </Button>
+            </Space>
+          }
         >
           <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
             <Form.Item name="noticeTitle" label="公告标题">
@@ -330,17 +335,8 @@ export const NoticeList: React.FC<NoticeListProps> = ({
               </Space>
             </Form.Item>
           </Form>
-          <Space>
-            {selectedRowKeys.length > 0 && (
-              <Button danger icon={<DeleteOutlined />} onClick={onBatchDelete}>
-                批量删除 ({selectedRowKeys.length})
-              </Button>
-            )}
-            <Button type="primary" icon={<PlusOutlined />} onClick={onAdd}>
-              新增公告
-            </Button>
-          </Space>
-        </div>
+        </FilterBar>
+
         {selectedRowKeys.length > 0 && (
           <Alert
             title={

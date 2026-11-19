@@ -19,7 +19,7 @@ import { useTableManager } from "@/hooks/useTableManager";
 import { usePagination } from "@/hooks/usePagination";
 import { handleApiError, handleSuccess, isFormValidationError } from "@/utils/errorHandler";
 import ActionButtons from "@/components/shared/ActionButtons";
-import { confirmDelete, StatCards } from "@/components/shared";
+import { confirmDelete, FilterBar, StatCards } from "@/components/shared";
 import { refreshEncryptionConfig } from "@/lib/api";
 import { createSorterMeta } from "@/utils/tableHelpers";
 
@@ -338,14 +338,26 @@ const ConfigManagement: FC = () => {
 
       {/* 搜索表单和操作按钮 */}
       <Card style={{ marginBottom: 16 }}>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-start",
-            flexWrap: "wrap",
-            gap: "16px",
-          }}
+        <FilterBar
+          actions={
+            <Space>
+              {selectedRowKeys.length > 0 && (
+                <Button
+                  icon={<DeleteOutlined />}
+                  style={{ color: "var(--theme-error)" }}
+                  onClick={handleBatchDelete}
+                >
+                  批量删除 ({selectedRowKeys.length})
+                </Button>
+              )}
+              <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
+                新增配置
+              </Button>
+              <Button icon={<ReloadOutlined />} onClick={handleRefreshCache}>
+                刷新缓存
+              </Button>
+            </Space>
+          }
         >
           <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
             <Form.Item name="configName" label="参数名称">
@@ -391,24 +403,8 @@ const ConfigManagement: FC = () => {
               </Space>
             </Form.Item>
           </Form>
-          <Space>
-            {selectedRowKeys.length > 0 && (
-              <Button
-                icon={<DeleteOutlined />}
-                style={{ color: "var(--theme-error)" }}
-                onClick={handleBatchDelete}
-              >
-                批量删除 ({selectedRowKeys.length})
-              </Button>
-            )}
-            <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
-              新增配置
-            </Button>
-            <Button icon={<ReloadOutlined />} onClick={handleRefreshCache}>
-              刷新缓存
-            </Button>
-          </Space>
-        </div>
+        </FilterBar>
+
         {selectedRowKeys.length > 0 && (
           <Alert
             title={

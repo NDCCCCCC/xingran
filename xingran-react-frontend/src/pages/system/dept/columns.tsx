@@ -33,6 +33,8 @@ export function getDeptColumns(params: DeptColumnsParams): ColumnsType<Departmen
       title: "部门名称",
       dataIndex: "deptName",
       key: "deptName",
+      // 名称列必须保底宽度：否则窄屏/长名称会被压成逐字竖排（表格内容区已可横向滚动）
+      width: 220,
       render: (text, record) => (
         <Space style={{ opacity: record.accessible === false ? 0.5 : 1 }}>
           <ApartmentOutlined />
@@ -49,6 +51,7 @@ export function getDeptColumns(params: DeptColumnsParams): ColumnsType<Departmen
       title: "负责人",
       dataIndex: "leader",
       key: "leader",
+      width: 160,
       render: (_: unknown, record: Department) => {
         if (record.leaderName && record.leaderUsername) {
           return `${record.leaderName}（${record.leaderUsername}）`;
@@ -60,6 +63,7 @@ export function getDeptColumns(params: DeptColumnsParams): ColumnsType<Departmen
       title: "联系电话",
       dataIndex: "phone",
       key: "phone",
+      width: 150,
       render: (phone) =>
         phone ? (
           <Space>
@@ -74,6 +78,7 @@ export function getDeptColumns(params: DeptColumnsParams): ColumnsType<Departmen
       title: "邮箱",
       dataIndex: "email",
       key: "email",
+      width: 200,
       render: (email) =>
         email ? (
           <Space>
@@ -88,6 +93,7 @@ export function getDeptColumns(params: DeptColumnsParams): ColumnsType<Departmen
       title: "显示顺序",
       dataIndex: "orderNum",
       key: "orderNum",
+      width: 100,
     },
     {
       title: "外部机构",
@@ -106,17 +112,20 @@ export function getDeptColumns(params: DeptColumnsParams): ColumnsType<Departmen
       title: "状态",
       dataIndex: "status",
       key: "status",
+      width: 100,
       render: (status) => renderStatusTag(status),
     },
     {
       title: "创建时间",
       dataIndex: "createdAt",
       key: "createdAt",
+      width: 180,
       render: (text) => formatDateTime(text),
     },
     {
       title: "操作",
       key: "action",
+      width: 150,
       render: (_: unknown, record: Department) => {
         const actions = [
           {

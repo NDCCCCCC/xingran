@@ -17,7 +17,7 @@ import { useQuery } from "@tanstack/react-query";
 import { usePagination } from "@/hooks/usePagination";
 import { useDeptTree } from "@/hooks/useDeptTree";
 import { queryKeys } from "@/lib/queryKeys";
-import { DepartmentTreeSelect, StatCards } from "@/components/shared";
+import { DepartmentTreeSelect, FilterBar, StatCards } from "@/components/shared";
 import { confirmDelete } from "@/components/shared/confirmDelete";
 import {
   getDutyPoolList,
@@ -362,14 +362,14 @@ const DutyPoolPage: FC = () => {
       />
 
       <Card title="值班池管理">
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-start",
-            flexWrap: "wrap",
-            gap: "16px",
-          }}
+        <FilterBar
+          actions={
+            <Space>
+              <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
+                新增值班池
+              </Button>
+            </Space>
+          }
         >
           <Form form={form} layout="inline" style={{ flex: 1, minWidth: 0 }}>
             <Form.Item name="poolName" label="值班池名称">
@@ -414,12 +414,7 @@ const DutyPoolPage: FC = () => {
               </Space>
             </Form.Item>
           </Form>
-          <Space>
-            <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
-              新增值班池
-            </Button>
-          </Space>
-        </div>
+        </FilterBar>
 
         <Table
           rowKey="id"

@@ -48,7 +48,7 @@ import { handleApiError, handleSuccess, isFormValidationError } from "@/utils/er
 import { debounce } from "@/utils/debounce";
 import { createDateTimeColumn, createSorterMeta } from "@/utils/tableHelpers";
 import ActionButtons from "@/components/shared/ActionButtons";
-import { useActionPermission } from "@/components/shared";
+import { FilterBar, useActionPermission } from "@/components/shared";
 import { PERMISSION_CODES } from "@/constants/permissionCodes";
 import ExcelImportLazy from "@/components/shared/ExcelImportLazy";
 import ExcelExport from "@/components/shared/ExcelExport";
@@ -907,14 +907,77 @@ const InfoPointManagement: FC = () => {
           ]}
         />
         <Card style={{ marginBottom: 16 }}>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "flex-start",
-              flexWrap: "wrap",
-              gap: "16px",
-            }}
+          <FilterBar
+            actions={
+              <Space>
+                <Radio.Group
+                  value={viewMode}
+                  onChange={(e) => setViewMode(e.target.value)}
+                  buttonStyle="solid"
+                >
+                  <Radio.Button value="table">
+                    <TableOutlined /> 表格
+                  </Radio.Button>
+                  <Radio.Button value="card">
+                    <AppstoreOutlined /> 卡片
+                  </Radio.Button>
+                </Radio.Group>
+                {/* Excel 门控点 = 触发按钮（modal 容器保留无条件渲染） */}
+                {permImport.visible && (
+                  <Button
+                    icon={<ImportOutlined />}
+                    onClick={() => setImportVisible(true)}
+                    disabled={permImport.disabled}
+                    title={permImport.hint}
+                  >
+                    导入
+                  </Button>
+                )}
+                {permExport.visible && (
+                  <Button
+                    icon={<ExportOutlined />}
+                    onClick={() => {
+                      const values = searchForm.getFieldsValue() as Record<string, unknown>;
+                      const currentFilters: Record<string, unknown> = {};
+                      Object.keys(values).forEach((key) => {
+                        const value = values[key];
+                        if (value !== undefined && value !== null && value !== "") {
+                          currentFilters[key] = value;
+                        }
+                      });
+                      setExportFilters(currentFilters);
+                      setExportVisible(true);
+                    }}
+                    disabled={permExport.disabled}
+                    title={permExport.hint}
+                  >
+                    导出
+                  </Button>
+                )}
+                {selectedRowKeys.length > 0 && permDelete.visible && (
+                  <Button
+                    icon={<DeleteOutlined />}
+                    style={{ color: "var(--theme-error)" }}
+                    onClick={handleBatchDelete}
+                    disabled={permDelete.disabled}
+                    title={permDelete.hint}
+                  >
+                    批量删除 ({selectedRowKeys.length})
+                  </Button>
+                )}
+                {permAdd.visible && (
+                  <Button
+                    type="primary"
+                    icon={<PlusOutlined />}
+                    onClick={() => openModal()}
+                    disabled={permAdd.disabled}
+                    title={permAdd.hint}
+                  >
+                    新增信息点
+                  </Button>
+                )}
+              </Space>
+            }
           >
             <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
               <Form.Item name="workstationId" label="所属工位">
@@ -981,75 +1044,8 @@ const InfoPointManagement: FC = () => {
                 </Space>
               </Form.Item>
             </Form>
-            <Space>
-              <Radio.Group
-                value={viewMode}
-                onChange={(e) => setViewMode(e.target.value)}
-                buttonStyle="solid"
-              >
-                <Radio.Button value="table">
-                  <TableOutlined /> 表格
-                </Radio.Button>
-                <Radio.Button value="card">
-                  <AppstoreOutlined /> 卡片
-                </Radio.Button>
-              </Radio.Group>
-              {/* Excel 门控点 = 触发按钮（modal 容器保留无条件渲染） */}
-              {permImport.visible && (
-                <Button
-                  icon={<ImportOutlined />}
-                  onClick={() => setImportVisible(true)}
-                  disabled={permImport.disabled}
-                  title={permImport.hint}
-                >
-                  导入
-                </Button>
-              )}
-              {permExport.visible && (
-                <Button
-                  icon={<ExportOutlined />}
-                  onClick={() => {
-                    const values = searchForm.getFieldsValue() as Record<string, unknown>;
-                    const currentFilters: Record<string, unknown> = {};
-                    Object.keys(values).forEach((key) => {
-                      const value = values[key];
-                      if (value !== undefined && value !== null && value !== "") {
-                        currentFilters[key] = value;
-                      }
-                    });
-                    setExportFilters(currentFilters);
-                    setExportVisible(true);
-                  }}
-                  disabled={permExport.disabled}
-                  title={permExport.hint}
-                >
-                  导出
-                </Button>
-              )}
-              {selectedRowKeys.length > 0 && permDelete.visible && (
-                <Button
-                  icon={<DeleteOutlined />}
-                  style={{ color: "var(--theme-error)" }}
-                  onClick={handleBatchDelete}
-                  disabled={permDelete.disabled}
-                  title={permDelete.hint}
-                >
-                  批量删除 ({selectedRowKeys.length})
-                </Button>
-              )}
-              {permAdd.visible && (
-                <Button
-                  type="primary"
-                  icon={<PlusOutlined />}
-                  onClick={() => openModal()}
-                  disabled={permAdd.disabled}
-                  title={permAdd.hint}
-                >
-                  新增信息点
-                </Button>
-              )}
-            </Space>
-          </div>
+          </FilterBar>
+
           {selectedRowKeys.length > 0 && (
             <Alert
               title={

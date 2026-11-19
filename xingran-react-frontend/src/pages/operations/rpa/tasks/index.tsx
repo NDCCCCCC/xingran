@@ -23,6 +23,7 @@ import { post } from "@/lib/api";
 // EXECUTION_STATUS_OPTIONS（success 而非 completed）都不同，故就地命名保留原值。
 import { AppInput, AppSelect } from "@/components/ui";
 import { useActionPermission } from "@/components/shared/useActionPermission";
+import FilterBar from "@/components/shared/FilterBar";
 import { PERMISSION_CODES } from "@/constants/permissionCodes";
 
 const { Content } = Layout;
@@ -205,14 +206,23 @@ const TaskManagement: FC = () => {
     <Layout style={{ background: "transparent" }}>
       <Content style={{ padding: 0, background: "transparent" }}>
         <Card style={{ marginBottom: 16 }}>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "flex-start",
-              flexWrap: "wrap",
-              gap: "16px",
-            }}
+          <FilterBar
+            actions={
+              <Space>
+                {canAdd && (
+                  <Button
+                    type="primary"
+                    icon={<PlusOutlined />}
+                    onClick={() => {
+                      handleAdd();
+                      setModalVisible(true);
+                    }}
+                  >
+                    新增任务
+                  </Button>
+                )}
+              </Space>
+            }
           >
             <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
               <Form.Item name="name" label="任务名称">
@@ -240,21 +250,8 @@ const TaskManagement: FC = () => {
                 </Space>
               </Form.Item>
             </Form>
-            <Space>
-              {canAdd && (
-                <Button
-                  type="primary"
-                  icon={<PlusOutlined />}
-                  onClick={() => {
-                    handleAdd();
-                    setModalVisible(true);
-                  }}
-                >
-                  新增任务
-                </Button>
-              )}
-            </Space>
-          </div>
+          </FilterBar>
+
           {selectedRowKeys.length > 0 && (
             <div style={{ marginTop: 12, color: "var(--theme-info)" }}>
               已选择 <strong>{selectedRowKeys.length}</strong> 个任务

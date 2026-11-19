@@ -16,8 +16,9 @@ import NetworkExport from "@/components/shared/NetworkExport";
 import {
   BatchExportModal,
   ErrorAlertWithRetry,
-  useActionPermission,
+  FilterBar,
   StatCards,
+  useActionPermission,
 } from "@/components/shared";
 import { PERMISSION_CODES } from "@/constants/permissionCodes";
 import type { ConfigExecution } from "@/types";
@@ -176,14 +177,42 @@ const ConfigExecutionPage: FC = () => {
 
       {/* 搜索表单和操作按钮 */}
       <Card style={{ marginBottom: 16 }}>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-start",
-            flexWrap: "wrap",
-            gap: "16px",
-          }}
+        <FilterBar
+          actions={
+            <Space>
+              {/* Phase 86 W3：执行配置模板 —— 条件渲染（networkCommand.execute） */}
+              {permExecute.visible && (
+                <Button
+                  type="primary"
+                  icon={<PlayCircleOutlined />}
+                  onClick={openExecuteModal}
+                  aria-label="执行模板"
+                  title={permExecute.hint ?? "执行模板"}
+                  disabled={permExecute.disabled}
+                >
+                  执行配置模板
+                </Button>
+              )}
+              {/* Phase 86 W3：批量导出 —— 门控点 = `<NetworkExport>` 组件元素本身
+                  （「导出」按钮在 `NetworkExport.tsx:120` 组件内部，页面上无独立触发按钮）。
+                  ready 无 networkCommand.export → 整个组件（含其内部「导出」按钮）不在 DOM。 */}
+              {permExport.visible && (
+                <span title={permExport.hint} aria-disabled={permExport.disabled || undefined}>
+                  <NetworkExport
+                    entityType="executions"
+                    entityName="配置执行"
+                    filters={Object.fromEntries(
+                      Object.entries(searchForm.getFieldsValue() as Record<string, unknown>).filter(
+                        ([, v]) => v !== undefined && v !== null && v !== ""
+                      )
+                    )}
+                    current={paginationProps?.current ?? 1}
+                    pageSize={paginationProps?.pageSize ?? 10}
+                  />
+                </span>
+              )}
+            </Space>
+          }
         >
           <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
             <Form.Item label="状态">
@@ -227,51 +256,18 @@ const ConfigExecutionPage: FC = () => {
               </Space>
             </Form.Item>
           </Form>
-          <Space>
-            {/* Phase 86 W3：执行配置模板 —— 条件渲染（networkCommand.execute） */}
-            {permExecute.visible && (
-              <Button
-                type="primary"
-                icon={<PlayCircleOutlined />}
-                onClick={openExecuteModal}
-                aria-label="执行模板"
-                title={permExecute.hint ?? "执行模板"}
-                disabled={permExecute.disabled}
-              >
-                执行配置模板
-              </Button>
-            )}
-            {/* Phase 86 W3：批量导出 —— 门控点 = `<NetworkExport>` 组件元素本身
-                （「导出」按钮在 `NetworkExport.tsx:120` 组件内部，页面上无独立触发按钮）。
-                ready 无 networkCommand.export → 整个组件（含其内部「导出」按钮）不在 DOM。 */}
-            {permExport.visible && (
-              <span title={permExport.hint} aria-disabled={permExport.disabled || undefined}>
-                <NetworkExport
-                  entityType="executions"
-                  entityName="配置执行"
-                  filters={Object.fromEntries(
-                    Object.entries(searchForm.getFieldsValue() as Record<string, unknown>).filter(
-                      ([, v]) => v !== undefined && v !== null && v !== ""
-                    )
-                  )}
-                  current={paginationProps?.current ?? 1}
-                  pageSize={paginationProps?.pageSize ?? 10}
-                />
-              </span>
-            )}
-          </Space>
-          {/* 批量导出 Modal */}
+        </FilterBar>
+        {/* 批量导出 Modal */}
 
-          <BatchExportModal
-            visible={batchModalVisible}
+        <BatchExportModal
+          visible={batchModalVisible}
 
-            onConfirm={handleBatchExport}
+          onConfirm={handleBatchExport}
 
-            onCancel={() => setBatchModalVisible(false)}
+          onCancel={() => setBatchModalVisible(false)}
 
-            loading={batchExporting}
-          />
-        </div>
+          loading={batchExporting}
+        />
       </Card>
 
       {/* 执行记录表格 */}
