@@ -1,3 +1,4 @@
+import FilterBar from "@/components/shared/FilterBar";
 /**
  * 楼层搜索表单组件
  */
@@ -93,14 +94,61 @@ export const FloorSearchForm: FC<FloorSearchFormProps> = ({
 }) => {
   return (
     <Card style={{ marginBottom: 16 }}>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "flex-start",
-          flexWrap: "wrap",
-          gap: "16px",
-        }}
+      <FilterBar
+        actions={
+          <Space>
+            <Radio.Group
+              value={viewMode}
+              onChange={(e) => onViewModeChange(e.target.value)}
+              buttonStyle="solid"
+            >
+              <Radio.Button value="table">
+                <TableOutlined /> 表格
+              </Radio.Button>
+              <Radio.Button value="card">
+                <AppstoreOutlined /> 卡片
+              </Radio.Button>
+            </Radio.Group>
+            {/* Phase 86 W2 通道①：导入/导出的门控点在**触发按钮**（不是 modal 容器）。
+                `onImport` 不传 ⇒ 按钮不渲染（ready 无权限）；未就绪 ⇒ 渲染但 disabled + hint。 */}
+            {onImport && (
+              <Button
+                icon={<ImportOutlined />}
+                onClick={onImport}
+                disabled={importDisabled}
+                title={importDisabled ? notReadyHint : undefined}
+              >
+                导入
+              </Button>
+            )}
+            {onExport && (
+              <Button
+                icon={<ExportOutlined />}
+                onClick={onExport}
+                disabled={exportDisabled}
+                title={exportDisabled ? notReadyHint : undefined}
+              >
+                导出
+              </Button>
+            )}
+            {/* Phase 86 W2 通道②：`showBatchDelete` 决定渲不渲染（ready 无权限 → 不在 DOM）；
+                `batchDeleteDisabled` 决定禁不禁用（未就绪 → 渲染但 disabled + hint）。 */}
+            {showBatchDelete && selectedCount > 0 && (
+              <Button
+                icon={<DeleteOutlined />}
+                onClick={onBatchDelete}
+                disabled={batchDeleteDisabled}
+                title={batchDeleteDisabled ? notReadyHint : undefined}
+                style={{ color: "var(--theme-error)" }}
+              >
+                批量删除 ({selectedCount})
+              </Button>
+            )}
+            <Button type="primary" icon={<PlusOutlined />} onClick={onAdd}>
+              新增楼层
+            </Button>
+          </Space>
+        }
       >
         <Form form={form} layout="inline" style={{ flex: 1, minWidth: 0 }} disabled={disabled}>
           <Form.Item name="buildingId" label="所属楼宇">
@@ -169,60 +217,7 @@ export const FloorSearchForm: FC<FloorSearchFormProps> = ({
             </Space>
           </Form.Item>
         </Form>
-
-        <Space>
-          <Radio.Group
-            value={viewMode}
-            onChange={(e) => onViewModeChange(e.target.value)}
-            buttonStyle="solid"
-          >
-            <Radio.Button value="table">
-              <TableOutlined /> 表格
-            </Radio.Button>
-            <Radio.Button value="card">
-              <AppstoreOutlined /> 卡片
-            </Radio.Button>
-          </Radio.Group>
-          {/* Phase 86 W2 通道①：导入/导出的门控点在**触发按钮**（不是 modal 容器）。
-              `onImport` 不传 ⇒ 按钮不渲染（ready 无权限）；未就绪 ⇒ 渲染但 disabled + hint。 */}
-          {onImport && (
-            <Button
-              icon={<ImportOutlined />}
-              onClick={onImport}
-              disabled={importDisabled}
-              title={importDisabled ? notReadyHint : undefined}
-            >
-              导入
-            </Button>
-          )}
-          {onExport && (
-            <Button
-              icon={<ExportOutlined />}
-              onClick={onExport}
-              disabled={exportDisabled}
-              title={exportDisabled ? notReadyHint : undefined}
-            >
-              导出
-            </Button>
-          )}
-          {/* Phase 86 W2 通道②：`showBatchDelete` 决定渲不渲染（ready 无权限 → 不在 DOM）；
-              `batchDeleteDisabled` 决定禁不禁用（未就绪 → 渲染但 disabled + hint）。 */}
-          {showBatchDelete && selectedCount > 0 && (
-            <Button
-              icon={<DeleteOutlined />}
-              onClick={onBatchDelete}
-              disabled={batchDeleteDisabled}
-              title={batchDeleteDisabled ? notReadyHint : undefined}
-              style={{ color: "var(--theme-error)" }}
-            >
-              批量删除 ({selectedCount})
-            </Button>
-          )}
-          <Button type="primary" icon={<PlusOutlined />} onClick={onAdd}>
-            新增楼层
-          </Button>
-        </Space>
-      </div>
+      </FilterBar>
     </Card>
   );
 };

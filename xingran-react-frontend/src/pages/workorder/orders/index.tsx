@@ -6,7 +6,7 @@ import { useState, useCallback, useMemo, type FC } from "react";
 import { useLocation } from "react-router-dom";
 import { usePersistedStateController } from "@/hooks/usePersistedState";
 import { confirmDelete } from "@/components/shared/confirmDelete";
-import { StatCards } from "@/components/shared";
+import { FilterBar, StatCards } from "@/components/shared";
 import {
   Button,
   Form,
@@ -557,14 +557,26 @@ const WorkOrderPage: FC = () => {
 
                 {/* 筛选表单和操作按钮 */}
                 <Card style={{ marginBottom: 16 }}>
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "flex-start",
-                      flexWrap: "wrap",
-                      gap: "16px",
-                    }}
+                  <FilterBar
+                    actions={
+                      <Space>
+                        {selectedRowKeys.length > 0 && (
+                          <Button
+                            type="primary"
+                            onClick={handleBatchDelete}
+                            style={{
+                              color: "var(--theme-error)",
+                              borderColor: "var(--theme-error)",
+                            }}
+                          >
+                            批量删除 ({selectedRowKeys.length})
+                          </Button>
+                        )}
+                        <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
+                          新增工单
+                        </Button>
+                      </Space>
+                    }
                   >
                     <Form form={form} layout="inline" style={{ flex: 1, minWidth: 0 }}>
                       <Form.Item name="workOrderNo" label="工单编号">
@@ -655,21 +667,8 @@ const WorkOrderPage: FC = () => {
                         </Space>
                       </Form.Item>
                     </Form>
-                    <Space>
-                      {selectedRowKeys.length > 0 && (
-                        <Button
-                          type="primary"
-                          onClick={handleBatchDelete}
-                          style={{ color: "var(--theme-error)", borderColor: "var(--theme-error)" }}
-                        >
-                          批量删除 ({selectedRowKeys.length})
-                        </Button>
-                      )}
-                      <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
-                        新增工单
-                      </Button>
-                    </Space>
-                  </div>
+                  </FilterBar>
+
                   {selectedRowKeys.length > 0 && (
                     <Alert
                       title={

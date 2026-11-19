@@ -45,7 +45,7 @@ import { renderTreeData, renderMenuName } from "./utils";
 import { useMenuData, useMenuActions } from "./hooks";
 // Phase 86 W1（RBAC-02）：操作级权限门控 —— 单一真相源 + 三态门控 hook。
 import { PERMISSION_CODES } from "@/constants/permissionCodes";
-import { useActionPermission, StatCards } from "@/components/shared";
+import { FilterBar, StatCards, useActionPermission } from "@/components/shared";
 import type { ActionPermissionDecision } from "@/components/shared";
 
 // ==================== 表格列定义 ====================
@@ -276,14 +276,34 @@ const MenuManagement: FC = () => {
 
       {/* 搜索表单和操作按钮 */}
       <Card style={{ marginBottom: 16 }}>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-start",
-            flexWrap: "wrap",
-            gap: "16px",
-          }}
+        <FilterBar
+          actions={
+            <Space>
+              {/* Phase 86 W1：工具栏写入口按权限码条件渲染（ready 无权限 → 不渲染；未就绪 → 渲染但 disabled + 提示） */}
+              {selectedRowKeys.length > 0 && permRemove.visible && (
+                <Button
+                  icon={<DeleteOutlined />}
+                  style={{ color: "var(--theme-error)" }}
+                  onClick={handleBatchDelete}
+                  disabled={permRemove.disabled}
+                  title={permRemove.hint}
+                >
+                  批量删除 ({selectedRowKeys.length})
+                </Button>
+              )}
+              {permAdd.visible && (
+                <Button
+                  type="primary"
+                  icon={<PlusOutlined />}
+                  onClick={handleOpenAddModal}
+                  disabled={permAdd.disabled}
+                  title={permAdd.hint}
+                >
+                  新增菜单
+                </Button>
+              )}
+            </Space>
+          }
         >
           <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
             <Form.Item name="menuName" label="菜单名称">
@@ -311,32 +331,8 @@ const MenuManagement: FC = () => {
               </Space>
             </Form.Item>
           </Form>
-          <Space>
-            {/* Phase 86 W1：工具栏写入口按权限码条件渲染（ready 无权限 → 不渲染；未就绪 → 渲染但 disabled + 提示） */}
-            {selectedRowKeys.length > 0 && permRemove.visible && (
-              <Button
-                icon={<DeleteOutlined />}
-                style={{ color: "var(--theme-error)" }}
-                onClick={handleBatchDelete}
-                disabled={permRemove.disabled}
-                title={permRemove.hint}
-              >
-                批量删除 ({selectedRowKeys.length})
-              </Button>
-            )}
-            {permAdd.visible && (
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                onClick={handleOpenAddModal}
-                disabled={permAdd.disabled}
-                title={permAdd.hint}
-              >
-                新增菜单
-              </Button>
-            )}
-          </Space>
-        </div>
+        </FilterBar>
+
         {selectedRowKeys.length > 0 && (
           <Alert
             title={

@@ -25,7 +25,7 @@ import { post } from "@/lib/api";
 import { queryKeys } from "@/lib/queryKeys";
 // Phase 86 W1（RBAC-02）：操作级权限门控 —— 单一真相源 + 三态门控 hook。
 import { PERMISSION_CODES } from "@/constants/permissionCodes";
-import { useActionPermission, StatCards } from "@/components/shared";
+import { FilterBar, StatCards, useActionPermission } from "@/components/shared";
 // 条线部门管理归属机构映射 Drawer（权限数据范围域）
 import ManagedOrgDrawer from "@/components/operations/ManagedOrgDrawer";
 
@@ -224,14 +224,55 @@ const DepartmentManagement: FC = () => {
       />
 
       <Card style={{ marginBottom: 16 }}>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-start",
-            flexWrap: "wrap",
-            gap: "16px",
-          }}
+        <FilterBar
+          actions={
+            <Space>
+              {/* Phase 86 W1（RBAC-02）：Excel 入口的门控点必须落在**触发按钮**上。
+                  下方 <ExcelImportLazy> / <ExcelExport> 是 modal 容器（visible 由按钮状态驱动），
+                  触发按钮不渲染 ⇒ 弹窗永远打不开；二者等价于「按钮不渲染」的可观察行为。 */}
+              {permAdd.visible && (
+                <Button
+                  type="primary"
+                  icon={<PlusOutlined />}
+                  onClick={handleAdd}
+                  disabled={permAdd.disabled}
+                  title={permAdd.hint}
+                >
+                  新增部门
+                </Button>
+              )}
+              {permImport.visible && (
+                <Button
+                  icon={<ImportOutlined />}
+                  onClick={() => setImportVisible(true)}
+                  disabled={permImport.disabled}
+                  title={permImport.hint}
+                >
+                  导入
+                </Button>
+              )}
+              {permExport.visible && (
+                <Button
+                  icon={<ExportOutlined />}
+                  onClick={() => setExportVisible(true)}
+                  disabled={permExport.disabled}
+                  title={permExport.hint}
+                >
+                  导出
+                </Button>
+              )}
+              {permManagedOrg.visible && (
+                <Button
+                  icon={<ApartmentOutlined />}
+                  onClick={() => setManagedOrgVisible(true)}
+                  disabled={permManagedOrg.disabled}
+                  title={permManagedOrg.hint ?? "条线部门管理归属映射"}
+                >
+                  归属映射
+                </Button>
+              )}
+            </Space>
+          }
         >
           <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
             <Form.Item name="deptName" label="部门名称">
@@ -259,53 +300,7 @@ const DepartmentManagement: FC = () => {
               </Space>
             </Form.Item>
           </Form>
-          <Space>
-            {/* Phase 86 W1（RBAC-02）：Excel 入口的门控点必须落在**触发按钮**上。
-                下方 <ExcelImportLazy> / <ExcelExport> 是 modal 容器（visible 由按钮状态驱动），
-                触发按钮不渲染 ⇒ 弹窗永远打不开；二者等价于「按钮不渲染」的可观察行为。 */}
-            {permAdd.visible && (
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                onClick={handleAdd}
-                disabled={permAdd.disabled}
-                title={permAdd.hint}
-              >
-                新增部门
-              </Button>
-            )}
-            {permImport.visible && (
-              <Button
-                icon={<ImportOutlined />}
-                onClick={() => setImportVisible(true)}
-                disabled={permImport.disabled}
-                title={permImport.hint}
-              >
-                导入
-              </Button>
-            )}
-            {permExport.visible && (
-              <Button
-                icon={<ExportOutlined />}
-                onClick={() => setExportVisible(true)}
-                disabled={permExport.disabled}
-                title={permExport.hint}
-              >
-                导出
-              </Button>
-            )}
-            {permManagedOrg.visible && (
-              <Button
-                icon={<ApartmentOutlined />}
-                onClick={() => setManagedOrgVisible(true)}
-                disabled={permManagedOrg.disabled}
-                title={permManagedOrg.hint ?? "条线部门管理归属映射"}
-              >
-                归属映射
-              </Button>
-            )}
-          </Space>
-        </div>
+        </FilterBar>
       </Card>
 
       <Card>
@@ -315,6 +310,8 @@ const DepartmentManagement: FC = () => {
           rowKey="key"
           loading={loading}
           pagination={false}
+          // 列宽总和约 1500px：窄屏由内容区横向滚动承载，避免列被压缩成逐字竖排
+          scroll={{ x: "max-content" }}
           rowClassName={(record) => getRowClassName(record)}
           expandable={{
             expandedRowKeys: expandedRowKeys,

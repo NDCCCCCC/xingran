@@ -25,6 +25,7 @@ import {
   BatchExportModal,
   ErrorAlertWithRetry,
   confirmDelete,
+  FilterBar,
   StatCards,
 } from "@/components/shared";
 import ActionButtons, { type ActionButton } from "@/components/shared/ActionButtons";
@@ -538,14 +539,59 @@ const PortStatusPage: FC = () => {
 
       {/* 搜索表单和操作按钮 */}
       <Card style={{ marginBottom: 16 }}>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-start",
-            flexWrap: "wrap",
-            gap: "16px",
-          }}
+        <FilterBar
+          actions={
+            <Space>
+              <NetworkExport
+                entityType="ports"
+                entityName="端口状态"
+                filters={(() => {
+                  const values = searchForm.getFieldsValue() as Record<string, unknown>;
+                  const filtered: Record<string, unknown> = {};
+                  Object.keys(values).forEach((key) => {
+                    const value = values[key];
+                    if (value !== undefined && value !== null && value !== "") {
+                      filtered[key] = value;
+                    }
+                  });
+                  return filtered;
+                })()}
+                current={paginationProps.current}
+                pageSize={paginationProps.pageSize}
+              />
+              <Button
+                aria-label="全量采集"
+                title="全量采集"
+                icon={<CloudSyncOutlined />}
+                onClick={handleCollectAll}
+                loading={collecting}
+                disabled={batchInProgress}
+              >
+                采集所有设备
+              </Button>
+              <Button
+                aria-label="批量删除"
+                title="批量删除"
+                icon={<DeleteOutlined />}
+                onClick={handleBatchDelete}
+                disabled={selectedRowKeys.length === 0}
+                style={{ color: "var(--theme-error)" }}
+              >
+                批量删除 ({selectedRowKeys.length})
+              </Button>
+              {/* Phase 53 W4 D-04: 批量配置入口 — 与批量删除 UX 一致, 额外加 !canWrite 防 */}
+              <Button
+                aria-label="批量写入"
+                title="批量写入"
+                icon={<SettingOutlined />}
+                onClick={() => setBulkWriteDrawerOpen(true)}
+                disabled={selectedRowKeys.length === 0 || !canWrite}
+                type="primary"
+              >
+                批量配置 ({selectedRowKeys.length})
+              </Button>
+            </Space>
+          }
         >
           <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
             <Form.Item name="deviceId" label="设备">
@@ -654,68 +700,18 @@ const PortStatusPage: FC = () => {
               </Space>
             </Form.Item>
           </Form>
-          <Space>
-            <NetworkExport
-              entityType="ports"
-              entityName="端口状态"
-              filters={(() => {
-                const values = searchForm.getFieldsValue() as Record<string, unknown>;
-                const filtered: Record<string, unknown> = {};
-                Object.keys(values).forEach((key) => {
-                  const value = values[key];
-                  if (value !== undefined && value !== null && value !== "") {
-                    filtered[key] = value;
-                  }
-                });
-                return filtered;
-              })()}
-              current={paginationProps.current}
-              pageSize={paginationProps.pageSize}
-            />
-            <Button
-              aria-label="全量采集"
-              title="全量采集"
-              icon={<CloudSyncOutlined />}
-              onClick={handleCollectAll}
-              loading={collecting}
-              disabled={batchInProgress}
-            >
-              采集所有设备
-            </Button>
-            <Button
-              aria-label="批量删除"
-              title="批量删除"
-              icon={<DeleteOutlined />}
-              onClick={handleBatchDelete}
-              disabled={selectedRowKeys.length === 0}
-              style={{ color: "var(--theme-error)" }}
-            >
-              批量删除 ({selectedRowKeys.length})
-            </Button>
-            {/* Phase 53 W4 D-04: 批量配置入口 — 与批量删除 UX 一致, 额外加 !canWrite 防 */}
-            <Button
-              aria-label="批量写入"
-              title="批量写入"
-              icon={<SettingOutlined />}
-              onClick={() => setBulkWriteDrawerOpen(true)}
-              disabled={selectedRowKeys.length === 0 || !canWrite}
-              type="primary"
-            >
-              批量配置 ({selectedRowKeys.length})
-            </Button>
-          </Space>
-          {/* 批量导出 Modal */}
+        </FilterBar>
+        {/* 批量导出 Modal */}
 
-          <BatchExportModal
-            visible={batchModalVisible}
+        <BatchExportModal
+          visible={batchModalVisible}
 
-            onConfirm={handleBatchExport}
+          onConfirm={handleBatchExport}
 
-            onCancel={() => setBatchModalVisible(false)}
+          onCancel={() => setBatchModalVisible(false)}
 
-            loading={batchExporting}
-          />
-        </div>
+          loading={batchExporting}
+        />
       </Card>
 
       {/* 端口状态表格 */}

@@ -19,7 +19,7 @@ import { post } from "@/lib/api";
 // Phase 71 (W3)：裸 Input/Select → 契约组件。
 // 执行状态为固定枚举（业务禁搜）→ children 改写 options + showSearch={false}。
 import { AppInput, AppSelect } from "@/components/ui";
-import { StatCards } from "@/components/shared";
+import { FilterBar, StatCards } from "@/components/shared";
 
 const { Content } = Layout;
 
@@ -151,15 +151,7 @@ const ExecutionManagement: FC = () => {
     <Layout style={{ background: "transparent" }}>
       <Content style={{ padding: 0, background: "transparent" }}>
         <Card style={{ marginBottom: 16 }}>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "flex-start",
-              flexWrap: "wrap",
-              gap: "16px",
-            }}
-          >
+          <FilterBar>
             <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
               <Form.Item name="taskName" label="任务名称">
                 <AppInput placeholder="请输入任务名称" style={{ width: 200 }} />
@@ -189,7 +181,7 @@ const ExecutionManagement: FC = () => {
                 </Space>
               </Form.Item>
             </Form>
-          </div>
+          </FilterBar>
 
           {/* 统计信息 */}
           <StatCards

@@ -36,7 +36,7 @@ import { useSidebarDeptFilter } from "@/hooks/useSidebarDeptFilter";
 import { useSearchParams } from "react-router-dom";
 import dayjs from "dayjs";
 import NetworkExport from "@/components/shared/NetworkExport";
-import { BatchExportModal, confirmDelete, StatCards } from "@/components/shared";
+import { BatchExportModal, confirmDelete, FilterBar, StatCards } from "@/components/shared";
 import { DeptSidebar } from "@/components/operations/DeptSidebar";
 import { MACEventsTimeline } from "@/components/network";
 import { MAC_TYPE_TAG_CONFIG } from "@/constants/status";
@@ -389,19 +389,45 @@ const MACAddressPage: FC = () => {
 
         {/* 搜索表单和操作按钮 */}
         <Card style={{ marginBottom: 16 }}>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "flex-start",
-              flexWrap: "wrap",
-              gap: "16px",
-            }}
+          {/* 90-F2: useTableManager 内建的 editForm 在本页没有编辑 Modal 可挂载，实例创建后
+              永不连接会触发 antd 6 警告「Instance created by `useForm` is not connected to
+              any Form element」。component={false} 不渲染任何 DOM，仅为实例建立连接消除警告。 */}
+          <Form form={editForm} component={false} />
+          <FilterBar
+            actions={
+              <Space>
+                <NetworkExport
+                  entityType="mac"
+                  entityName="MAC地址"
+                  filters={(() => {
+                    const values = searchForm.getFieldsValue() as Record<string, unknown>;
+                    const filtered: Record<string, unknown> = {};
+                    Object.keys(values).forEach((key) => {
+                      const value = values[key];
+                      if (value !== undefined && value !== null && value !== "") {
+                        filtered[key] = value;
+                      }
+                    });
+                    return filtered;
+                  })()}
+                  current={paginationProps.current}
+                  pageSize={paginationProps.pageSize}
+                />
+                {permMacRemove.visible && (
+                  <Button
+                    aria-label="批量删除"
+                    title="批量删除"
+                    icon={<DeleteOutlined />}
+                    onClick={handleBatchDelete}
+                    disabled={selectedRowKeys.length === 0 || permMacRemove.disabled}
+                    style={{ color: "var(--theme-error)" }}
+                  >
+                    批量删除 ({selectedRowKeys.length})
+                  </Button>
+                )}
+              </Space>
+            }
           >
-            {/* 90-F2: useTableManager 内建的 editForm 在本页没有编辑 Modal 可挂载，实例创建后
-            永不连接会触发 antd 6 警告「Instance created by `useForm` is not connected to
-            any Form element」。component={false} 不渲染任何 DOM，仅为实例建立连接消除警告。 */}
-            <Form form={editForm} component={false} />
             <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
               <Form.Item name="deviceId" label="设备">
                 {/* 形态分类器①/②：children 写法改写 options。设备下拉为 UUID 外键
@@ -480,49 +506,18 @@ const MACAddressPage: FC = () => {
                 </Space>
               </Form.Item>
             </Form>
-            <Space>
-              <NetworkExport
-                entityType="mac"
-                entityName="MAC地址"
-                filters={(() => {
-                  const values = searchForm.getFieldsValue() as Record<string, unknown>;
-                  const filtered: Record<string, unknown> = {};
-                  Object.keys(values).forEach((key) => {
-                    const value = values[key];
-                    if (value !== undefined && value !== null && value !== "") {
-                      filtered[key] = value;
-                    }
-                  });
-                  return filtered;
-                })()}
-                current={paginationProps.current}
-                pageSize={paginationProps.pageSize}
-              />
-              {permMacRemove.visible && (
-                <Button
-                  aria-label="批量删除"
-                  title="批量删除"
-                  icon={<DeleteOutlined />}
-                  onClick={handleBatchDelete}
-                  disabled={selectedRowKeys.length === 0 || permMacRemove.disabled}
-                  style={{ color: "var(--theme-error)" }}
-                >
-                  批量删除 ({selectedRowKeys.length})
-                </Button>
-              )}
-            </Space>
-            {/* 批量导出 Modal */}
+          </FilterBar>
+          {/* 批量导出 Modal */}
 
-            <BatchExportModal
-              visible={batchModalVisible}
+          <BatchExportModal
+            visible={batchModalVisible}
 
-              onConfirm={handleBatchExport}
+            onConfirm={handleBatchExport}
 
-              onCancel={() => setBatchModalVisible(false)}
+            onCancel={() => setBatchModalVisible(false)}
 
-              loading={batchExporting}
-            />
-          </div>
+            loading={batchExporting}
+          />
         </Card>
 
         {/* MAC地址表格 */}

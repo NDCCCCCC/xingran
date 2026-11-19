@@ -37,7 +37,7 @@ import type { PeriodicWorkOrderTemplate } from "@/lib/workorderApi";
 import ActionButtons from "@/components/shared/ActionButtons";
 import { PERMISSION_CODES } from "@/constants/permissionCodes";
 import { confirmDelete } from "@/components/shared/confirmDelete";
-import { StatCards } from "@/components/shared";
+import { FilterBar, StatCards } from "@/components/shared";
 import CronSelector from "@/components/CronSelector";
 import { PeriodicAssignType } from "@/lib/workorderApi";
 
@@ -346,14 +346,14 @@ const PeriodicTemplatePage: FC = () => {
 
       {/* 筛选表单和操作按钮 */}
       <Card style={{ marginBottom: 16 }}>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-start",
-            flexWrap: "wrap",
-            gap: "16px",
-          }}
+        <FilterBar
+          actions={
+            <Space>
+              <Button type="primary" icon={<PlusOutlined />} onClick={handleOpenAddModal}>
+                新增模板
+              </Button>
+            </Space>
+          }
         >
           <Form form={form} layout="inline" style={{ flex: 1, minWidth: 0 }}>
             <Form.Item name="title" label="模板名称">
@@ -386,12 +386,7 @@ const PeriodicTemplatePage: FC = () => {
               </Space>
             </Form.Item>
           </Form>
-          <Space>
-            <Button type="primary" icon={<PlusOutlined />} onClick={handleOpenAddModal}>
-              新增模板
-            </Button>
-          </Space>
-        </div>
+        </FilterBar>
       </Card>
 
       {/* 周期性工单模板表格 */}

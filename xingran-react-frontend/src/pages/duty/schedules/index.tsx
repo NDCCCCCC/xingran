@@ -62,6 +62,7 @@ import { useScheduleData, useScheduleModals } from "./hooks";
 import { usePagination } from "@/hooks/usePagination";
 import { createSorter } from "@/utils/tableHelpers";
 import { confirmDelete } from "@/components/shared/confirmDelete";
+import FilterBar from "@/components/shared/FilterBar";
 
 const { Text } = Typography;
 const { RangePicker } = DatePicker;
@@ -470,14 +471,36 @@ const DutySchedulePage: FC = () => {
 
       {/* 排班管理 - 筛选表单 */}
       <Card style={{ marginBottom: 16 }}>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-start",
-            flexWrap: "wrap",
-            gap: "16px",
-          }}
+        <FilterBar
+          actions={
+            <Space>
+              <Button type="primary" icon={<PlusOutlined />} onClick={openGenerateModal}>
+                生成排班
+              </Button>
+              <Button icon={<SwapOutlined />} onClick={openSwapModal}>
+                调班
+              </Button>
+              <Button icon={<EditOutlined />} onClick={openManualModal}>
+                手动排班
+              </Button>
+              {selectedRowKeys.length > 0 && (
+                <Button
+                  icon={<DeleteOutlined />}
+                  style={{ color: "var(--theme-error)" }}
+                  onClick={() => {
+                    confirmDelete({
+                      target: `选中的 ${selectedRowKeys.length} 项排班记录`,
+                      title: "确认批量删除",
+                      actionContext: "批量删除",
+                      onDelete: () => handleBatchDelete(selectedRowKeys, setSelectedRowKeys),
+                    });
+                  }}
+                >
+                  批量删除 ({selectedRowKeys.length})
+                </Button>
+              )}
+            </Space>
+          }
         >
           <Form form={form} layout="inline" style={{ flex: 1, minWidth: 0 }}>
             <Form.Item name="poolId" label="值班池">
@@ -542,34 +565,7 @@ const DutySchedulePage: FC = () => {
               </Space>
             </Form.Item>
           </Form>
-          <Space>
-            <Button type="primary" icon={<PlusOutlined />} onClick={openGenerateModal}>
-              生成排班
-            </Button>
-            <Button icon={<SwapOutlined />} onClick={openSwapModal}>
-              调班
-            </Button>
-            <Button icon={<EditOutlined />} onClick={openManualModal}>
-              手动排班
-            </Button>
-            {selectedRowKeys.length > 0 && (
-              <Button
-                icon={<DeleteOutlined />}
-                style={{ color: "var(--theme-error)" }}
-                onClick={() => {
-                  confirmDelete({
-                    target: `选中的 ${selectedRowKeys.length} 项排班记录`,
-                    title: "确认批量删除",
-                    actionContext: "批量删除",
-                    onDelete: () => handleBatchDelete(selectedRowKeys, setSelectedRowKeys),
-                  });
-                }}
-              >
-                批量删除 ({selectedRowKeys.length})
-              </Button>
-            )}
-          </Space>
-        </div>
+        </FilterBar>
       </Card>
 
       {/* 排班管理 - 数据表格 */}

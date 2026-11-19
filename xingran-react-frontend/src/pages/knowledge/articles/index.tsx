@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef, type FC } from "react";
 import { Table, Button, Form, Card, Space, App } from "antd";
-import { StatCards } from "@/components/shared";
+import { FilterBar, StatCards } from "@/components/shared";
 import type { FilterValue } from "antd/es/table/interface";
 // Phase 71 (W1)：裸 Input/Select → 契约组件（本页 Select 全为 children 形态，均改写为 options 形态，
 // 见各处的形态分类器注记——AppSelect 无条件 optionFilterProp="label"，children 形态下该 prop 破坏性）
@@ -206,14 +206,14 @@ const KnowledgeArticlePage: FC = () => {
 
       {/* 筛选表单和操作按钮 */}
       <Card style={{ marginBottom: 16 }}>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-start",
-            flexWrap: "wrap",
-            gap: "16px",
-          }}
+        <FilterBar
+          actions={
+            <Space>
+              <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
+                新增文章
+              </Button>
+            </Space>
+          }
         >
           <Form form={form} layout="inline" style={{ flex: 1, minWidth: 0 }}>
             <Form.Item name="title" label="标题">
@@ -272,12 +272,7 @@ const KnowledgeArticlePage: FC = () => {
               </Space>
             </Form.Item>
           </Form>
-          <Space>
-            <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
-              新增文章
-            </Button>
-          </Space>
-        </div>
+        </FilterBar>
       </Card>
 
       {/* 知识库文章表格 */}

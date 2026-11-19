@@ -18,6 +18,7 @@
     "src/pages/dashboard-system/edit.css": 1,
     "src/pages/dashboard-system/view.css": 0,
     "src/pages/login/login.css": 45,
-    "src/pages/operations/building-spaces/components/styles.module.css": 12
+    "src/pages/operations/building-spaces/components/styles.module.css": 12,
+    "src/responsive.css": 0
   }
 }
