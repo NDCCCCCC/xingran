@@ -31,6 +31,9 @@ import {
   writePortBinding,
   batchWritePorts,
   getPortMACBundle,
+  listPortWriteAudits,
+  listPortWriteAuditDeviceOptions,
+  listPortWriteAuditPortOptions,
 } from "../networkApi";
 
 describe("lib/api/networkApi", () => {
@@ -184,6 +187,28 @@ describe("v1.51 新增 wrapper（Phase 121/125/127 coverage 补齐）", () => {
       reason: "测试",
     });
     expect(result.url).toBe("/network/ports/write/trunk");
+  });
+
+  it("listPortWriteAuditDeviceOptions 调用 audit/device-options（透传 keyword/分页）", async () => {
+    await listPortWriteAuditDeviceOptions({ keyword: "核心", current: 1, pageSize: 20 });
+    expect(post).toHaveBeenCalledWith("/network/ports/write/audit/device-options", {
+      keyword: "核心",
+      current: 1,
+      pageSize: 20,
+    });
+  });
+
+  it("listPortWriteAuditDeviceOptions 无参调用时发送空对象（后端按默认分页兜底）", async () => {
+    await listPortWriteAuditDeviceOptions();
+    expect(post).toHaveBeenCalledWith("/network/ports/write/audit/device-options", {});
+  });
+
+  it("listPortWriteAuditPortOptions 调用 audit/port-options 并携带 deviceId", async () => {
+    await listPortWriteAuditPortOptions({ deviceId: "dev-1", keyword: "GE0" });
+    expect(post).toHaveBeenCalledWith("/network/ports/write/audit/port-options", {
+      deviceId: "dev-1",
+      keyword: "GE0",
+    });
   });
 
   it("listPortWriteAudits 调用 post /network/ports/write/audit/list（含 batchId 过滤）", async () => {

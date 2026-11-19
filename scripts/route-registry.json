@@ -4,8 +4,8 @@
   "writeHandlerBasis": "WRITE_HANDLER regex on handler name (same as tmp_scan_final.cjs)",
   "totals": {
     "mounts": 260,
-    "routes": 732,
-    "writeRoutes": 332,
+    "routes": 734,
+    "writeRoutes": 334,
     "deferredWriteRoutes": 147
   },
   "routes": [
@@ -3648,6 +3648,22 @@
     },
     {
       "method": "POST",
+      "path": "/network/ports/write/audit/device-options",
+      "mountGroup": "write",
+      "setup": "SetupPortWriteRouter",
+      "isWrite": true,
+      "handler": "PortWriteAuditDeviceOptions",
+      "permKind": "RequirePermissions",
+      "permCodes": [
+        "network:port:query",
+        "network:port:write"
+      ],
+      "registeredDeadTable": true,
+      "file": "internal/api/v1/network/port_write_router.go",
+      "line": 73
+    },
+    {
+      "method": "POST",
       "path": "/network/ports/write/audit/list",
       "mountGroup": "write",
       "setup": "SetupPortWriteRouter",
@@ -3661,6 +3677,22 @@
       "registeredDeadTable": true,
       "file": "internal/api/v1/network/port_write_router.go",
       "line": 70
+    },
+    {
+      "method": "POST",
+      "path": "/network/ports/write/audit/port-options",
+      "mountGroup": "write",
+      "setup": "SetupPortWriteRouter",
+      "isWrite": true,
+      "handler": "PortWriteAuditPortOptions",
+      "permKind": "RequirePermissions",
+      "permCodes": [
+        "network:port:query",
+        "network:port:write"
+      ],
+      "registeredDeadTable": true,
+      "file": "internal/api/v1/network/port_write_router.go",
+      "line": 74
     },
     {
       "method": "POST",
@@ -3740,7 +3772,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/v1/network/port_write_router.go",
-      "line": 76
+      "line": 80
     },
     {
       "method": "POST",
@@ -3772,7 +3804,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/v1/network/port_write_router.go",
-      "line": 74
+      "line": 78
     },
     {
       "method": "POST",
@@ -3836,7 +3868,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/v1/network/port_write_router.go",
-      "line": 72
+      "line": 76
     },
     {
       "method": "POST",

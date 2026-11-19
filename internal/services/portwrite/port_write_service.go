@@ -157,6 +157,10 @@ type PortWriteService interface {
 	PreviewPortWrite(ctx context.Context, req PreviewRequest, operator string) (*PreviewResult, error)
 	// ListAudit Phase 127 前置（PWX-04）：端口写审计分页查询（纯读）。
 	ListAudit(ctx context.Context, req AuditListRequest) (*AuditListResult, error)
+	// ListDeviceOptions v1.57：审计页设备选择器（只读，仅 id/名称/IP）。
+	ListDeviceOptions(ctx context.Context, req AuditOptionRequest) (*AuditDeviceOptionResult, error)
+	// ListPortOptions v1.57：审计页端口选择器（只读，DeviceID 必填）。
+	ListPortOptions(ctx context.Context, req AuditOptionRequest) (*AuditPortOptionResult, error)
 	// TrunkWrite Phase 124 (PWX-01)：trunk native/allowed + hybrid 写入口。
 	TrunkWrite(ctx context.Context, portID string, action Action, params TrunkParams, operator string, opts ...WriteOption) (*PortResult, error)
 	// PortSecWrite Phase 125 (PWX-02)：端口安全写入口。

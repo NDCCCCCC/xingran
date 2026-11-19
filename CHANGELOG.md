@@ -11,6 +11,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+**端口写审计页可读性优化（UUID → 设备名称 / 端口名称）**
+
+- 后端新增名称快照（v1.57，migration 254）：`sys_port_write_audit` 增加 `device_name_snapshot` / `device_ip_snapshot` / `interface_name_snapshot` / `port_description_snapshot` 四列，写入审计行时同时固化设备名/IP 与接口名/描述；历史行按当前主数据分批回填（每批 5000 行，仅填空值、幂等）。审计不可变——设备改名/软删、端口描述变更或采集行被 `CleanOldRecords` 清理后，历史审计仍显示"操作当时"的名称
+- `ListAudit` 改返回 `AuditRow`（内嵌原 `models.PortWriteAudit`，既有 `deviceId`/`portId`/`beforeValue` 等契约不变），新增 `deviceName`/`deviceIp`/`interfaceName`/`portDescription`/`nameFromSnapshot`；名称解析「快照优先、实时兜底」（设备查询用 `Unscoped()` 覆盖软删），每页固定 3 条 SQL，无 N+1
+- 新增两个只读选择器端点 `POST /network/ports/write/audit/device-options` 与 `/audit/port-options`：只返回 id/名称/IP（及接口名/描述）最小读面，权限沿用组级 `network:port:write`——审计员通常不持有 `network:device:list` 或 `network:port:query`，复用既有列表端点会 403；`port-options` 强制 `deviceId`（接口名跨设备重名，禁止全局裸选）
+- `AuditListRequest` 新增 `deviceName` / `interfaceName` 模糊过滤（子查询实现，避免 JOIN 放大行数；LIKE 通配符 `%` `_` `\` 显式转义）
+- 前端 `pages/network/port-audits`：列表主信息改为设备名称（+IP）、接口名（+端口描述），UUID 降级到 Tooltip 与展开行；过滤器从"手输 UUID"改为设备下拉（远程搜索名称/IP）+ 端口下拉（按设备联动，未选设备时禁用）；名称缺失显示 `已删除设备` / `未采集/已删除` 兜底
+- `BulkWriteDrawer` 断线对账改显示真实接口名（原先把 `portId` UUID 当接口名）
+
 **数据库全量备份与恢复（PR #83，feat/db-backup-export-restore）**
 
 - 后端 `internal/api/v1/dbbackup/` + `internal/services/dbbackup/`：pg_dump/pg_restore 全库备份导出（异步任务 + taskId 轮询）、上传 zip 导入恢复、定期备份计划（cron + 保留份数）、多存储后端、备份记录下载/删除、pg_dump 能力预检（`GET /system/db-backup/capabilities`）

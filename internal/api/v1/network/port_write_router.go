@@ -68,6 +68,10 @@ func SetupPortWriteRouter(r *gin.RouterGroup, core *core.Core) {
 	write.POST("/preview", handler.PortWritePreview)
 	// v1.51 (Phase 127 PWX-04 前置)：端口写审计分页查询（纯读）
 	write.POST("/audit/list", handler.PortWriteAuditList)
+	// v1.57：审计页设备/端口选择器（纯读，最小读面，权限沿用组级 network:port:write）。
+	// 审计员通常不持有 network:device:list / network:port:query，复用现有列表端点会 403。
+	write.POST("/audit/device-options", handler.PortWriteAuditDeviceOptions)
+	write.POST("/audit/port-options", handler.PortWriteAuditPortOptions)
 	// v1.51 (Phase 124 PWX-01)：trunk native/allowed + hybrid（单端点三动作）
 	write.POST("/trunk", handler.TrunkWrite)
 	// v1.51 (Phase 125 PWX-02)：端口安全（单端点五动作）

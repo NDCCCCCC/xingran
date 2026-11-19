@@ -2,14 +2,20 @@
  * PortWriteAuditsPage — v1.51 Phase 127 PWX-04 端口写审计明细页
  *
  * 功能：
- * - 分页表 + 过滤表单（设备 ID / 操作人 / 动作 / 状态 / 时间范围）
+ * - 分页表 + 过滤表单（设备 / 端口 / 操作人 / 动作 / 状态 / 时间范围）
  * - 展开行：beforeValue / afterValue JSON 对比 + 设备原始响应折叠 + 失败原因
  *
+ * v1.57 可读性优化：
+ * - 列表不再展示 deviceId/portId UUID：设备名称（+IP）、接口名（+端口描述）为主信息，
+ *   UUID 降级为 Tooltip / 展开行里的追溯标识
+ * - 过滤器从"手输 UUID"改为设备下拉（远程搜索名称/IP）+ 端口下拉（按设备联动）
+ * - 数据源走 audit 专用 options 端点：审计员通常只有 network:port:write，
+ *   直接调 /network/devices/list（需 network:device:list）会 403
+ * - 名称缺失（设备已删/端口采集行被清理）显示明确兜底文案，不出现空白单元格
+ *
  * 约束：
- * - API 走 @/lib/api 封装（listPortWriteAudits），无裸 axios
+ * - API 走 @/lib/api 封装（listPortWriteAudits / listPortWriteAudit*Options），无裸 axios
  * - 样式全部 antd token/预设色，零手写暗色覆盖（C13 预算纪律）
- * - 后端查询契约未就绪（portwriter 排期），接口报错时以空态兜底；
- *   真机数据联调与 Phase 123 集成验证合并进行
  *
  * 菜单注册：migration_229（幂等，复用 TIDY-01 migration 228 模式），
  * 挂网络设备 M 根下，perms=network:port:write（与写同权限，契约选项之一）。
@@ -29,14 +35,21 @@ import {
   Row,
   Col,
   DatePicker,
+  Tooltip,
+  Descriptions,
 } from "antd";
 import { SearchOutlined, ReloadOutlined } from "@ant-design/icons";
 import type { Dayjs } from "dayjs";
 import type { ColumnsType } from "antd/es/table";
-import { AppInput, AppSelect } from "@/components/ui";
+import { AppInput, AppSelect, RemoteSelect } from "@/components/ui";
+import type { RemoteSelectOption } from "@/components/ui";
 import { useActionPermission } from "@/components/shared";
 import { PERMISSION_CODES } from "@/constants/permissionCodes";
-import { listPortWriteAudits } from "@/lib/api/networkApi";
+import {
+  listPortWriteAudits,
+  listPortWriteAuditDeviceOptions,
+  listPortWriteAuditPortOptions,
+} from "@/lib/api/networkApi";
 import type { PortWriteAuditRow } from "@/types/network";
 import { ACTION_TITLE } from "@/components/network/port-write/constants";
 
@@ -59,6 +72,9 @@ const ACTION_OPTIONS = Object.entries(ACTION_TITLE).map(([value, label]) => ({
   value,
 }));
 
+/** 选择器默认条数（设备/端口均按此预取首屏，搜索时再远程刷新） */
+const OPTION_PAGE_SIZE = 50;
+
 /** JSON 快照格式化（beforeValue/afterValue 为任意 JSON） */
 function formatJson(value: unknown): string {
   if (value === undefined || value === null) return "(无记录)";
@@ -67,6 +83,26 @@ function formatJson(value: unknown): string {
   } catch {
     return String(value);
   }
+}
+
+/** 设备选项 label：名称 + IP（重名设备靠 IP 区分） */
+function deviceOptionLabel(label: string, ip?: string): string {
+  return ip ? `${label}（${ip}）` : label;
+}
+
+/** 端口选项 label：接口名 + 描述（同名接口跨设备靠描述辅助辨识） */
+function portOptionLabel(label: string, description?: string): string {
+  return description ? `${label}（${description}）` : label;
+}
+
+/** 单元格副信息行（IP / 端口描述）；无值不占位 */
+function SubText({ children }: { children?: React.ReactNode }) {
+  if (!children) return null;
+  return (
+    <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+      {children}
+    </Typography.Text>
+  );
 }
 
 const PortWriteAuditsPage = () => {
@@ -84,6 +120,11 @@ const PortWriteAuditsPage = () => {
   // 查询参数快照：提交时固化，翻页沿用同一组过滤条件
   const [filters, setFilters] = useState<Record<string, unknown>>({});
 
+  // v1.57 选择器状态：设备选项（首次进入预取首屏）+ 端口选项（随设备联动）
+  const [deviceOptions, setDeviceOptions] = useState<RemoteSelectOption[]>([]);
+  const [portOptions, setPortOptions] = useState<RemoteSelectOption[]>([]);
+  const [selectedDeviceId, setSelectedDeviceId] = useState<string | undefined>();
+
   const loadData = useCallback(async (page: number, size: number, f: Record<string, unknown>) => {
     setLoading(true);
     try {
@@ -95,7 +136,7 @@ const PortWriteAuditsPage = () => {
       setRows(result.list ?? []);
       setTotal(result.total ?? 0);
     } catch {
-      // 后端契约未就绪/网络错误: post() 拦截器已弹 Toast, 页面空态兜底
+      // 网络错误: post() 拦截器已弹 Toast, 页面空态兜底
       setRows([]);
       setTotal(0);
     } finally {
@@ -108,10 +149,88 @@ const PortWriteAuditsPage = () => {
     void loadData(current, pageSize, filters);
   }, [loadData, current, pageSize, filters]);
 
+  // 设备选项首屏预取（RemoteSelect 无关键字时展示 initialOptions）
+  useEffect(() => {
+    let alive = true;
+    listPortWriteAuditDeviceOptions({ current: 1, pageSize: OPTION_PAGE_SIZE })
+      .then((res) => {
+        if (!alive) return;
+        setDeviceOptions(
+          (res.list ?? []).map((d) => ({
+            label: deviceOptionLabel(d.label, d.ipAddress),
+            value: d.value,
+          }))
+        );
+      })
+      .catch(() => {
+        // 选项失败不阻塞列表：post() 拦截器已提示，选择器留空可手输关键字重试
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  /** 设备远程搜索：名称或 IP 模糊匹配 */
+  const fetchDeviceOptions = useCallback(async (keyword: string): Promise<RemoteSelectOption[]> => {
+    const res = await listPortWriteAuditDeviceOptions({
+      keyword,
+      current: 1,
+      pageSize: OPTION_PAGE_SIZE,
+    });
+    return (res.list ?? []).map((d) => ({
+      label: deviceOptionLabel(d.label, d.ipAddress),
+      value: d.value,
+    }));
+  }, []);
+
+  /** 端口远程搜索：必须带 deviceId（接口名跨设备重名） */
+  const fetchPortOptions = useCallback(
+    async (deviceId: string, keyword: string): Promise<RemoteSelectOption[]> => {
+      const res = await listPortWriteAuditPortOptions({
+        deviceId,
+        keyword: keyword || undefined,
+        current: 1,
+        pageSize: OPTION_PAGE_SIZE,
+      });
+      return (res.list ?? []).map((p) => ({
+        label: portOptionLabel(p.label, p.description),
+        value: p.value,
+      }));
+    },
+    []
+  );
+
+  /** 设备切换：清空已选端口 + 重新预取该设备端口首屏 */
+  const handleDeviceChange = useCallback(
+    (deviceId?: string) => {
+      setSelectedDeviceId(deviceId);
+      form.setFieldValue("portId", undefined);
+      setPortOptions([]);
+      if (!deviceId) return;
+      // 首屏预取该设备端口（RemoteSelect 无关键字时展示 initialOptions；
+      // 输入关键字后由 fetcher 防抖远程刷新）
+      fetchPortOptions(deviceId, "")
+        .then(setPortOptions)
+        .catch(() => setPortOptions([]));
+    },
+    [fetchPortOptions, form]
+  );
+
+  /** 端口远程搜索（未选设备时禁用，此处仅做防御） */
+  const handlePortSearch = useCallback(
+    (keyword: string): Promise<RemoteSelectOption[]> => {
+      if (!selectedDeviceId) return Promise.resolve([]);
+      return fetchPortOptions(selectedDeviceId, keyword);
+    },
+    [fetchPortOptions, selectedDeviceId]
+  );
+
   const handleSearch = () => {
     const values = form.getFieldsValue();
     const range = values.timeRange as [Dayjs, Dayjs] | undefined;
-    // 契约 30a80c94: 时间为 RFC3339; 分页 current 从 1 起, pageSize 上限 100
+    // 契约 30a80c94: 时间为 RFC3339; 分页 current 从 1 起, pageSize 上限 100。
+    // v1.57: 仍以 deviceId/portId 精确提交（走既有索引, 不会因同名端口误命中），
+    // 名称只用于选择器内检索。
     const next: Record<string, unknown> = {
       deviceId: values.deviceId || undefined,
       portId: values.portId || undefined,
@@ -127,6 +246,8 @@ const PortWriteAuditsPage = () => {
 
   const handleReset = () => {
     form.resetFields();
+    setSelectedDeviceId(undefined);
+    setPortOptions([]);
     setCurrent(1);
     setFilters({});
   };
@@ -140,8 +261,59 @@ const PortWriteAuditsPage = () => {
         width: 170,
         render: (v: string) => (v ? v.replace("T", " ").slice(0, 19) : "-"),
       },
-      { title: "设备 ID", dataIndex: "deviceId", key: "deviceId", width: 280, ellipsis: true },
-      { title: "端口 ID", dataIndex: "portId", key: "portId", width: 280, ellipsis: true },
+      {
+        // v1.57：设备名称（主）+ IP（副）；UUID 仅在 Tooltip 内可追溯
+        title: "设备",
+        dataIndex: "deviceName",
+        key: "deviceName",
+        width: 200,
+        render: (_v: string, row: PortWriteAuditRow) => (
+          <Tooltip
+            title={
+              <span>
+                设备 ID：{row.deviceId}
+                {row.nameFromSnapshot ? "（名称取自操作当时快照）" : ""}
+              </span>
+            }
+          >
+            <div>
+              <Typography.Text
+                ellipsis
+                type={row.deviceName ? undefined : "secondary"}
+                style={{ maxWidth: 180 }}
+              >
+                {row.deviceName || "已删除设备"}
+              </Typography.Text>
+              <div>
+                <SubText>{row.deviceIp}</SubText>
+              </div>
+            </div>
+          </Tooltip>
+        ),
+      },
+      {
+        // v1.57：端口接口名（主）+ 描述（副）；UUID 仅在 Tooltip 内可追溯
+        title: "端口",
+        dataIndex: "interfaceName",
+        key: "interfaceName",
+        width: 200,
+        render: (_v: string, row: PortWriteAuditRow) => (
+          <Tooltip title={`端口 ID：${row.portId}`}>
+            <div>
+              <Typography.Text
+                ellipsis
+                type={row.interfaceName ? undefined : "secondary"}
+                style={{ maxWidth: 180 }}
+              >
+                {row.interfaceName || "未采集/已删除"}
+              </Typography.Text>
+              <div>
+                <SubText>{row.portDescription}</SubText>
+              </div>
+            </div>
+          </Tooltip>
+        ),
+      },
       {
         title: "动作",
         dataIndex: "action",
@@ -186,11 +358,31 @@ const PortWriteAuditsPage = () => {
         <>
           <Card style={{ marginBottom: 16 }}>
             <Form form={form} layout="inline" style={{ flexWrap: "wrap", gap: "8px" }}>
-              <Form.Item name="deviceId" label="设备 ID">
-                <AppInput placeholder="设备 UUID" allowClear style={{ width: 220 }} />
+              <Form.Item name="deviceId" label="设备">
+                <RemoteSelect
+                  placeholder="搜索设备名称 / IP"
+                  allowClear
+                  style={{ width: 260 }}
+                  initialOptions={deviceOptions}
+                  fetcher={fetchDeviceOptions}
+                  onChange={(v) => handleDeviceChange(v as string | undefined)}
+                />
               </Form.Item>
-              <Form.Item name="portId" label="端口 ID">
-                <AppInput placeholder="端口 UUID" allowClear style={{ width: 220 }} />
+              <Form.Item
+                name="portId"
+                label="端口"
+                extra={selectedDeviceId ? undefined : "请先选择设备"}
+              >
+                <RemoteSelect
+                  // 设备切换后重建组件，清掉内部缓存的 options 与在途请求
+                  key={selectedDeviceId ?? "no-device"}
+                  placeholder={selectedDeviceId ? "搜索接口名 / 描述" : "请先选择设备"}
+                  allowClear
+                  disabled={!selectedDeviceId}
+                  style={{ width: 240 }}
+                  initialOptions={portOptions}
+                  fetcher={handlePortSearch}
+                />
               </Form.Item>
               <Form.Item name="operator" label="操作人">
                 <AppInput placeholder="操作人" allowClear style={{ width: 140 }} />
@@ -260,6 +452,32 @@ const PortWriteAuditsPage = () => {
                         style={{ marginBottom: 12 }}
                       />
                     )}
+                    {/* v1.57：展开行顶部保留完整标识（名称 + UUID），便于追溯与复制 */}
+                    <Descriptions
+                      size="small"
+                      column={2}
+                      style={{ marginBottom: 12 }}
+                      items={[
+                        {
+                          key: "device",
+                          label: "设备",
+                          children: row.deviceName
+                            ? `${row.deviceName}${row.deviceIp ? `（${row.deviceIp}）` : ""}`
+                            : row.deviceId,
+                        },
+                        {
+                          key: "port",
+                          label: "端口",
+                          children: row.interfaceName
+                            ? `${row.interfaceName}${
+                                row.portDescription ? `（${row.portDescription}）` : ""
+                              }`
+                            : row.portId,
+                        },
+                        { key: "deviceId", label: "设备 ID", children: row.deviceId },
+                        { key: "portId", label: "端口 ID", children: row.portId },
+                      ]}
+                    />
                     <Row gutter={16}>
                       <Col span={12}>
                         <Typography.Title level={5}>变更前 (beforeValue)</Typography.Title>

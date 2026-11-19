@@ -132,9 +132,19 @@ func (m *mockPortWriteService) PortBinding(ctx context.Context, portID string, o
 	return &portwrite.PortResult{PortID: portID, Action: portcollection.ActionPortBinding, Status: "succeeded"}, nil
 }
 
-// ListAudit Phase 127 前置 mock：返回空分页结果。
+// ListAudit Phase 127 前置 mock：返回空分页结果（v1.57 起返回 AuditRow 视图）。
 func (m *mockPortWriteService) ListAudit(ctx context.Context, req portwrite.AuditListRequest) (*portwrite.AuditListResult, error) {
-	return &portwrite.AuditListResult{List: []models.PortWriteAudit{}, Total: 0, Current: 1, PageSize: 20}, nil
+	return &portwrite.AuditListResult{List: []portwrite.AuditRow{}, Total: 0, Current: 1, PageSize: 20}, nil
+}
+
+// ListDeviceOptions v1.57 mock：返回空设备选项。
+func (m *mockPortWriteService) ListDeviceOptions(ctx context.Context, req portwrite.AuditOptionRequest) (*portwrite.AuditDeviceOptionResult, error) {
+	return &portwrite.AuditDeviceOptionResult{List: []portwrite.AuditDeviceOption{}, Total: 0, Current: 1, PageSize: 20}, nil
+}
+
+// ListPortOptions v1.57 mock：返回空端口选项（真实实现 deviceId 必填，见 handler 测试）。
+func (m *mockPortWriteService) ListPortOptions(ctx context.Context, req portwrite.AuditOptionRequest) (*portwrite.AuditPortOptionResult, error) {
+	return &portwrite.AuditPortOptionResult{List: []portwrite.AuditPortOption{}, Total: 0, Current: 1, PageSize: 20}, nil
 }
 
 // TrunkWrite Phase 124 (PWX-01) mock：返回 succeeded PortResult。
@@ -1027,4 +1037,67 @@ func TestPortWriteHandler_SetDescription_FailedStatus(t *testing.T) {
 	assert.Equal(t, 1, mockOperLog.recordAsyncCalls, "failed path still writes operlog")
 	assert.Equal(t, operlog.OperTypeUpdate, mockOperLog.lastBusinessType,
 		"SetDescription maps to OperTypeUpdate(2)")
+}
+
+// ====================== v1.57 审计名称快照（写入路径） ======================
+
+// TestPortWriteHandler_Shutdown_WritesNameSnapshot 单端口写审计行必须落
+// 设备名/IP + 接口名/描述快照，避免审计页展示裸 UUID。
+func TestPortWriteHandler_Shutdown_WritesNameSnapshot(t *testing.T) {
+	h, mockSvc, _, sqlDB := newTestHandler(t)
+
+	if err := sqlDB.Create(&models.NetworkDevice{
+		BaseModel:  models.BaseModel{ID: "dev-snap-1"},
+		DeviceName: "核心交换机-01",
+		DeviceType: models.DeviceTypeSwitch,
+		Vendor:     models.VendorHuawei,
+		IPAddress:  "10.10.10.1",
+	}).Error; err != nil {
+		t.Fatalf("seed device: %v", err)
+	}
+	if err := sqlDB.Create(&models.DevicePortStatus{
+		ID: "port-snap-1", DeviceID: "dev-snap-1", InterfaceName: "GE0/0/1",
+		AdminStatus: "up", Description: "上行到核心",
+	}).Error; err != nil {
+		t.Fatalf("seed port: %v", err)
+	}
+	mockSvc.shutdownResult = &portwrite.PortResult{
+		PortID: "port-snap-1", Action: portcollection.ActionShutdown,
+		Status: "succeeded", CommandSent: "shutdown",
+	}
+
+	w := invokeWithCtx("Shutdown", h.Shutdown, PortWriteRequest{PortID: "port-snap-1"}, nil)
+	if w.Code != http.StatusOK {
+		t.Fatalf("status=%d body=%s", w.Code, w.Body.String())
+	}
+
+	var audit models.PortWriteAudit
+	if err := sqlDB.First(&audit, "port_id = ?", "port-snap-1").Error; err != nil {
+		t.Fatalf("audit row not found: %v", err)
+	}
+	assert.Equal(t, "核心交换机-01", audit.DeviceNameSnapshot)
+	assert.Equal(t, "10.10.10.1", audit.DeviceIPSnapshot)
+	assert.Equal(t, "GE0/0/1", audit.InterfaceNameSnapshot)
+	assert.Equal(t, "上行到核心", audit.PortDescriptionSnapshot)
+}
+
+// TestPortWriteHandler_Shutdown_NoSnapshotWhenMasterDataMissing 设备/端口行缺失时
+// 快照必须留空 —— 不能把 UUID 当名称固化进审计。
+func TestPortWriteHandler_Shutdown_NoSnapshotWhenMasterDataMissing(t *testing.T) {
+	h, mockSvc, _, sqlDB := newTestHandler(t)
+
+	mockSvc.shutdownResult = &portwrite.PortResult{
+		PortID: "port-orphan", Action: portcollection.ActionShutdown,
+		Status: "succeeded", CommandSent: "shutdown",
+	}
+	w := invokeWithCtx("Shutdown", h.Shutdown, PortWriteRequest{PortID: "port-orphan"}, nil)
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var audit models.PortWriteAudit
+	if err := sqlDB.First(&audit, "port_id = ?", "port-orphan").Error; err != nil {
+		t.Fatalf("audit row not found: %v", err)
+	}
+	assert.Empty(t, audit.DeviceNameSnapshot, "查不到设备时不得用 UUID 冒充名称")
+	assert.Empty(t, audit.InterfaceNameSnapshot, "查不到端口时不得用 UUID 冒充接口名")
+	assert.Equal(t, "port-orphan", audit.PortID, "UUID 关系字段照常落库")
 }

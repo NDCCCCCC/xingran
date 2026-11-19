@@ -38,7 +38,23 @@ type PortWriteAudit struct {
 	OperLogID      *string         `gorm:"type:uuid" json:"operLogId,omitempty"`
 	// BatchID Phase 122 收尾：批量写批次标识（单端口写为空）。断线对账凭此
 	// 在 audit/list 精确过滤（migration 232，TEXT 可空，历史行 NULL）。
-	BatchID   string    `gorm:"size:64;index:idx_port_write_audit_batch" json:"batchId,omitempty"`
+	BatchID string `gorm:"size:64;index:idx_port_write_audit_batch" json:"batchId,omitempty"`
+
+	// 名称快照（二期，migration 254）：写入审计行时一并落库的设备/端口可读名称。
+	//
+	// 语义：审计行 append-only，名称必须固化在写入时刻 —— 设备改名、端口改描述、
+	// 采集记录被 CleanOldRecords 清理后，历史审计仍显示"操作当时"的名称。
+	// 这些列**只作展示冗余**，权威关联仍是 DeviceID / PortID。
+	//
+	// 查询层优先级：快照非空 → 用快照；快照为空（migration 254 之前的历史行或
+	// 采集行缺失时的写入）→ 回退实时表补名（设备用 Unscoped 覆盖软删）。
+	// json:"-" ：不直接对外序列化，统一由 portwrite.AuditRowView 的
+	// deviceName/interfaceName 等字段暴露，避免同一语义两个字段名。
+	DeviceNameSnapshot      string `gorm:"size:100" json:"-"`
+	DeviceIPSnapshot        string `gorm:"size:45" json:"-"`
+	InterfaceNameSnapshot   string `gorm:"size:100" json:"-"`
+	PortDescriptionSnapshot string `gorm:"size:500" json:"-"`
+
 	CreatedAt time.Time `gorm:"not null;index:idx_port_write_audit_device_port_created,priority:3;index:idx_port_write_audit_created" json:"createdAt"`
 }
 
