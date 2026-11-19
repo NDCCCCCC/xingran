@@ -75,6 +75,24 @@ describe("PortWriteAuditsPage — PWX-04", () => {
     expect(arg.pageSize).toBe(10);
   });
 
+  it("筛选区使用 FilterBar 统一骨架，表格开启横向滚动（窄屏自适应）", async () => {
+    mockListPortWriteAudits.mockResolvedValue(makeResult([makeRow()]));
+
+    const { container } = render(<PortWriteAuditsPage />, { wrapper: Wrapper });
+    await screen.findByText("admin");
+
+    // 筛选卡片走统一骨架：窄宽下由 responsive.css 切成等宽栅格
+    const bar = container.querySelector(".xr-filter-bar");
+    expect(bar).not.toBeNull();
+    expect(bar?.querySelector(".xr-filter-bar__form .ant-form-inline")).not.toBeNull();
+
+    // 表格开启横向滚动：缺 scroll.x 时列宽会被压缩成逐字竖排
+    const content = container.querySelector(".ant-table-content");
+    expect(content).not.toBeNull();
+    const table = content?.querySelector("table");
+    expect(table?.getAttribute("style") ?? "").toMatch(/min-width|width/);
+  });
+
   it("展开行显示 before/after JSON 与设备原始响应", async () => {
     mockListPortWriteAudits.mockResolvedValue(makeResult([makeRow()]));
 
