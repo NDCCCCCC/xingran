@@ -136,9 +136,7 @@ describe("PortWriteAuditsPage — PWX-04", () => {
       pageSize: 50,
     });
     mockPortOptions.mockResolvedValue({
-      list: [
-        { value: "port-1", label: "GE0/0/1", interfaceName: "GE0/0/1", description: "上行" },
-      ],
+      list: [{ value: "port-1", label: "GE0/0/1", interfaceName: "GE0/0/1", description: "上行" }],
       total: 1,
       current: 1,
       pageSize: 50,
