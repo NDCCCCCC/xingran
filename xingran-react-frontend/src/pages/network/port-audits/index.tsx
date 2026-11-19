@@ -43,7 +43,7 @@ import type { Dayjs } from "dayjs";
 import type { ColumnsType } from "antd/es/table";
 import { AppInput, AppSelect, RemoteSelect } from "@/components/ui";
 import type { RemoteSelectOption } from "@/components/ui";
-import { useActionPermission } from "@/components/shared";
+import { FilterBar, useActionPermission } from "@/components/shared";
 import { PERMISSION_CODES } from "@/constants/permissionCodes";
 import {
   listPortWriteAudits,
@@ -357,68 +357,70 @@ const PortWriteAuditsPage = () => {
       {permView.visible && (
         <>
           <Card style={{ marginBottom: 16 }}>
-            <Form form={form} layout="inline" style={{ flexWrap: "wrap", gap: "8px" }}>
-              <Form.Item name="deviceId" label="设备">
-                <RemoteSelect
-                  placeholder="搜索设备名称 / IP"
-                  allowClear
-                  style={{ width: 260 }}
-                  initialOptions={deviceOptions}
-                  fetcher={fetchDeviceOptions}
-                  onChange={(v) => handleDeviceChange(v as string | undefined)}
-                />
-              </Form.Item>
-              <Form.Item
-                name="portId"
-                label="端口"
-                extra={selectedDeviceId ? undefined : "请先选择设备"}
-              >
-                <RemoteSelect
-                  // 设备切换后重建组件，清掉内部缓存的 options 与在途请求
-                  key={selectedDeviceId ?? "no-device"}
-                  placeholder={selectedDeviceId ? "搜索接口名 / 描述" : "请先选择设备"}
-                  allowClear
-                  disabled={!selectedDeviceId}
-                  style={{ width: 240 }}
-                  initialOptions={portOptions}
-                  fetcher={handlePortSearch}
-                />
-              </Form.Item>
-              <Form.Item name="operator" label="操作人">
-                <AppInput placeholder="操作人" allowClear style={{ width: 140 }} />
-              </Form.Item>
-              <Form.Item name="action" label="动作">
-                <AppSelect
-                  placeholder="全部动作"
-                  allowClear
-                  options={ACTION_OPTIONS}
-                  style={{ width: 160 }}
-                  showSearch={false}
-                />
-              </Form.Item>
-              <Form.Item name="status" label="状态">
-                <AppSelect
-                  placeholder="全部状态"
-                  allowClear
-                  options={STATUS_OPTIONS}
-                  style={{ width: 130 }}
-                  showSearch={false}
-                />
-              </Form.Item>
-              <Form.Item name="timeRange" label="时间范围">
-                <DatePicker.RangePicker style={{ width: 260 }} />
-              </Form.Item>
-              <Form.Item>
-                <Space>
-                  <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>
-                    查询
-                  </Button>
-                  <Button icon={<ReloadOutlined />} onClick={handleReset}>
-                    重置
-                  </Button>
-                </Space>
-              </Form.Item>
-            </Form>
+            <FilterBar>
+              <Form form={form} layout="inline" style={{ flex: 1, minWidth: 0 }}>
+                <Form.Item name="deviceId" label="设备">
+                  <RemoteSelect
+                    placeholder="搜索设备名称 / IP"
+                    allowClear
+                    style={{ width: 260 }}
+                    initialOptions={deviceOptions}
+                    fetcher={fetchDeviceOptions}
+                    onChange={(v) => handleDeviceChange(v as string | undefined)}
+                  />
+                </Form.Item>
+                <Form.Item
+                  name="portId"
+                  label="端口"
+                  extra={selectedDeviceId ? undefined : "请先选择设备"}
+                >
+                  <RemoteSelect
+                    // 设备切换后重建组件，清掉内部缓存的 options 与在途请求
+                    key={selectedDeviceId ?? "no-device"}
+                    placeholder={selectedDeviceId ? "搜索接口名 / 描述" : "请先选择设备"}
+                    allowClear
+                    disabled={!selectedDeviceId}
+                    style={{ width: 240 }}
+                    initialOptions={portOptions}
+                    fetcher={handlePortSearch}
+                  />
+                </Form.Item>
+                <Form.Item name="operator" label="操作人">
+                  <AppInput placeholder="操作人" allowClear style={{ width: 140 }} />
+                </Form.Item>
+                <Form.Item name="action" label="动作">
+                  <AppSelect
+                    placeholder="全部动作"
+                    allowClear
+                    options={ACTION_OPTIONS}
+                    style={{ width: 160 }}
+                    showSearch={false}
+                  />
+                </Form.Item>
+                <Form.Item name="status" label="状态">
+                  <AppSelect
+                    placeholder="全部状态"
+                    allowClear
+                    options={STATUS_OPTIONS}
+                    style={{ width: 130 }}
+                    showSearch={false}
+                  />
+                </Form.Item>
+                <Form.Item name="timeRange" label="时间范围">
+                  <DatePicker.RangePicker style={{ width: 260 }} />
+                </Form.Item>
+                <Form.Item>
+                  <Space>
+                    <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>
+                      查询
+                    </Button>
+                    <Button icon={<ReloadOutlined />} onClick={handleReset}>
+                      重置
+                    </Button>
+                  </Space>
+                </Form.Item>
+              </Form>
+            </FilterBar>
           </Card>
 
           <Card>
@@ -428,6 +430,7 @@ const PortWriteAuditsPage = () => {
               rowKey="id"
               loading={loading}
               size="small"
+              scroll={{ x: "max-content" }}
               pagination={{
                 current,
                 pageSize,
