@@ -1,10 +1,40 @@
 ---
-last_updated: 2026-11-09
-update_trigger: v1.55 milestone SHIPPED 2026-11-09（LOCKED 残余根治：7/7 Phase、23/23 REQ、6 项 LOCKED / 7 子项全部从根源清偿；① 的 A+B 均完成 → P1-5 侧信道根治达成；全量回归闸门全绿；验证类残余不伪造闭环）
-previous_update: 2026-11-09 v1.55 milestone INITIATED（LOCKED 残余根治：6 项 / 7 子项，用户裁定推翻 ① 产品语义纳入 A+B 根治；取数自 261109-v154-locked-root-cause-analysis.md + 261109-v155-requirements-draft.md；Phase 从 145 续编）
+last_updated: 2026-11-23
+update_trigger: v1.56 milestone INITIATED 2026-11-23（RPA 员工自助自动化：7 Phase / 30 REQ；承载模型结论「一 VM 一容器一 Chromium 多 page」；取数自 261123 RPA 全模块审计 + 用户三条新方向裁定）
+previous_update: 2026-11-09 v1.55 milestone SHIPPED（LOCKED 残余根治：7/7 Phase、23/23 REQ，① 的 A+B 均完成 → P1-5 侧信道根治达成；全量回归闸门全绿）
 ---
 
-## Current Milestone: v1.55 LOCKED 残余根治 (Locked Residual Root-Cause Fix) — ✅ SHIPPED 2026-11-09
+## Current Milestone: v1.56 RPA 员工自助自动化 (Self-Service RPA for General Staff)
+
+**Goal:** 让**不会写代码的一般员工**在 3 分钟内把「繁琐重复的浏览器流程」变成可自动执行的任务；把 RPA 的执行**看见**（无头浏览器实时画面）并**随时接管**（人机协作），同时把承载模型从「一容器多 Chrome 进程」纠正为「一 VM 一 Worker 一 Chromium 多页面」，使整套系统在一台 VDI 虚拟机组成的资源池上可预测地扩容。
+
+**立项动因（2026-11-23）:** 对 RPA 模块（主项目 `internal/{api,services,models}/rpa` + 子项目 `rpa-worker/` + 前端 `pages/operations/rpa`）做了逐文件静态审计 + 编译/测试实跑 + 定向探针实测，结论是「骨架完整、主干能跑、横向功能每条断在最后一公里」：凭证端点因未注入 SM4 cipher 必然 panic、三张列表的状态筛选因 int/string 类型不一致必然 400、任务名搜索因列名 `task_name` 写错必然 500、选择器学习表名与迁移不符必然 500、执行记录从不写 Worker 归属、会话注入与 `applySessionData` 均为半成品、取消不联动 Worker、人工干预缺 Redis 回传、批量报告与自动扩缩容配置返回硬编码假数据、前端 AI 编辑器是 1.5s setTimeout 的 mock、`useRPAProgress` 零调用方。用户同时提出三条新方向：**员工可用性**、**无头浏览器可视化 + 可接管**、**VDI 虚拟机承载模型决策**。
+
+**Target features:**
+- **CONTRACT（P0 契约修复）** — 凭证 cipher 注入 / 三列表状态枚举同构 / 任务名列名 / 选择器表名 / 任务字段无损 round-trip
+- **RUNTIME（执行闭环）** — 执行记录写 Worker 归属 / 会话与凭证真正注入并复用 / 取消可中断 Worker / 人工干预双向闭环（pause↔submit↔resume）
+- **ENGINE（执行引擎）** — 浏览器池由「每 page 一个 Chrome 进程」改为「1 Chrome + N page」+ 覆盖一般浏览器全部常用操作（上传/下载/执行 JS/断言/悬停/双击/右键/拖拽/键盘/滚动/条件）+ 选择器阶梯评分
+- **LIVEVIEW（无头可视化与接管）** — CDP screencast 实时画面流 + 人工接管（鼠标/键盘注入）+ 三种协作模式（auto / copilot / manual）+ 画面上叠加步骤/日志/变量 + 安全授权
+- **NOCODE（员工零门槛）** — 页面内录制即生成 / 元素拾取器 / 自然语言生成（替换 mock）/ 开箱模板 / 三步向导
+- **FLEET（承载与容量）** — 扩缩容 provider 化（本地容器 / 生产 VDI VM）/ 一 VM 一容器一 Chromium 落地 / 压测实测回填容量矩阵
+- **CLEANUP（收尾真相化）** — 假数据清零 / 定时调度接通 / 死代码与连接泄漏清理 / 文档与代码对齐
+
+**关键决策 (v1.56, 用户 2026-11-23 + 审计实证):**
+- **承载模型（结构性结论已定，数字待实测）**：默认 **一 VM 一 Worker 容器，容器内 1 个 Chromium + N 个 page（N = `worker.max_concurrency`）**；扩容粒度是 **VM 不是容器**（由 VDI API 编排）；「一 VM 多容器」仅保留给多租户/多浏览器版本/滚动升级场景且要求 VM ≥32GB + 每容器 shm ≤1GB。完整推导见 `.planning/notes/261123-rpa-worker-capacity-model.md`。
+- **可视化不是「第二个浏览器」**：直接复用 Worker 已有的 Chromium，经 `Page.startScreencast` + `Input.dispatchMouseEvent/KeyEvent` 做单向帧流 + 反向输入注入，**不引入 VNC/WebRTC/独立远程桌面栈**（零新增重量级依赖）。
+- **接管优先于全自动**：`copilot` 模式作为默认推荐（RPA 到关键节点停、人确认后继续），因为目标用户是一般员工，完全无人值守不是首要诉求。
+- **录制在页面内做，不做浏览器插件**：`Page.evalOnNewDocument` 注入监听器生成动作序列，避免分发/签名插件。
+- **修复优先于新增**：P0 契约缺陷（4 类必然失败路径）必须先于任何新功能交付，否则新功能建在 500/panic 之上无法验收。
+- **Worker 双副本边界不变**：只在根副本 `rpa-worker/` 演进，`xingran-react-frontend/rpa-worker/` 维持「可编译参考骨架」不新增业务功能（`.planning/notes/261108-rpa-worker-dual-copy.md`）。
+- **验收必须真跑**：`rpa-worker` 的 executor/worker/communication 当前零测试，本里程碑要求补真实 Chromium 集成用例；**禁止用 mock 顶替验收**，也禁止「单测内自建表」掩盖生产缺表（v1.55 已暴露此反模式）。
+- **上一里程碑「v1.56 候选」并入**：候选期内已落地的备份恢复 / 设置页收敛 / 菜单权限迁移（PR #83/#84 + quick 261110-161/f5g/jci）**不再单独立项**，作为已落地代码载入 Known Gaps（缺真实 UAT 证据，不标 SHIPPED 子项）。
+- **提交授权**：用户 2026-11-23 授权 GSD 自动提交本里程碑立项/需求/路线图产物与实现代码。
+
+**事实基线:** `.planning/notes/261123-rpa-worker-capacity-model.md`（承载模型推导）｜本轮审计结论见本文件上方「立项动因」｜`.planning/REQUIREMENTS.md`（本轮 30 REQ / 7 Phase）｜`.planning/ROADMAP.md`（Phases 152-158）
+
+---
+
+## Past Milestone: v1.55 LOCKED 残余根治 (Locked Residual Root-Cause Fix) — ✅ SHIPPED 2026-11-09
 
 **Goal:** 把 v1.52 收档时以「已接受 / 仅登记」名义挂账的 6 项 LOCKED 残余（7 个子项，③ 拆 A/B）从根源上修掉（而非打补丁 / 加告警 / 加方言分支），使约束从「靠约定」升级为「靠机制」；按用户 2026-11-09 裁定允许推翻 ① 的「范围快照回显」产品语义，① 纳入 A+B 组合根治。
 

@@ -2,7 +2,22 @@
 
 # Milestones
 
-## 当前里程碑：v1.56 候选（进行中 / 未正式立项）
+## 当前里程碑：v1.56 RPA 员工自助自动化 (Self-Service RPA for General Staff) — 进行中
+
+**Status:** INITIATED / ROADMAP CREATED 2026-11-23 · Phase **152-158** · **31 REQ / 7 Phase / 100% 映射**
+
+- **Goal:** 让不会写代码的一般员工在 3 分钟内把重复浏览器流程变成自动任务；执行过程可视、可随时人工接管；承载模型纠正为「一 VM 一 Worker 一 Chromium 多 page」。
+- **三条用户方向 → 落点**：员工可用性 = NOCODE + CONTRACT；无头可视化与接管 = LIVEVIEW；VDI 承载模型 = FLEET。
+- **立项基线**：`REQUIREMENTS.md` 记录 D1-D20 共 20 条审计缺陷（探针实测 100% 复现）；承载模型推导见 `notes/261123-rpa-worker-capacity-model.md`。
+- **并入项**：上一「v1.56 候选」（备份恢复 / 设置页收敛 / 菜单权限迁移 + quick 261110-161/f5g/jci）作为已落地代码载入，缺 UAT 证据不追认。
+- **验证状态**：79 条人工验证跟踪表保持 0 勾选；FLEET-03 容量实测需真机 VDI，本环境只能登记 UAT 待办。
+- **Phase 顺序**：152（P0 契约，必须先行）→ 153 ∥ 154 → 155 → 156 → 157 → 158。
+
+---
+
+## 历史候选段：v1.56 候选（已并入 v1.56 RPA 员工自助自动化，非当前状态）
+
+> **口径更新（2026-11-23）**：本候选段已正式并入 v1.56「RPA 员工自助自动化」。候选期内落地代码（备份恢复 / 设置页收敛 / 菜单权限迁移 + quick 261110-161/f5g/jci）作为已落地代码载入，缺真实 UAT 证据不追认、不标 SHIPPED。以下内容为候选期时点快照，仅供追溯。
 
 **Status:** v1.56 候选（进行中 / 未正式立项）· 口径来源 `CHANGELOG.md` `## [Unreleased] — v1.56 候选` + `.planning/quick/261110-161-*/v156-MILESTONE-DRAFT.md`（draft，未跑 `/gsd-new-milestone`）｜同步口径见 `.planning/STATE.md` frontmatter / `.planning/state.json` / `.planning/ROADMAP.md` 当前段。
 

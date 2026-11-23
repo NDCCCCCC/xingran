@@ -1,153 +1,166 @@
 # Requirements: RuoYi-Next 运维管理系统
 
-**Defined:** 2026-11-09
-**Milestone:** v1.55 LOCKED 残余根治
-**Core Value:** 把 v1.52 收档时以「已接受 / 仅登记」名义挂账的 LOCKED 残余，**从根源上**（而非打补丁/加告警/加方言分支）全部修掉，使约束从「靠约定」升级为「靠机制」；用户 2026-11-09 裁定允许推翻 ① 的「范围快照回显」产品语义，故 **6 项 LOCKED / 7 个子项全部纳入根治**。
+**Defined:** 2026-11-23
+**Milestone:** v1.56 RPA 员工自助自动化 (Self-Service RPA for General Staff)
+**Core Value:** 让不会写代码的一般员工能把重复的浏览器流程变成自动任务，并且随时能看见、能接管、能改；同时让这套东西在一台台 VDI 虚拟机上可预测地扩容。
 
-## 决策裁定记录（用户 2026-11-09，全部按推荐项）
+## 立项基线（2026-11-23 全模块审计实证）
 
-| 决策 | 裁定 | 在本 REQUIREMENTS 中的落点 | 实证前提 |
+对 `internal/{api/v1,services,models}/rpa` + `rpa-worker/` + 前端 `pages/operations/rpa` 逐文件审计、`go build`/`go test` 实跑、定向探针实测（探针文件已删）后确认的**必然失败路径**（均为 100% 复现，非偶发）：
+
+| # | 缺陷 | 实证位置 | 影响 |
 |---|---|---|---|
-| **DECISION-①**（决定性） | **允许重定语义，① 纳入根治（A+B 组合）** —— 允许取消 `ScopeTotal/ScopeOutOfScope` 等回显、去掉全库 `countQ`、去导入 `Errors[].Row` 行号、作废 132-SUMMARY.md:74 前端四类「本次范围：共 N 条」文案 | 新增 `SIDECHANNEL-01~04`；`ARCH-01` 从「可选」升级为**必需**（B = 统一 ScopedDB 防回归）；132/133 backfill UAT 作废重跑 | 8 个 `/statistics` 已同源；残余是 `workstation_service.go:662-677` 刻意双口径差分，属信息论必然非代码缺陷 |
-| **FUTURE-01** | **✅ v1.55 收档已关闭**（原「随 ① 根治一并关闭」，A(150)+B(151) 均完成，P1-5 侧信道已根治，告警通道合并评估不再需要） | 4 处引用已由 Lead 在 2026-11-09 收档清理：本节、`ROADMAP.md` Known Gaps/历史段、`STATE.md` Deferred Items、`261108-v153-locked-residuals.md:63` | 触发条件「FIX-11 告警通道落地」在 v1.54 成立但 ① 已改由 A+B 根治，不再走告警通道路线 |
-| **DECISION-CI-PG** | **本期不建 PG service，登记前置依赖** | `DIALECT-04③` 改为「登记前置依赖、不伪造双跑」；v1.55 只做 `forbidigo` 门禁（XS）+ 视预算抽 dialect 语义原语 | `ci.yml` 无 `services: postgres`；`TEST_PG_DSN` 明确 unset，PG contract 只做「skip 可观测」，零真实 PG 验证 |
-| **DECISION-存量密码** | **免盘点，直接上守卫** | `CRYPTO-02` 直接加 `len(hashBytes)==32` 校验，无需迁移 | 全库 `sys_user.password` 写入均经 `HashPassword`（`user_service.go:841`、`user_sync_service.go:511/646/1143`、`excel_service.go:1172`），`$sm3$` 恒 32 字节；无绕过写入路径。仅对「人工直接改库的历史脏数据」在上线说明里提示（代码层不产生） |
-| **DECISION-例外陈旧窗口** | **要求立即一致，做联动失效** | `CACHE-02` 必做（非可选项）：规则写成功后 `GetByWorkstation` 的 exception 字段立即一致 | `reconciliation_service.go:821-834` 5min TTL 缓存含 `exceptionHit/AppliedActions`；同文件 `InvalidateWorkstationHealth` 已是正确范式但无联动 |
+| D1 | `NewServiceGroup` 第 5 参传 `nil`（passwordCipher） | `rpa_router.go:24,51`；探针 panic: nil pointer | 凭证创建/更新必然 500 |
+| D2 | 三列表 `Status *int` vs 前端字符串 | 探针 `cannot unmarshal string into ... status of type int` | 任务/Worker/执行列表状态筛选必然 400 |
+| D3 | 任务名筛选用 `task_name`（真列是 `name`） | 探针 `no such column: task_name` | 任务名搜索必然 500 |
+| D4 | 选择器模型无 `TableName()`，真表是 `sys_rpa_selector_success` | 探针 `no such table: selector_success_records` | 11 个 AI 选择器端点 + `LearnFromExecution` 必然 500 |
+| D5 | 任务 Create/Update 丢 `Tags`；`Status>0`/`Priority>0` 判定 | `task_service.go:84-132` | 标签死字段；无法改回停用/优先级 0 |
+| D6 | 执行记录从不写 `worker_id` | `execution_service.go:50`、`worker_service.go:222` | Worker 列恒空、按 Worker 筛选无效 |
+| D7 | 会话放消息顶层，Worker 只读 `Variables["__sessionData"]` | `task_service.go:287` vs `engine.go:626` | 会话复用永不生效 |
+| D8 | `applySessionData` 全是 `logger.Debug` 占位 | `engine.go:730,740` | cookie/localStorage/token 均未注入 |
+| D9 | `extractTargetSystem` 恒返回 `"default"`；`deptID` 传空 | `task_service.go:372`、`:296` | 按系统匹配凭证、部门共享凭证失效 |
+| D10 | 取消只改 DB，无 Redis 通道；Worker 无订阅 | `execution_service.go:Cancel` | 取消后被 Worker 覆盖回 success |
+| D11 | `pause` 等 `worker:human-input:*`，后端只写表不 publish | `engine.go:499` vs `excel_service.go` | 任何 pause 必然超时失败 |
+| D12 | 批量报告硬编码 `100/95/5`；创建/更新为空函数 | `excel_service.go:GetBatchExecutionReport` | 批量功能全是假数据 |
+| D13 | 自动扩缩容配置 GET 返回常量、POST 只记 operlog | `worker_handler.go:358-390` | 配置不可持久化 |
+| D14 | `WorkerHandler` 每实例 new redis.Client | `worker_handler.go:36-45` | 连接泄漏（公开组+主组各一） |
+| D15 | 前端 AI 编辑器是 `setTimeout(1500)` + mock | `AIScriptEditor.tsx:100-101` | 后端 11 个 AI 端点零调用 |
+| D16 | `useRPAProgress` 零调用方 | 全仓 grep | 实时进度未接线，执行页靠轮询 |
+| D17 | 每 page 启动独立 Chrome 进程 | `chrome_page.go:MustLaunch()` | `max_pages` 语义错位，内存线性爆炸 |
+| D18 | `sys_rpa_schedules` 有表有模型，零服务/零 API 读写 | `database.go:894` 注释自认 | 定时执行 RPA 事实上不可用 |
+| D19 | `flow_handler/data_mapper/error_handling` 为死代码 | `NewFlowHandler` 等无调用方 | 维护面虚高 |
+| D20 | Worker `types.go` 声明 upload/download/evaluate/condition 等，`engine.go` 无 case | switch 缺失 | 前端动作选项执行即 `unsupported action type` |
 
-> 5 项裁定已全部落地到下方 REQ；原「Future Requirements / 待产品决策」段整体退役，其中未纳入本期的仅剩「CI PG 双跑」一条前置依赖（见 Out of Scope）。
+## 用户三条新方向 → 本里程碑落点
 
-## 范围裁定（用户 2026-11-09 最终版）
+| 用户方向 | 落点 |
+|---|---|
+| 「一般员工可以使用其方便的做一些繁琐的重复的流程化任务，操作够简单」 | NOCODE 全部 + CONTRACT（先修 500/panic，否则谈不上可用） |
+| 「满足一般浏览器的所有操作」 | ENGINE-01~05（动作全集 + 选择器阶梯 + 真实浏览器验收） |
+| 「无头浏览器可视化页面…渲染一个页面出来展示现状，用户随时接管浏览器和 rpa 协作」 | LIVEVIEW-01~05（screencast 帧流 + 输入注入 + 三模式 + 叠加层 + 审计） |
+| 「VDI 虚拟机管理…一 VM 多容器 vs 一容器多浏览器」 | FLEET-01~03 + `notes/261123-rpa-worker-capacity-model.md` |
 
-- **纳入：6 项 LOCKED / 7 个子项全覆盖**（③ 拆 A/B）：① P1-5 侧信道（A+B）、② 5 项豁免面、③-A `RightCast:"text"`、③-B PG 专属 CTE、④ operlog e2e 静态门禁、⑤ `invalidateCache` no-op、⑥ `pbkdf2SM3` 契约。
-- **不纳入**：79 条人工验证跟踪表（保持 0 勾选）、FIX-01/04/09/13 验证类残余、v1.54 新增 7 项 Known Gaps（GAP-01~07）、CI 新建 PG service（登记为前置依赖）。
-- **FUTURE-01 随 ① 根治一并关闭**（✅ v1.55 收档已关闭，4 处引用已清理），不再单列挂账。
-- **Phase 编号**：延续 v1.54（结束于 144），从 **145** 续编。
-- **跳过领域研究**：7 个子项均带本仓 `文件:行号` 实证与现成改写范本，无新领域能力需调研（沿用 v1.53/v1.54 先例）；根因报告即研究输入。
-- **零新依赖**；遵循 Handler-Service / `response.Success()/Error()` / operlog 写操作约定 / SQLite+PG 双方言 / 前端 wrapped API / 构建产物只落 `out/`。
+**承载模型结论（结构性已定，数字待 FLEET-03 实测回填）:** 默认 **一 VM 一 Worker 容器 + 容器内 1 Chromium + N page（N = `worker.max_concurrency`）**；扩容粒度 **VM 不是容器**（由 VDI API 编排）；「一 VM 多容器」仅保留给多租户/多浏览器版本/滚动升级，且要求 VM ≥32GB、每容器 shm ≤1GB。
 
-## v1.55 Requirements
+## v1.56 Requirements
 
-### SCOPE — data_scope 豁免面根治（②）
+### CONTRACT — P0 契约修复（先让已存在的功能真的能用）
 
-- [x] **SCOPE-01**: 5 类读端点（walls / doors / floor-plan-texts / rooms-photos / location-alias）在**统一父资源可见性校验**下按可见集裁剪——walls/doors/floor-plan-texts 经 `floor_id → ops_floors/ops_buildings` 归属链、rooms-photos 经 `room_id → serverRoom → building` 两级链（复用 `scope_entities.go` 的 `entityExistsSub` + `wrapScopeExists`），location-alias 按已有 `dept_id ∈ 可见集` 直挂；断链（floor/room 软删或不存在）fail-closed 空集。
-- [x] **SCOPE-02**: `internal/api/router.go:1174-1177` 的 rooms/photos 组补挂 `middleware.DataScopePermission(core)`（当前**连中间件都没挂**，比「豁免」更基础的接线遗漏）；`GetByID` / count / primary / batch-delete 前置全部走可见集校验。
-- [x] **SCOPE-03**: 写端点（Create/Update/Delete/Batch）对越界 `floor_id`/`room_id` 返回显式 403（单条）或按可见集裁剪（批量，复用 `scope_write.go:282-320` 的 `visibleIDsForEntityWrite`）；**必须修保存侧**：`useFloorPlanEditor.ts:156-186` 的「整层拉取 → 整体覆写」不得让非超管误删自己看不到的几何元素。响应形状不变（只裁剪行，不改 `list`/`total`/字段）。
-- [x] **SCOPE-04**: 双方言（PG + SQLite）403 矩阵 + 断链脏数据抽查断言一致；`133-UAT.md:79-91` 的 D1/D2「确认未收口」结论作废并登记重跑窗口；若这些端点将来加缓存，key 必须含 `scopeCacheKey(ctx)`。
-  - **零迁移**（方案 D）：不新增 `org_id` 冗余列（方案 E）、不把几何合并进楼层 JSONB（方案 F）。
+- [ ] **CONTRACT-01**: 凭证链路端到端可用 —— 两处 `NewServiceGroup` 注入 `core.SM4Cipher`；`CredentialService` 对 nil cipher 显式报错而非 panic；凭证 CRUD + 会话创建/失效在 sqlite 与 PG 均通过真实 HTTP 层用例（不用服务层 fake cipher 顶替验收）。
+- [ ] **CONTRACT-02**: 三张列表状态筛选前后端同构 —— `TaskListParams.Status` 改用任务枚举（0/1）、`WorkerListParams.Status` 与 `ExecutionListParams.Status` 改用状态字符串；前端任务页筛选值改为任务态（启用/停用）而非执行态字符串；`"pending"`/`"online"`/`""`/`null` 边界各有用例，非法枚举返回 400 且错误可读。
+- [ ] **CONTRACT-03**: 任务搜索与字段无损 —— 任务名筛选改用真实列 `name`；Create/Update 保存 `tags`；`Status`/`Priority` 用指针语义区分「未传」与「传 0」；前后端优先级取值域统一（迁移或适配二选一，PLAN 中给出裁定）；建→查→改→查 逐字段 round-trip 断言。
+- [ ] **CONTRACT-04**: 选择器学习表打通 —— 两模型补 `TableName()` 指向 `sys_rpa_selector_success`/`sys_rpa_selector_failure`；加入 `scripts/dbprovision` 与 sqlite AutoMigrate 清单；删除测试里手写 `CREATE TABLE selector_success_records` 的掩盖式 DDL，改为断言「真实迁移后可直接写入」；11 个 `/rpa/ai/selector/*` 端点各一条真库用例。
+- [ ] **CONTRACT-05**: 前端不再用 mock 冒充 —— `AIScriptEditor` 实调 `POST /rpa/ai/generate`（含失败态/超时态/空结果态）；`useRPAProgress` 接入执行页替换轮询；两者均有组件测试断言「发出真实请求」而非 `setTimeout`。
+- [ ] **CONTRACT-06**: 契约回归闸门 —— 新增 `internal/api/v1/rpa` HTTP 层冒烟（httptest + sqlite 真表，非 mock service），覆盖 6 条 P0 缺陷对应请求；纳入 CI 硬门禁；并把「禁止在 handler 测试里用自建表/mock 掩盖真实 schema」写入 `AGENTS.md` 或等价文档。
 
-### DIALECT — 双方言 SQL 根治（③）
+### RUNTIME — 执行闭环（让任务真的能跑完、能停、能干预）
 
-- [x] **DIALECT-01**（③-A）: 删除 `RightCast` 承载 `"::"` 方言片段的机制（`excel_export_config.go:18,351/355/359`），改为语义枚举 + service 统一 `CAST(id AS TEXT)`（**单侧**即可，`IN ?` 参数是 Go 字符串）；`resolveAssociations` 的 3 个关联列在 SQLite 与 PG 均产出相同非空结果，不再 `logger.Warnf + continue` 静默降级为整列空；补 P1-8 式 DryRun 静态断言（导出路径 SQL 不含 `::`）+ SQLite 实跑断言。
-- [x] **DIALECT-02**（③-B）: 单工位 `GetPhysicalDevices`（`workstation_device_service.go:426-535`）与批量 `GetPhysicalDevicesByWorkstations`（`:2151-2234`）**从根源消除 PG 专属 raw CTE**——推荐拆多次 GORM 链式查询 + Go 层归一化/去重/排序（复用 `diagnosePhysicalChain:701-799` 与 `physicalDevicesFetcher` 注入，保证「不存在第二套 recall 逻辑」）；`DISTINCT ON` / `REGEXP_REPLACE` / `NULLS LAST` / `id::text` 全部归零，SQLite 与 PG 返回逐字段一致结果（含归一化/置信度/Top-1 口径）。
-- [x] **DIALECT-03**（③-B 配套）: 改写 4+ 个「把 PG CTE 报错当预期」的既有测试（`workstation_device_77_01_test.go:9-11,568-620`、`excel_export_chain_77_02_test.go:458-480`、`workstation_physical_diagnosis_test.go:401-403`）为真实结果断言；`SkipSoftDelete:true` 两处语义保留。
-  - **明确禁止**：加 `isPostgres` 方言分支（两套 SQL 口径必分叉，是补丁不是根治）；CTE 下沉双方言视图（带 `?` 参数，视图无法参数化）。
-- [x] **DIALECT-04**（防复发机制）: ① `.golangci.yml` 启用 `forbidigo` 禁方言 token（`::text|::uuid|DISTINCT ON|REGEXP_REPLACE|NULLS LAST|ILIKE|ON CONFLICT`，存量先白名单逐步收敛；不得一刀切禁全部 raw SQL——406 文件含 `.Raw(`）② 视预算抽 `dialect` 语义原语（`CastToText` / `Top1PerGroup` / `NormalizeMac`），配置里禁止出现 SQL 片段 ③ **CI 注入 `TEST_PG_DSN` 双跑登记为前置依赖**（用户裁定本期不建 `services: postgres`），在 REQ/SUMMARY 显式写「需新建 PG service + 迁移引导后方可升级」，**不伪造双跑**。
+- [ ] **RUNTIME-01**: 执行记录写 Worker 归属 —— Worker 首次上报进度/心跳时按 `worker_id` 反查 Worker 回写 execution 的 `worker_id`/`worker_name`（并发安全 + 幂等）；Worker 列、按 Worker 筛选、WebSocket 消息三处均有用例。
+- [ ] **RUNTIME-02**: 会话与凭证真正生效 —— 后端把有效会话注入 `Variables["__sessionData"]`（顶层字段保留兼容）；Worker `applySessionData` 真正 `page.SetCookies` + localStorage 注入 + token 头注入；`extractTargetSystem` 改为可配置映射（任务/凭证显式 `targetSystem` 优先、其次 URL host 规则）；`deptID` 从执行上下文取真实值。
+- [ ] **RUNTIME-03**: 取消可中断 —— 新增 Redis 通道 `worker:cancel:{workerId}:{executionId}`（或等价 stream 指令），Worker 订阅后 cancel 该任务 ctx 并上报 `cancelled` 终态；后端 `Cancel` 发布指令且对「已终态」「Worker 离线」返回明确语义；前端执行页提供取消入口（二次确认 + 权限码）。
+- [ ] **RUNTIME-04**: 人工干预双向闭环 —— Worker `pause` 上报后写入 `sys_rpa_human_interventions`；后端 `SubmitHumanIntervention` 校验 `action ∈ resume/skip/abort` 后 publish 到 `worker:human-input:{workerId}:{executionId}`；Worker 收到后按 action 继续/跳过/中止；超时与「用户未响应」UI 可区分；全链路有真 Redis（miniredis 或等价）集成用例。
+- [ ] **RUNTIME-05**: 执行状态机收敛 —— 显式状态机（pending→running→(paused)→success/failed/cancelled/timeout），非法迁移拒绝并记 WARN；`cancelled` 不得被后续 `success` 覆盖；`timeout` 由 Worker 侧 `TaskTimeout` 主动上报；状态迁移矩阵单测 + 幂等重放用例。
 
-### AUDIT — operlog 静态门禁根治（④）
+### ENGINE — 执行引擎与「一般浏览器所有操作」
 
-- [x] **AUDIT-01**: 把 `scripts/operlog_e2e_verify.sh:68-151` 的**静态段从 shell 拆出改写成 Go 单测**并纳入 `go test ./internal/...`（`ci.yml:62-63` 天然硬门禁）：① `operlog.Record|RecordWithBody` 全 `internal/` 调用数 ≥290 ② `sensitiveKeys` 条目 ≥17 ③ `internal/api/v1/**/*_handler.go` 的 `*Handler` 方法文件逐文件覆盖扫描（0 命中且不在 `READONLY_ALLOWLIST` → FAIL）。可复用 `internal/utils/operlog/regression_test.go`（`go/ast` 锁 25 常量）与 `coverage_test.go`（脱敏）现成基建，补约 80-120 行 `go/parser` 扫描。
-- [x] **AUDIT-02**: 验收「零 `ADMIN_USER`/`ADMIN_PASSWORD`/`DEV_MODE`/`SKIP_E2E`/`SKIP_LIVE`、零 running backend、零 DB、**任意 cwd** 下静态 3 项断言真实执行且失败会红」；LIVE 段保留 shell、缺凭据仍 `exit 1`（恢复脚本注释声明的语义，不改 LIVE 行为）。
-- [x] **AUDIT-03**: 顺带处置两份 `operlog_e2e_verify.sh` 重复副本（仅 1 行注释不同）与 `scripts/README.md` 登记（AGENTS.md 目录治理）；**不做** shell 整体替换为 Go e2e（会把 CI 硬门禁与需凭据 live 重新耦合，复现同类缺陷）。
-  - **必须同时修 cwd 锚定**：当前 Go driver 未设 `cmd.Dir`、脚本用相对仓库根路径，包子目录下 `CALLS=0` / 目标文件不存在 → 仅挪门禁顺序连缓解都不算（假绿）。
+- [ ] **ENGINE-01**: 浏览器承载改造 —— `Pool` 语义从「Chrome 进程池」改为「page 池」：`browser.Manager` 持有 1 个 `rod.Browser`、按需 `NewPage`；`Page.Close()` 只关 page，Chrome 崩溃时整池重建；`worker.max_concurrency` 与 `browser.max_pages` 合并为单一「并发页面数」配置（旧键保留兼容并告警）；N page 下 RSS 增长基线写入验收。
+- [ ] **ENGINE-02**: 动作全集（浏览器常用操作零缺口）—— 实现并通过真实 Chromium 用例：`upload`（`Element.SetFiles`）、`download`（`Browser.WaitDownload` + 产物归档）、`evaluate`（JS 执行与返回值入变量）、`assert`（断言 + 失败即终止策略）、`hover`、`doubleClick`、`rightClick`、`drag`（含 HTML5 drag 兼容策略）、`keyboard`（组合键/快捷键）、`scroll`（元素内滚动）、`condition`（真条件分支，不再是空 case）、`close`（关闭当前 page/标签）、`switchTab`、`iframe`（进入/退出 frame）；未实现动作提交时被静态断言拦截（`types.go` 枚举与 `engine.go` switch 一致性测试）。
+- [ ] **ENGINE-03**: 选择器阶梯与自愈 —— 元素定位按 `data-testid > role+name > aria-label > 稳定属性(id/name) > 文本 > 结构路径 > XPath` 阶梯尝试（`rod` 的 `Has/HasR/ElementR/Search`）；失败自动尝试下一级并记录命中层级；连续失败达阈值触发选择器学习告警（复用 `RecordFailure`）；阶梯评分单测 + 真实页面命中用例；约定「录制生成的选择器优先落 testid/role」。
+- [ ] **ENGINE-04**: 变量与数据流 —— 变量作用域（任务级/循环项级/会话级）显式化；`${var}` 与嵌套 `a.b[0].c` 支持；变量未定义按策略（严格失败 / 空串，可配）；extract 结果回写变量并可被后续动作引用；敏感变量（凭证）在日志与上报中脱敏（复用 operlog 敏感键机制）。
+- [ ] **ENGINE-05**: 真实浏览器验收基线 —— `rpa-worker` 建立可重复集成测试：容器内 Chromium 起真实页面（httptest 或内嵌 fixture），覆盖 ENGINE-02 全部动作 + ENGINE-03 阶梯 + 失败重试；`rpa-worker` 的 `go test ./...` 从「仅 browser 包有测试」变为 executor/worker/communication 均有真实用例；CI 以 `-short` 跳过重型用例但保留轻量兜底。
 
-### CACHE — 缓存失效契约根治（⑤）
+### LIVEVIEW — 无头浏览器可视化与人工接管
 
-- [x] **CACHE-01**: 删除死键 `CacheKeyReconciliationExceptionRuleList` / `GetReconciliationExceptionRuleListKey()` 与空函数体 `invalidateCache()`（`reconciliation_exception.go:578-580`），消除「定义缓存键却从不读写 + 失效函数为空」的悬空契约；4 个写路径（Create/Update/Delete/ImportFromExcel）的调用点同步清理。
-- [x] **CACHE-02**（**用户裁定：必做，不允许 5min 陈旧**）: 补**真实陈旧点**的联动失效：`reconciliation_service.go:821-834` 的 `GetByWorkstation` 5min TTL 缓存中 `exceptionHit/AppliedActions` 随例外规则变更陈旧 —— 规则写成功后按同文件 `InvalidateWorkstationHealth`（`cache_keys.go:129-134`，接 cache 参数、nil-safe、真调 Delete）范式广播失效，或把 exception 字段从缓存结果中剥离；**保留 5min 缓存不动其性能价值，但要求写后立即一致**。
-- [x] **CACHE-03**: 验收「写后读必一致」（List/GetByID/MatchTest/MatchException/DetectLayer3/`GetByWorkstation` 同进程立即反映新规则）、`Cache.Type=memory`（`*MemoryCache`）与 `redis`（`*MultiLevelCache`）两种配置行为一致、失效动作可观测且失败可传播（返回 error 或日志/metric，禁止空函数）。
-  - **明确作废**触发条件「项目接入 Redis 后补 `core.Cache.Delete(ctx, 死键)`」——L1/L2 都支持 Delete，该处方删的是从没人写过的键，且无 Redis 时同样不生效。
-  - **不推荐**改全局 `CacheProvider` 接口禁 no-op（20+ 消费文件/大量 mock 连锁改，未命中真实陈旧点，仅为缓解）。
+- [ ] **LIVEVIEW-01**: 实时画面帧流 —— Worker 对执行中 page 启 `Page.startScreencast`（`format=jpeg`、`quality`/`maxWidth` 可配、按客户端 ACK 节流），帧经 WebSocket 推前端；单路带宽与帧率有实测基线（默认目标 ≥8fps / ≤3Mbps@1280×720，可降档）；无执行时停流（不空转烧 CPU）。
+- [ ] **LIVEVIEW-02**: 输入注入与接管 —— 前端画面上的点击/移动/滚轮/键盘事件映射为 CDP `Input.dispatchMouseEvent`/`dispatchKeyEvent` 注入同一 page；坐标系缩放正确（画布尺寸 ↔ viewport）；接管期间 RPA 动作暂停，释放后恢复；输入注入有权限码与操作审计（谁在何时接管了哪个执行）。
+- [ ] **LIVEVIEW-03**: 三种协作模式 —— `auto`（全自动）、`copilot`（关键节点暂停等确认，默认推荐）、`manual`（完全人工）；模式可在任务级设置并在执行中切换（切换记审计与时间线事件）；copilot 的暂停点支持「动作级标记 + 失败自动暂停」两种来源；状态机与 RUNTIME-05 共用同一套枚举。
+- [ ] **LIVEVIEW-04**: 画面叠加层与独立页 —— 画面上叠加步骤序号/总步数、动作类型、最近日志、关键变量（脱敏后）、「已接管/自动执行」角标；前端有独立「RPA 实时画面」页（`pages/operations/rpa/live` 或等价），可从执行详情跳转，支持多执行并行观看时的列表与切换。
+- [ ] **LIVEVIEW-05**: 安全与资源边界 —— 画面流与输入注入仅对「有权查看该执行」的用户开放（复用 `ops:rpa:execution:list` + 数据范围）；同一 page 同一时刻只允许一个接管者（抢占需显式确认）；用户断开后 N 秒内停流；单 Worker 同时推流路数上限可配（默认 2），超限返回可读错误而非静默降级。
 
-### CRYPTO — KDF 契约根治（⑥）
+### NOCODE — 员工零门槛
 
-- [x] **CRYPTO-01**: `pbkdf2SM3`（`password.go:69-97`）把未定义行为变定义行为——`keyLen<=0` / `keyLen>32` / `iterations<=0` 显式返回 `error`（项目禁 panic），杜绝 `result[32:]` 静默全零弱密钥；`HashPassword`/`VerifyPassword` 同步接错误。
-- [x] **CRYPTO-02**（**用户裁定：免盘点，直接上守卫**）: `VerifyPassword:149` 当前用 `len(hashBytes)` 作 keyLen（裁定「全部调用点 32」不成立）——显式校验 `len(hashBytes)==32`，非 32 字节哈希属损坏/伪造数据，按产品决策报错或返回 false，不再喂给 KDF。代码实证所有写入路径均经 `HashPassword` 产出恒 32 字节 `$sm3$`，**无需生产盘点、无需迁移**；仅在上线说明提示「人工直接改库的历史脏数据」风险（代码层不产生）。
-- [x] **CRYPTO-03**: **向后兼容硬约束**——`keyLen=32` 时输出逐字节不变；新增黄金向量测试（固定 password/salt/iterations 固化 hex，锁重构前后一致，不能只靠 Hash↔Verify 自洽），存量 `$sm3$<iter>$<salt>$<32字节hash>` 与 600k 默认 / 100k 旧哈希无需迁移；`$sm3$` 格式、`DefaultPasswordConfig`、25 个 operlog 常量均不变。
-- [x] **CRYPTO-04**（可选能力扩展，非消除当前隐患的必要条件）: 若产品确认未来需要 >32 派生（当前**无** SM4/会话/token 派生用途），再补完整 PBKDF2-SM3 多块循环（INT32_BE(i)、每块独立 `New/Reset`、`dk[:keyLen]` 截断、`make+append` 避免 `:75` slice 别名），用独立 oracle `golang.org/x/crypto/pbkdf2.Key(sm3.New,...)` 比对 `keyLen=33/64/65`、断言 `DK(64)[0:32]==DK(32)`。**守卫仍为主防线**，补循环不叠加守卫只算缓解。
+- [ ] **NOCODE-01**: 页面内录制即生成 —— `Page.evalOnNewDocument` 注入监听器捕获 click/input/change/submit/select/navigate/key，按时间与去抖聚类成动作序列；录制过程生成中文「可读步骤描述」，结束即产出可直接保存的任务草稿；不依赖浏览器插件（零分发成本）。
+- [ ] **NOCODE-02**: 元素拾取器 —— 在 LIVEVIEW 画面上「点选元素」直接生成选择器（按 ENGINE-03 阶梯生成候选并展示置信度），用户可一键换用次选；拾取结果写回录制/编辑中的任务；iframe 内也可用。
+- [ ] **NOCODE-03**: 自然语言生成落真 —— 前端 AI 编辑器接 `POST /rpa/ai/generate`（CONTRACT-05），后端返回的 `actions` 必须通过 `types.go` 动作枚举校验（非法动作服务端拒绝并给出可读原因）；生成结果可「一键转录制/一键编辑」；AI 不可用时降级为「录制」入口而非报错死路。
+- [ ] **NOCODE-04**: 三步向导 + 开箱模板 —— 新建任务向导固定三步：① 选模板或「录一段」 ② 选运行时机（手动/定时/立即一次） ③ 选凭证与通知；内置 ≥6 个开箱模板（登录取数、表单批量填报、报表下载、跨系统搬数、定时巡检、文件上传），模板带中文说明与示例数据；向导全流程有前端测试；「一般员工」路径的点击次数与字段数在 PLAN 中给出明确上限并断言。
 
-### SIDECHANNEL — P1-5 聚合计数侧信道根治（①，用户 2026-11-09 裁定纳入）
+### FLEET — 承载、容量与 VDI 编排
 
-> **根治定义**：任何非 All 档用户，通过单请求或多次请求组合，都无法从响应体（含状态码、任何数值/序号/数组长度）推导出「可见集之外的资源规模」或「越界资源是否存在/有多少」。
-> **方案 A+B 组合**（用户裁定）：A = 响应体去规模化（信息论根治），B = 统一 ScopedDB 防回归（见 `ARCH-01` / `SIDECHANNEL-04`）。只做 A 不做 B，未来新增端点仍可能漏挂；只做 B 不做 A，响应体仍可显式算「全库−可见」差值。
+- [ ] **FLEET-01**: 扩缩容 provider 化 —— `ScalingService` 的 Docker 依赖抽象为 provider 接口：`ContainerProvider`（本地/单机，保留现 mock 供测试）与 `VDIVMProvider`（生产，走 `internal/services/vdi` 的 `CreateVM/StartVM/StopVM/ListVMs/GetVMInfo`）；按 `rpa.scaling.provider` 选择；provider 能力差异显式声明（如 VDI 不支持容器级缩容）。
+- [ ] **FLEET-02**: 「一 VM 一容器一 Chromium」落地 —— 提供 VDI 镜像构建与首启脚本：预装 Chromium + worker + 单容器 systemd 单元；容器内 `max_concurrency = N`、shm/内存按 `notes/261123-rpa-worker-capacity-model.md` 参数表设置；docker-compose 与 VDI 部署两条路径各一份权威配置，CI 校验关键参数不漂移。
+- [ ] **FLEET-03**: 容量实测矩阵回填 —— 在真实 VDI VM（8GB/4vCPU 与 16GB/8vCPU 各一档）跑压测：N = 1/2/4/8 并发下的 P95 执行时延、Chrome 崩溃率、OOM 率、单路 LIVEVIEW 带宽；实测数字回填承载模型笔记的「待实测」处并给出推荐默认 `max_concurrency`；实测不可执行时**必须显式登记为 UAT 待办**，不得用推算数字充数。
 
-- [x] **SIDECHANNEL-01**（A-响应体）: 删除 `BackfillDeptResult` 的 `ScopeTotal` / `ScopeVisible` / `ScopeOutOfScope` / `ScopeDeptTotal`（`workstation_service.go:110-134`）及全库派生的 `SkippedNoUser` / `SkippedBadUserDept`（`:681-682`）；**去掉 `workstation_service.go:666-669` 的全库 `countQ`**（或改为带 `visibleCond`），消除「一条带 scope 的 candidateQ + 一条不带 scope 的 COUNT + 相减」双口径；`ToFill`/`ToCorrect`（可见集内）可保留。
-- [x] **SIDECHANNEL-02**（A-导入/审计边界）: `ImportResult.Errors[].Row` 实际行号（`excel_service.go:62-67`）与 `ScopeOutOfScope`（`:83`）不回显越界行位置与数量，越界行改为静默跳过或仅记录到服务端 operlog；`ScopeWriteOperParam`（`scope_write.go:730-738`）的 `requested/visible/outOfScope` **保留在服务端审计链但不进入 HTTP 响应**。
-- [x] **SIDECHANNEL-03**（A-前端/验收/All 档）: 作废 132-SUMMARY.md:74 的四类「本次范围：…（共 N 条）」文案与 `useBackfillDept.tsx` 确认框（`scopeWriteBackfillSnapshot`），改为不含全库规模的可见集内表述；**All 档响应形状/数值零回归**；新增「差分攻击测试」：构造「全库 N 行、可见 M 行」，用两个相邻 scope（Dept / DeptChild）各请求一次，断言响应体所有数值字段仅随 M 变化、不随 N−M 变化，重复请求不得通过 `Row`/数组长度/`total` 枚举出 N；重跑 132/133 backfill 相关 UAT。
-- [x] **SIDECHANNEL-04**（B-防回归，与 `ARCH-01` 同 phase）: 所有 `COUNT(*)` / `SUM` 与明细查询同源——8 个 `/statistics`、分页 `total`、`counts-by-floor`（`router.go:914`）、`dept-options`、`workstations-all`；用 `pg_contract_test.go` + SQLite 双跑，对同一 `ScopeResult` 断言 COUNT 结果与 `List` 行数一致；operlog 审计链不降级。
+### CLEANUP — 收尾真相化
 
-### ARCH — 统一 ScopedDB（① 的 B 组成 + ② 机制化，**用户裁定升级为必需**）
-
-- [x] **ARCH-01**: `DataScopePermission` 注入 `ScopeResult`（已有 `pkg/datascope` 单一真实源）→ **统一 ScopedDB**：GORM `Scopes` 强制唯一查询起链点（禁止裸 `s.db.WithContext(ctx)` 起链）+「资源归属注册表」（引用 `effectiveOrgExpr` / 归属链 EXISTS 骨架 / `dept_id` 直挂，禁止内联复制，符合项目「单一真实源」约定）+ 内建 `scopeCacheKey(ctx)` → **响应契约层**禁止任何「全库规模 − 可见规模」回显。
-  - **同时解 ①②**：② 的 5 类端点在注册表登记后自动获得可见集谓词（修「中间件挂了没接线」）；① 的任何 `COUNT(*)` 从 ScopedDB 起链后天然同源。
-  - **硬约束**：触及 `base.GORMRepository` 全仓基座（485 Go 文件）与 system/vdi 零回归保证，需全量 `go build ./...` + `go test ./...` 守护；**必须保留「未注入 ctx → All 兜底」短路**（`scope_filter.go:37-39`、`datascope.go:6`）；`EXISTS (?) + CAST AS TEXT` 已验证双方言。
-  - **不可行方向（勿立项）**：DB 视图（可见集每用户动态、无法参数化）、PG RLS（SQLite 无 RLS、Go 共享连接池串味需每请求 `SET LOCAL` 独占事务、双方言两套安全模型）、按用户分表（`org_id` 可变、与 UUID 单表模型冲突）。
+- [ ] **CLEANUP-01**: 假数据清零 —— 批量报告真实落库（`sys_rpa_executions.batch_report` 等既有列）+ 逐项状态更新；自动扩缩容配置持久化到 `sys_config` 并热生效；`GetBatchExecutionReport` / `UpdateAutoScaleConfig` 各有「写入后读取一致」用例；删除所有硬编码假结果路径。
+- [ ] **CLEANUP-02**: 定时调度接通 —— `sys_rpa_schedules` 接入 `internal/scheduler`：CRUD API + 启动时注册 cron job（`rpa_task` + `task_id`）+ 下次/上次运行时间回写 + 停用即摘除 job；调度触发与手动触发共用同一执行入口且 `trigger_type=schedule`；有「到点真触发」集成用例（可用秒级 cron）。
+- [ ] **CLEANUP-03**: 死代码与泄漏清理 —— `flow_handler.go`（7 端点）/`data_mapper.go`/`error_handling.go` 三选一：删除，或明确保留为 service 内部能力并加使用方与豁免说明；`WorkerHandler` 复用 `core.Cache` 的 Redis 客户端（不再每实例 `redis.NewClient`）；`docs/RPA系统完成状态报告.md` 等失真文档更新为与代码一致；`grep` 断言「无未使用导出符号」「无每实例 Redis 连接」纳入 CI 或 lint。
 
 ## Out of Scope
 
-| Feature | Reason |
+| 项 | 理由 |
 |---|---|
-| 79 条人工验证跟踪项的实际执行与勾选 | 需生产 PG 只读 / 写授权 / 现场真机 / DBA 回传；保持 0 勾选，AI 不擅自写生产数据 |
-| FIX-01 实机 AD UAT / FIX-04 真机逐型号取证 / FIX-09 HTTP P99 压测 / FIX-13 生产库 migration 236/237 | 验证类残余，不伪造闭环 |
-| v1.54 新增 7 项 Known Gaps（GAP-01~07） | 已在 `STATE.md ## Deferred Items` v1.54 行登记，属后续候选；本里程碑专注 LOCKED 根治 |
-| **CI 新建 `services: postgres` + 注入 `TEST_PG_DSN` 双跑** | 用户 2026-11-09 裁定本期不建，登记为 **DIALECT-04③ 前置依赖**；不伪造双跑 |
-| PG RLS / DB 视图 / 按用户分表 | Go+GORM+SQLite/PG 双方言下不可行（见 ARCH-01） |
-| shell 整体替换为 Go e2e / 加 `isPostgres` 方言分支 / 加告警通道代替 ① 根治 / 「接 Redis 后补 Delete」/ 仅调门禁顺序 | 均为补丁或无效处方，按用户「不打补丁」标准排除 |
-| 新领域能力、新外部依赖 | 7 个子项均有本仓现成范本与实证，零新依赖 |
-| ~~FUTURE-01 单独挂账~~ | ✅ v1.55 收档已关闭（随 ① 的 A+B 根治一并关闭，4 处引用已清理），不再单列 |
+| 浏览器插件式录制（Chrome Extension） | 分发与签名成本高；`evalOnNewDocument` 页内注入已覆盖录制需求（NOCODE-01） |
+| VNC / WebRTC / 独立远程桌面栈 | 与「复用同一 Chromium」目标冲突；CDP screencast + 输入注入足够，零新增重量级依赖 |
+| 桌面（非浏览器）自动化（Win32/键鼠宏） | 目标用户诉求与部署形态（Linux 无头 VM）不支持 |
+| 移动端 App / 小程序 | Web-first，本期不做 |
+| 多租户隔离（每租户独立 Worker 池/配额计费） | 需组织模型与计费体系，超出本期；FLEET 只保留「一 VM 多容器」技术选项 |
+| AI Agent 全自主（无人值守长链路决策） | 目标用户是一般员工，copilot 优先；AI 只做生成/修复建议 |
+| 存量「v1.56 候选」代码的 UAT 追认（备份恢复/设置页收敛） | 缺真实环境证据，按 `notes/SHIPPED-DEFINITION.md` 只登记不追认，不混入本期 REQ |
+| 79 条人工验证跟踪表 | 维持 0 勾选口径，不因本里程碑改写 |
 
-## Constraints (inherited + v1.55 新增)
-- Handler-Service；service 返回 `error`；`response.Success()` / `response.Error()`（禁止裸 `c.JSON`）；写操作 success path 在 `response.Success` **之前** `operlog.Record(...)`；敏感端点 `RecordWithBody`。
-- `0=正常 1=停用`；UUID 主键；**SQLite+PG 双方言**（纯 GORM / `CAST AS TEXT` / 禁 `::uuid`/`ILIKE`/裸 `ON CONFLICT`）；PG contract 门控变量名 `TEST_PG_DSN`（本期仍为前置依赖）。
-- 前端 wrapped API（`@/lib/api.ts`）、Zustand、禁止裸 axios、`useEffect` 依赖稳定。
-- Go 单测就近 `*_test.go`；集成 `tests/integration/`；e2e `tests/e2e/`；前端 `*.test.ts(x)`。
-- 构建产物只落 `out/`；Excel 模板动态生成、禁止落盘 `.xlsx`；`data/` 不入库。
-- **向后兼容**：`keyLen=32` KDF 输出逐字节不变、25 个 operlog 常量值不重排、② 响应形状不变、**① All 档响应形状/数值零回归**、`datascope` 未注入 ctx → All 兜底短路不变。
-- **① 专项**：132-SUMMARY.md:74 四类前端文案与 `useBackfillDept.tsx` 确认框作废需产品/QA 确认；132/133 backfill 相关 UAT 作废重跑窗口由 QA 裁定；~~FUTURE-01 在 ① 落地后由 Lead 同步清理 4 处引用~~ → **✅ v1.55 收档已清理完毕**。
-- 回归基线：`go build ./...` + `go test ./...` + `tsc` + `lint:ci`（含新增 forbidigo） + `vitest` 全绿；ARCH-01 改动后必须跑全量矩阵。
+## Constraints (inherited + v1.56 新增)
 
-## Traceability（v1.55 ROADMAP 已生成 · Phases 145-151）
+- **Handler-Service 分层**：handler 只做绑定/校验/响应，业务在 service；`response.Success()/Error()` 包装。
+- **operlog 写操作**：写操作 success path 在 `response.Success` 前 `operlog.Record`；敏感端点 `RecordWithBody`；新增 RPA 写端点同样受 `AUDIT-01` 静态门禁约束。
+- **双方言**：SQLite + PG 双通过；migration 双方言幂等、`database.go` 两处注册（PG + sqlite 分支）、`registry.go` 234+ 不进 ActiveMigrations；`.golangci.yml` 的 forbidigo 方言 token 规则不得新增违规。
+- **RBAC**：新端点逐端点挂权限码（读 ANY-of / 写 strict），并在 `pkg/permission/config.go` + F 型播种 migration 同步；前端按钮按权限码门控。
+- **零新增重量级依赖**：LIVEVIEW 只用 `go-rod` 已有的 `proto.PageStartScreencast` / `Input.*`；前端只用既有 WebSocket + Canvas，不引入 WebRTC 库。
+- **Worker 双副本边界**：只在根副本 `rpa-worker/` 演进；`xingran-react-frontend/rpa-worker/` 维持可编译骨架，不新增业务。
+- **禁 mock 验收**：不允许用「服务层 fake」或「测试内自建表」冒充端到端验收；真实浏览器与真实 schema 是验收前提。
+- **构建产物只落 `out/`**；前端 `tsc` / `lint:ci` / vitest 全绿；后端 `go build ./...` / `go test ./...` 全绿。
+
+## Traceability（v1.56 ROADMAP 已生成 · Phases 152-158）
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SCOPE-01 | 149 | Satisfied |
-| SCOPE-02 | 149 | Satisfied |
-| SCOPE-03 | 149 | Satisfied |
-| SCOPE-04 | 149 | Satisfied |
-| DIALECT-01 | 148 | Satisfied |
-| DIALECT-02 | 148 | Satisfied |
-| DIALECT-03 | 148 | Satisfied |
-| DIALECT-04 | 148 | Satisfied |
-| AUDIT-01 | 145 | Satisfied |
-| AUDIT-02 | 145 | Satisfied |
-| AUDIT-03 | 145 | Satisfied |
-| CACHE-01 | 147 | Satisfied |
-| CACHE-02 | 147 | Satisfied |
-| CACHE-03 | 147 | Satisfied |
-| CRYPTO-01 | 146 | Satisfied |
-| CRYPTO-02 | 146 | Satisfied |
-| CRYPTO-03 | 146 | Satisfied |
-| CRYPTO-04（可选 / optional） | 146 | Satisfied |
-| SIDECHANNEL-01 | 150 | Satisfied |
-| SIDECHANNEL-02 | 150 | Satisfied |
-| SIDECHANNEL-03 | 150 | Satisfied |
-| SIDECHANNEL-04 | 151 | Satisfied |
-| ARCH-01（必需） | 151 | Satisfied |
+| CONTRACT-01 | Phase 152 | Pending |
+| CONTRACT-02 | Phase 152 | Pending |
+| CONTRACT-03 | Phase 152 | Pending |
+| CONTRACT-04 | Phase 152 | Pending |
+| CONTRACT-05 | Phase 152 | Pending |
+| CONTRACT-06 | Phase 152 | Pending |
+| RUNTIME-01 | Phase 153 | Pending |
+| RUNTIME-02 | Phase 153 | Pending |
+| RUNTIME-03 | Phase 153 | Pending |
+| RUNTIME-04 | Phase 153 | Pending |
+| RUNTIME-05 | Phase 153 | Pending |
+| ENGINE-01 | Phase 154 | Pending |
+| ENGINE-02 | Phase 154 | Pending |
+| ENGINE-03 | Phase 154 | Pending |
+| ENGINE-04 | Phase 154 | Pending |
+| ENGINE-05 | Phase 154 | Pending |
+| LIVEVIEW-01 | Phase 155 | Pending |
+| LIVEVIEW-02 | Phase 155 | Pending |
+| LIVEVIEW-03 | Phase 155 | Pending |
+| LIVEVIEW-04 | Phase 155 | Pending |
+| LIVEVIEW-05 | Phase 155 | Pending |
+| NOCODE-01 | Phase 156 | Pending |
+| NOCODE-02 | Phase 156 | Pending |
+| NOCODE-03 | Phase 156 | Pending |
+| NOCODE-04 | Phase 156 | Pending |
+| FLEET-01 | Phase 157 | Pending |
+| FLEET-02 | Phase 157 | Pending |
+| FLEET-03 | Phase 157 | Pending |
+| CLEANUP-01 | Phase 158 | Pending |
+| CLEANUP-02 | Phase 158 | Pending |
+| CLEANUP-03 | Phase 158 | Pending |
 
-**Coverage:** **23 REQ total / 23 mapped / 0 unmapped / 23 Satisfied（SHIPPED 2026-11-09）**（每个 REQ 映射且只映射到一个 Phase，无孤儿无重复）。**收档计数修正（2026-11-09 Lead 复核）**：立项期草案/ROADMAP 沿用「24 REQ」口径，实为把 CRYPTO-04 的 `optional` 标注误计入第 24 项；逐组实证 = SCOPE 4 + DIALECT 4 + AUDIT 3 + CACHE 3 + CRYPTO 4 + SIDECHANNEL 4 + ARCH 1 = **23**，故以 23 为准，7 phase 映射本身全部有效。**CRYPTO-04 标注 optional**（可选能力扩展，非消除当前隐患的必要条件，仍映射至 Phase 146；守卫仍为主防线）；ARCH-01 用户裁定由「可选」升级为**必需**，与 SIDECHANNEL-04 同归 Phase 151。6 项 LOCKED / 7 个子项 100% 覆盖（① ② ③-A ③-B ④ ⑤ ⑥），① 的用户裁定（A=150 + B=151 组合根治）已纳入。
-
-### 建议的 Phase 划分（供 gsd-roadmapper 输入，非定案）
-| Phase | 主题 | REQ | 文件面（互斥检查用） |
-|---|---|---|---|
-| 145 | AUDIT 静态门禁 Go 化 | AUDIT-01/02/03 | `internal/utils/operlog/*_test.go`、`scripts/operlog_e2e_verify.sh`、`tests/e2e/operlog_e2e_verify.sh`、两 driver、`scripts/README.md`、`.github/workflows/ci.yml` |
-| 146 | CRYPTO KDF 契约 | CRYPTO-01/02/03/04 | `internal/core/security/password.go` + `*_test.go` |
-| 147 | CACHE 失效契约 | CACHE-01/02/03 | `internal/services/asset/reconciliation_exception*.go`、`reconciliation_service.go`、`cache_keys.go` |
-| 148 | DIALECT 双方言 | DIALECT-01/02/03/04 | `excel_export_config/service*.go`、`workstation_device_service.go` + 4+ 测试、`.golangci.yml` |
-| 149 | SCOPE 豁免面收口 | SCOPE-01/02/03/04 | 5 个 `*_service.go`、`scope_entities.go`、`internal/api/router.go`、`useFloorPlanEditor.ts`、`133-UAT.md` |
-| 150 | ① 侧信道根治 A（响应体去规模化） | SIDECHANNEL-01/02/03 | `workstation_service.go`、`excel_service.go`、`scope_write.go`、`useBackfillDept.tsx`、132/133 UAT |
-| 151 | 统一 ScopedDB（B，① 防回归 + ② 机制化） | SIDECHANNEL-04 + ARCH-01 | `base/GORMRepository`、`pkg/query`（新）、8 个 service 起链处、`scope_filter.go` |
-
-> **并行冲突面**：W1 候选 `145 ∥ 146 ∥ 147`（文件面互斥）。`148 / 149 / 150` 均动 `internal/services/operations/**`（148 动 excel_export/workstation_device，149 动 wall/door/text/photo/alias + router，150 动 workstation_service/excel_service + 前端），须产出**函数级归属表**否则降级串行。`151` 触及全仓基座且依赖 148/149/150 的经验，**必须最后执行**；① 的 A（150）与 B（151）按用户裁定均需完成，不伪造「统一架构已落地」。
+**Coverage:**
+- v1 requirements: 31 total
+- Mapped to phases: 31
+- Unmapped: 0
 
 ---
-*Requirements defined: 2026-11-09 (from `.planning/notes/261109-v155-requirements-draft.md`, 用户 5 项决策已拍板)*
-*Last updated: 2026-11-09 after GSD new-milestone v1.55 INITIATED — 草案转为权威 REQUIREMENTS.md；Traceability 待 gsd-roadmapper 填充*
+*Requirements defined: 2026-11-23*
+*Last updated: 2026-11-23 after v1.56 milestone initiation*

@@ -1,20 +1,118 @@
 # Roadmap: RuoYi-Next 运维管理系统
 
-## Current Milestone: v1.56 候选（进行中 / 未正式立项）
+## Current Milestone: v1.56 RPA 员工自助自动化 (Self-Service RPA for General Staff)
 
-**Status:** v1.56 候选（进行中 / 未正式立项）· `code-complete·verification-pending` | 口径来源 `CHANGELOG.md` `## [Unreleased] — v1.56 候选` + `.planning/quick/261110-161-*/v156-MILESTONE-DRAFT.md`（draft，未跑 `/gsd-new-milestone`、未重建 REQUIREMENTS / phase）｜同步口径见 `.planning/STATE.md` frontmatter / `.planning/state.json` / `.planning/MILESTONES.md` 顶部。
+**Status:** INITIATED / ROADMAP CREATED 2026-11-23 · Phase **152-158**（延续 v1.55 结束于 151，**不重置**）| **31 REQ / 7 Phase / 100% 映射** | 执行期状态见 `.planning/STATE.md` frontmatter 与各 phase `*-SUMMARY.md`
 
-**Goal:** 把候选期内已落地的代码改动（数据库全量备份导出/导入恢复、系统设置页收敛与低密度页面 Tab 化、菜单与权限迁移 241/242/243 + 补强 248/249、B 类 quick 261110-161 / f5g / jci）按 `.planning/notes/SHIPPED-DEFINITION.md` 补齐「代码绿 + 关键 UAT 通过 + 对外文档同步」三项，再正式立项并收档。
+**Goal:** 让不会写代码的一般员工能把重复的浏览器流程变成自动任务，并随时能看见、能接管、能改；把承载模型从「一容器多 Chrome 进程」纠正为「一 VM 一 Worker 一 Chromium 多页面」。
 
-**当前段硬约束**:
-- **不得标 SHIPPED**：无真实环境 UAT 证据只允许 `code-complete·verification-pending`（见 `.planning/notes/SHIPPED-DEFINITION.md`）；本环境无生产 PG 写授权、无真机，只能排期不能执行。
-- **79 条人工验证**：`.planning/notes/261108-human-verification-tracker.md` 全部「已排期·待执行」，**0 勾选 / 0 已完成**；三桶分类 / 优先级 / 解锁路径见 `.planning/notes/UAT-EXECUTION-PLAN.md`，真机端口写 UAT（29 条现场真机债，tracker §六）排第一。
-- **候选草案**：`v156-MILESTONE-DRAFT.md` 的 phase 152-155 为候选骨架（152/154 已由 quick 执行、153 用户裁定暂缓、155 可选），**未走 `/gsd-plan-phase` 正式立项**，不伪造 phase 完成。
-- **历史段不清空**：下方 v1.55 段及 `<details>` 折叠的 v1.54~v1.20 历史里程碑均为**已收档快照**，完整保留、仅供追溯。
+**事实基线:** `.planning/REQUIREMENTS.md`（权威，31 REQ + 20 条审计缺陷 D1-D20）｜`.planning/notes/261123-rpa-worker-capacity-model.md`（承载模型推导）｜本轮审计实证（探针已删）
 
-### Phases（当前里程碑）
+**范围裁定（用户 2026-11-23）:**
+- 三条新方向全部纳入：**员工可用性**（NOCODE + CONTRACT）、**无头浏览器可视化与接管**（LIVEVIEW）、**VDI 承载模型**（FLEET）。
+- 「一般浏览器所有操作」= ENGINE-02 动作全集 + ENGINE-03 选择器阶梯，验收必须真 Chromium。
+- 承载模型结构性结论已定：**一 VM 一 Worker 容器 + 1 Chromium + N page**；数字由 FLEET-03 实测回填，不可用推算充数。
+- **修复先于新增**：P0 契约 6 条必须Phase 152 先行，否则新功能建在 500/panic 之上无法验收。
+- 上一里程碑「v1.56 候选」（备份恢复/设置页收敛/菜单迁移）**并入本里程碑作为已落地代码**，缺 UAT 证据不追认。
+- 79 条人工验证跟踪表维持 0 勾选；不伪造闭环。
 
-- 无（v1.56 候选尚未正式立项、未生成 GSD phase）；正式立项后按 `v156-MILESTONE-DRAFT.md` 从 152 续编重建。
+### Phases
+
+- [ ] Phase 152: CONTRACT P0 契约修复 — 让已存在的 RPA 功能真的能跑通 (CONTRACT-01~06)
+- [ ] Phase 153: RUNTIME 执行闭环 — Worker 归属 / 会话注入 / 取消可中断 / 人工干预 / 状态机 (RUNTIME-01~05)
+- [ ] Phase 154: ENGINE 执行引擎 — page 池 + 浏览器动作全集 + 选择器阶梯 + 真实浏览器验收 (ENGINE-01~05)
+- [ ] Phase 155: LIVEVIEW 无头可视化与人工接管 — screencast 帧流 + 输入注入 + 三模式 + 叠加层 (LIVEVIEW-01~05)
+- [ ] Phase 156: NOCODE 员工零门槛 — 页面内录制 / 元素拾取 / 自然语言生成 / 三步向导 (NOCODE-01~04)
+- [ ] Phase 157: FLEET 承载与 VDI 编排 — provider 化 / 一 VM 一容器落地 / 容量实测 (FLEET-01~03)
+- [ ] Phase 158: CLEANUP 收尾真相化 — 假数据清零 / 定时调度 / 死代码与泄漏 (CLEANUP-01~03)
+
+**依赖拓扑:** `152`（P0 契约，必须先）→ `153 ∥ 154`（153 动后端执行/状态，154 动 worker 引擎，文件面基本互斥）→ `155`（依赖 154 的 page 池与执行流，且依赖 153 的暂停/接管状态机）→ `156`（依赖 155 的画面拾取与 154 的阶梯选择器）→ `157`（依赖 154 的并发模型定稿）→ `158`（依赖 153 状态机、155 审计与 157 provider 配置，最后执行）。任一并行组实测出现跨 phase 写交集，整组显式降级为串行。
+
+**REQ → Phase 映射（100% 覆盖、无孤儿无重复）:** 152=CONTRACT-01~06 ｜ 153=RUNTIME-01~05 ｜ 154=ENGINE-01~05 ｜ 155=LIVEVIEW-01~05 ｜ 156=NOCODE-01~04 ｜ 157=FLEET-01~03 ｜ 158=CLEANUP-01~03
+
+### 各 Phase 详情
+
+#### Phase 152: CONTRACT P0 契约修复
+
+- **需求映射:** CONTRACT-01, CONTRACT-02, CONTRACT-03, CONTRACT-04, CONTRACT-05, CONTRACT-06
+- **文件面:** `internal/api/v1/rpa/rpa_router.go`（两处 NewServiceGroup 第 5 参）、`internal/services/rpa/credential_service.go`（nil cipher 守卫）、`internal/services/rpa/types.go`（三个 ListParams.Status）、`internal/services/rpa/task_service.go`（列名 + tags + 指针语义）、`internal/services/rpa/selector_learner.go`（TableName）、`scripts/dbprovision/main.go` + `internal/core/db/database.go`（注册两模型）、`xingran-react-frontend/src/pages/operations/rpa/tasks/modals/AIScriptEditor.tsx`、`xingran-react-frontend/src/pages/operations/rpa/executions/index.tsx`、`AGENTS.md`
+- **实现要点:** ① 两处注入 `core.SM4Cipher`；② 三 ListParams 状态类型与前端枚举同构（任务态 0/1 vs 执行态字符串，禁止混用）；③ `task_name`→`name`；④ `TableName()` + dbprovision/AutoMigrate 注册 + 删测试内自建表；⑤ 前端 AI 编辑器与 useRPAProgress 真接线；⑥ httptest + sqlite 真表冒烟作为 CI 硬门禁。
+- **成功标准:**
+  1. 凭证 CRUD 在 HTTP 层 200（不再 500/panic），且有「cipher 为 nil 时返回明确错误」的负向用例。
+  2. 三列表接口对前端真实请求体（含 `status: "pending"/"online"`）绑定成功并正确过滤；非法枚举返回 400。
+  3. 任务名搜索命中；`tags` 建→查→改→查 一致；`status:0` 可写回。
+  4. 选择器两表在真实迁移后可直接写入；11 个 selector 端点各一条真库用例绿。
+  5. 前端测试断言 AI 编辑器发出真实 HTTP 请求；执行页不再依赖 `setInterval` 轮询 running。
+  6. 新增冒烟测试在 CI 中失败会红（红绿变异验证）。
+
+#### Phase 153: RUNTIME 执行闭环
+
+- **需求映射:** RUNTIME-01~05
+- **文件面:** `internal/services/rpa/execution_service.go`、`worker_service.go`、`task_service.go`、`internal/api/v1/rpa/execution_handler.go`、`rpa-worker/internal/worker/worker.go`、`rpa-worker/internal/executor/engine.go`、`rpa-worker/internal/communication/*`
+- **实现要点:** ① Progress/Heartbeat 反查 Worker 回写 execution 归属；② 会话注入 `Variables["__sessionData"]` + Worker 真注入 cookie/localStorage/header；③ 新增取消通道与 Worker ctx cancel；④ 人工干预双向：DB 落事件 + publish + Worker 按 action 继续/跳过/中止；⑤ 状态机集中定义、非法迁移拒绝、终态不可覆盖。
+- **成功标准:**
+  1. 执行记录的 `workerId`/`workerName` 有值，按 Worker 筛选命中。
+  2. 会话命中时 Worker 实际带 cookie 打开目标页（真实 Chromium 用例断言）。
+  3. `POST /executions/{id}/cancel` 后 Worker 停止执行、状态保持 `cancelled`（不被 success 覆盖）。
+  4. `pause` 动作在后端提交干预后继续执行，超时与未响应可区分。
+  5. 状态迁移矩阵单测覆盖全部非法迁移并拒绝。
+
+#### Phase 154: ENGINE 执行引擎
+
+- **需求映射:** ENGINE-01~05
+- **文件面:** `rpa-worker/internal/browser/pool.go`、`chrome_page.go`、`page_manager.go`、`internal/executor/engine.go`、`internal/types/types.go`、`internal/config/config.go`、`rpa-worker/internal/executor/*_test.go`
+- **实现要点:** ① `browser.Manager` 1 Chrome + N page，Page.Close 只关 page；② 动作全集补齐（upload/download/evaluate/assert/hover/dblclick/rightclick/drag/keyboard/scroll内/condition/close/switchTab/iframe）；③ 选择器阶梯 7 级；④ 变量作用域与嵌套访问 + 脱敏；⑤ 真 Chromium 集成验收。
+- **成功标准:**
+  1. N=1 与 N=8 的 RSS 增长符合「1 Chrome + N page」模型（写入基线数据）。
+  2. `types.go` 每个 ActionType 在 `engine.go` 有 case，一致性测试守护。
+  3. 全部新增动作在真实 Chromium fixture 页面上通过。
+  4. 选择器阶梯在「testid 缺失但 role 存在」「id 变化」两种场景下命中并记录层级。
+  5. `rpa-worker/executor` 与 `worker` 包首次拥有真实用例并通过。
+
+#### Phase 155: LIVEVIEW 无头可视化与人工接管
+
+- **需求映射:** LIVEVIEW-01~05
+- **文件面:** `rpa-worker/internal/browser/*`（screencast）、`rpa-worker/internal/worker/*`（帧路由）、`internal/api/v1/rpa/*`（WS 端点 + 接管审计）、`internal/websocket/notice_hub.go`、`xingran-react-frontend/src/pages/operations/rpa/live/*`（新建）
+- **实现要点:** ① `Page.startScreencast` + ACK 节流；② 前端 Canvas 渲染 + 输入事件 → `Input.dispatch*`；③ auto/copilot/manual 三模式与暂停/恢复；④ 叠加层与独立实时页；⑤ 权限、单接管者、断流与并发上限。
+- **成功标准:**
+  1. 执行中可在前端看到实时画面（≥8fps 目标，实测带宽登记）。
+  2. 用户在画面上点击/输入后，目标页面真实响应（真实 Chromium 用例断言 DOM 变化）。
+  3. 接管期间 RPA 动作暂停，释放后从断点继续，全程有审计记录。
+  4. 无执行时无推流、无 CPU 空转；超并发上限时返回可读错误。
+  5. 无权限用户既看不到帧也注入不了输入（负向用例）。
+
+#### Phase 156: NOCODE 员工零门槛
+
+- **需求映射:** NOCODE-01~04
+- **文件面:** `rpa-worker/internal/browser/recorder.go`（新建）、`rpa-worker/internal/executor/*`（聚类）、`internal/api/v1/rpa/*`（生成校验）、`xingran-react-frontend/src/pages/operations/rpa/tasks/modals/*`、`.../wizard/*`（新建）、模板种子 migration
+- **实现要点:** ① `evalOnNewDocument` 注入监听 → 去抖聚类 → 中文步骤描述；② 画面点选生成选择器候选与置信度；③ AI 返回动作枚举校验 + 降级到录制；④ 三步向导 + ≥6 模板。
+- **成功标准:**
+  1. 在一次真实录制中产出可回放的任务草稿（回放成功率高）。
+  2. 画面上点选元素即得选择器，且可切换次选。
+  3. AI 生成非法动作时服务端拒绝并给出可读原因；AI 不可用时降级到录制入口。
+  4. 一般员工路径「新建→录制→保存→执行」≤3 步向导、字段数有上限断言。
+
+#### Phase 157: FLEET 承载与 VDI 编排
+
+- **需求映射:** FLEET-01~03
+- **文件面:** `internal/services/rpa/scaling_service.go`、`internal/services/rpa/docker_client.go`、`internal/services/vdi/*`（只读复用）、`internal/config/config.go`、`rpa-worker/deployments/*`、`scripts/*`（镜像与首启）
+- **实现要点:** ① provider 接口 + ContainerProvider/VDIVMProvider；② 一 VM 一容器一 Chromium 的镜像与首启脚本，两份配置不漂移；③ 实测容量矩阵回填笔记。
+- **成功标准:**
+  1. 切换 `rpa.scaling.provider` 后扩缩容走对应 provider（VDI provider 用 mock VDI 客户端单测覆盖）。
+  2. 镜像首启后单 worker 注册成功、`max_concurrency` 生效、shm/内存参数与笔记一致。
+  3. 容量矩阵（8GB/16GB × N=1/2/4/8）实测数字回填；不可实测则显式登记 UAT 待办。
+
+#### Phase 158: CLEANUP 收尾真相化
+
+- **需求映射:** CLEANUP-01~03
+- **文件面:** `internal/services/rpa/excel_service.go`、`internal/api/v1/rpa/worker_handler.go`、`internal/core/core.go`（调度注册）、`internal/api/v1/rpa/flow_handler.go`、`internal/services/rpa/data_mapper.go`、`error_handling.go`、`docs/*`
+- **实现要点:** ① 批量报告落库 + 扩缩容配置持久化；② `sys_rpa_schedules` 接 scheduler（CRUD + cron 注册 + 时间回写 + 停用摘除）；③ 死代码处置 + Redis 客户端复用 + 文档对齐 + grep 断言。
+- **成功标准:**
+  1. 批量报告写入后读取一致（不再返回 100/95/5 常量）。
+  2. 自动扩缩容配置 POST 后 GET 返回写入值并热生效。
+  3. 秒级 cron 到点真触发 RPA 执行，`trigger_type=schedule`。
+  4. 死代码处置完成且 `grep` 断言通过；`WorkerHandler` 不再每实例建 Redis 连接。
+
 
 ---
 
