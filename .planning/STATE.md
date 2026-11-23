@@ -28,6 +28,7 @@ progress:
 - **三条用户方向**：员工可用性（NOCODE + CONTRACT）｜无头浏览器可视化与接管（LIVEVIEW）｜VDI 承载模型（FLEET）。
 - **修复先于新增**：Phase 152 先修 4 类必然失败路径（凭证 panic / 状态筛选 400 / 任务名 500 / 选择器表 500），否则新功能无法验收。
 - **承载模型结论**：一 VM 一 Worker 容器 + 1 Chromium + N page；扩容粒度 VM 不是容器；数字由 FLEET-03 实测回填。
+- **并行性已实证裁决（2026-11-23）**：W1 `152 ∥ 154` → W2 `153 ∥ 157` → W3 155 → W4 156 → W5 158；硬冲突 = worker 侧 `154×155` + 前端 `153×155`（Modal footer 同数组）；7 条归属协议见 `.planning/notes/261123-v156-phase-parallelism.md`。
 - **并入项**：上一「v1.56 候选」（备份恢复 / 设置页收敛 / 菜单权限迁移 + quick 261110-161/f5g/jci）作为已落地代码载入，缺 UAT 证据不追认、不标 SHIPPED。
 - **SHIPPED 判定**：见 [`.planning/notes/SHIPPED-DEFINITION.md`](notes/SHIPPED-DEFINITION.md) —— 代码绿 + 关键 UAT 通过 + 对外文档同步三者齐备才允许标 SHIPPED。
 - **验证状态**：[`.planning/notes/261108-human-verification-tracker.md`](notes/261108-human-verification-tracker.md) 79 条保持「已排期·待执行」，**0 勾选**；本环境无生产 PG 写授权、无真机 VDI，FLEET-03 只能登记 UAT 待办。
@@ -114,10 +115,10 @@ progress:
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 152 (CONTRACT P0 契约修复) — not started（W1 起跑）
 Plan: —
-Status: Defining requirements
-Last activity: 2026-11-23 — Milestone v1.56 started
+Status: Roadmap created + 并行性已实证裁决；W1 = 152 ∥ 154，W2 = 153 ∥ 157，W3~W5 串行
+Last activity: 2026-11-23 — Milestone v1.56 initiated + Phase 并行性裁决落地
 
 ## 历史归档（v1.25 及更早，已 SHIPPED / ARCHIVED；以下为非当前状态，仅供追溯）
 

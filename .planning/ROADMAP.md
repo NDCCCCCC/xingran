@@ -2,7 +2,7 @@
 
 ## Current Milestone: v1.56 RPA 员工自助自动化 (Self-Service RPA for General Staff)
 
-**Status:** INITIATED / ROADMAP CREATED 2026-11-23 · Phase **152-158**（延续 v1.55 结束于 151，**不重置**）| **31 REQ / 7 Phase / 100% 映射** | 执行期状态见 `.planning/STATE.md` frontmatter 与各 phase `*-SUMMARY.md`
+**Status:** INITIATED / ROADMAP CREATED 2026-11-23 · Phase **152-158**（延续 v1.55 结束于 151，**不重置**）| **31 REQ / 7 Phase / 100% 映射** | **并行性已实证裁决（W1 `152∥154` / W2 `153∥157` / W3 155 / W4 156 / W5 158，见 `notes/261123-v156-phase-parallelism.md`）** | 执行期状态见 `.planning/STATE.md` frontmatter 与各 phase `*-SUMMARY.md`
 
 **Goal:** 让不会写代码的一般员工能把重复的浏览器流程变成自动任务，并随时能看见、能接管、能改；把承载模型从「一容器多 Chrome 进程」纠正为「一 VM 一 Worker 一 Chromium 多页面」。
 
@@ -26,9 +26,43 @@
 - [ ] Phase 157: FLEET 承载与 VDI 编排 — provider 化 / 一 VM 一容器落地 / 容量实测 (FLEET-01~03)
 - [ ] Phase 158: CLEANUP 收尾真相化 — 假数据清零 / 定时调度 / 死代码与泄漏 (CLEANUP-01~03)
 
-**依赖拓扑:** `152`（P0 契约，必须先）→ `153 ∥ 154`（153 动后端执行/状态，154 动 worker 引擎，文件面基本互斥）→ `155`（依赖 154 的 page 池与执行流，且依赖 153 的暂停/接管状态机）→ `156`（依赖 155 的画面拾取与 154 的阶梯选择器）→ `157`（依赖 154 的并发模型定稿）→ `158`（依赖 153 状态机、155 审计与 157 provider 配置，最后执行）。任一并行组实测出现跨 phase 写交集，整组显式降级为串行。
+**依赖拓扑（2026-11-23 并行性实证裁决，见 `notes/261123-v156-phase-parallelism.md`）:**
+
+```text
+W1  152 ∥ 154      P0 契约收拾  ∥  Worker 引擎重写（零文件交集）
+W2  153 ∥ 157      执行闭环      ∥  VDI 承载（后端零交集，157 不碰 worker Go 代码）
+W3  155            （依赖 154 的 page 池 + RawPage 出口 与 153 的暂停/接管状态机）
+W4  156            （依赖 155 的画布拾取器 与 154 的选择器阶梯）
+W5  158            （依赖 153 状态机、155 审计、157 provider 配置）
+```
+
+**硬冲突（不可并行）**：`154×155`（`Page` 接口无 `RawPage` 出口恰在 154 重写的文件里；`Engine.Execute` Acquire 路径与接管暂停点同区域；`Worker` struct 两侧都加字段）｜前端 `153×155`（`ExecutionDetailModal.tsx:317-329` footer 同一数组字面量）。
+
+**软冲突（同文件不同函数，靠归属协议化解）**：`152×153`（`task_service.go`：152 独占 `:81-200`，153 只碰 `:243+`）｜`152×158`（`rpa_router.go`：152 独占 `:22-52`，158 尾部追加 Schedule 组）｜`153×154`（`engine.go`/`worker.go` 函数不相交，故分波）｜`152×156`（`AIScriptEditor.tsx` 语义依赖，故串行）｜`154×157`/`155×157`（仅 `config.yaml`/`compose` 不同节）。
+
+**机制层限制**：`.planning/config.json` 的 `parallelization: false`（GSD 默认串行同层 wave）；GSD 的并行是**相位内按 plan 的 wave** 且同 wave 内 `files_modified` 任一对重叠即整波降级为串行；**GSD 无跨 phase 并行机制** —— W1/W2 的「∥」由操作层实现（两个独立会话各跑 `/gsd-execute-phase`，靠第 3 节归属协议隔离写面，完成后 Lead 统一复核）。任一并行组实测出现跨 phase 写交集，整组显式降级为串行。
 
 **REQ → Phase 映射（100% 覆盖、无孤儿无重复）:** 152=CONTRACT-01~06 ｜ 153=RUNTIME-01~05 ｜ 154=ENGINE-01~05 ｜ 155=LIVEVIEW-01~05 ｜ 156=NOCODE-01~04 ｜ 157=FLEET-01~03 ｜ 158=CLEANUP-01~03
+
+### 并行归属协议（W1/W2 并行前必须签订，违反任一条该波降级为串行）
+
+1. **`task_service.go`**：152 独占 `Create:81`/`Update:106`/`List:157`（`:81-200`）；153 只碰 `publishTaskToRedis:243`/`extractTargetSystem:372`（`:243+`）。152 先合入，153 rebase。
+2. **`rpa_router.go`**：152 独占 `:22-52`（两处 `NewServiceGroup` 第 5 参）；158 只在 `SetupRPARouter` 尾部追加 `SetupScheduleRouter`，不改既有行。
+3. **RUNTIME-04 publish 落点**：定为 `execution_handler.go:238 SubmitHumanIntervention`（用 `h.core.Cache`），**禁止**落 `excel_service.go` —— 这是 153 与 158 解耦的唯一手段。
+4. **前端 footer 归属**：取消按钮落 `executions/columns.tsx:106-118` 行内 actions + `executions/index.tsx:135` handler（**不进 Modal footer**）；「实时画面」入口落 `ExecutionDetailModal.tsx:317-329` footer。二者因此不同数组。
+5. **155 的接口前置**：154 在 W1 内先落并冻结 `browser.Manager` 契约（`Acquire(ctx) (Page, error)` / `Release` / `Page.RawPage() *rod.Page` / 「Close 只关 page」）；155 只依赖该接口 + 新增 `internal/communication` 帧通道；live 消息类型放独立文件 `types/liveview.go`，避免与 154 的动作常量同文件。
+6. **路由策略统一**：155 与 156 的新页面统一走后端 `sys_menu` seed migration（各自动各自 migration），前端零 router 改动；否则两相共享 `componentLoader.tsx` + `DynamicRoutes.tsx`。
+7. **`ACTION_TYPE_OPTIONS` 归属**：扩充的上游是 **154**（ENGINE-02），156 只消费，不得作为第三写方。
+
+### 文件面漏项补登（PLAN 阶段必须纳入）
+
+| Phase | 补登 | 来源 |
+|---|---|---|
+| 153 | 前端 `executions/columns.tsx:106-118`（行内取消入口）、`executions/index.tsx:135`（handler） | RUNTIME-03 |
+| 155 | 前端 `executions/ExecutionDetailModal.tsx:317-329`（实时画面入口） | LIVEVIEW-04 |
+| 156 | 前端 `tasks/index.tsx:212-223`（新增按钮改开向导）、`tasks/modals/EditModal.tsx:391`（模板/转录制）、`AIScriptEditor.tsx`（降级录制入口） | NOCODE-03/04 |
+| 157 | provider 键在**根模块** `internal/config/config.go:259 RPAScalingConfig`，**不是** rpa-worker 的 config | scan-worker 取证 |
+| 158 | `rpa_router.go` 的 Schedule CRUD 路由注册 | scan-backend 取证 |
 
 ### 各 Phase 详情
 
