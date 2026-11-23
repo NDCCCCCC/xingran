@@ -1,7 +1,7 @@
 ---
 created: 2026-11-23
 topic: RPA Worker 部署承载模型（一 VM 多容器 vs 一容器多浏览器）
-status: decision-input（结论需 CAP-01 实测确认）
+status: decision-input（结论需 FLEET-03 实测确认）
 related:
   - rpa-worker/internal/browser/pool.go
   - rpa-worker/internal/browser/chrome_page.go
@@ -12,7 +12,7 @@ related:
 
 # RPA Worker 承载模型分析（VM / 容器 / 浏览器实例）
 
-> 本文是 v1.56 Phase「CAPACITY」的决策输入。结构性结论可先定，**具体容量数字必须由 CAP-01 实测回填**，不得把推算当实测。
+> 本文是 v1.56 Phase「CAPACITY」的决策输入。结构性结论可先定，**具体容量数字必须由 FLEET-03 实测回填**，不得把推算当实测。
 
 ## 1. 现状代码事实（`文件:行号` 实证）
 
@@ -34,7 +34,7 @@ related:
 | **B. 1 VM + M 容器 + 每容器 1 Chrome + n page** | 现 compose 的横向复制 | 故障隔离好；可滚动升级 | 内存 ×M（含 shm ×M）；Chrome 冷启动 ×M；端口/健康检查/日志 ×M |
 | **C. 1 VM + 1 容器 + N Chrome + 每 Chrome 1 page** | 现状语义 | 页面间彻底隔离 | 内存与启动成本最高；与「一般员工会开 5-20 个会话」的现实直接冲突 |
 
-## 3. 结构性推算（假设标注，待 CAP-01 实测）
+## 3. 结构性推算（假设标注，待 FLEET-03 实测）
 
 假设（Chromium 124+ headless=new，Linux x86_64，无 GPU）：
 - 单个 Chromium 进程基线 RSS ≈ 100–180 MB（空页 idle）；
@@ -49,17 +49,29 @@ related:
 
 **结论二**：在 8–16 GB 的 VDI 规格下，**形态 A 明显占优**；只有当单 VM ≥ 32 GB 且需要强故障隔离/多租户时才值得上形态 B，且应把 shm 降为 512MB–1GB 并显式配置 `--disable-dev-shm-usage`（现已在 `chrome_page.go` launcher flags 里）。
 
-## 4. 推荐决策（写入 v1.56 CAPACITY 交付）
+## 4. 推荐决策（写入 v1.56 FLEET / ENGINE 交付）
 
 1. **默认形态 = A：一 VM 一 Worker 容器，容器内 1 个 Chromium + N 个 page。**
    - N = `worker.max_concurrency`（默认 5，8 GB VM 可到 8–10），与 `browser.max_pages` 语义统一为「页面数」而非「进程数」。
 2. **扩容粒度 = VM，不是容器。** `ScalingService` 的 Docker provider 抽象改为 provider 化：`ContainerProvider`（本地 dev）/ `VDIVMProvider`（生产），按 `rpa.scaling.provider` 选择；VM 创建后由 cloud-init/预置镜像拉起容器（镜像已预装 worker）。
 3. **故障隔离靠引擎重试而非进程复制**：单 Chrome 崩溃时引擎捕获 `rod` 错误 → 销毁重建 Chrome → 该执行标记 failed 并按 `retry_count` 重跑；不因此扩大进程数。
-4. **一 VM 多容器的唯一保留场景**：需要「不同租户/不同浏览器版本/滚动升级不停机」。此时每容器 shm ≤ 1GB 且 VM ≥ 32 GB，并在 CAP-02 决策矩阵中单列。
-5. **每 VM 上限先按「1 容器 8 page」压测**（CAP-01），以 P95 执行时延、OOM 率、Chrome 崩溃率为验收口径；超过再增 VM。
+4. **一 VM 多容器的唯一保留场景**：需要「不同租户/不同浏览器版本/滚动升级不停机」。此时每容器 shm ≤ 1GB 且 VM ≥ 32 GB，并在 FLEET-03 决策矩阵中单列。
+5. **每 VM 上限先按「1 容器 8 page」压测**（FLEET-03），以 P95 执行时延、OOM 率、Chrome 崩溃率为验收口径；超过再增 VM。
 
-## 5. 对 v1.56 的影响
+## 5. 关键参数对照（现状 vs 目标）
 
-- `CAP-03`：Worker 池化改造 = 引入 `browser.Manager`（1 进程多 page），`Pool` 改为「page 池」而不是「Chrome 池」；`Page.Close()` 语义改为「关闭 page 而非关浏览器」。
-- `CAP-04`：`ScalingService` provider 化 + VDI VM 编排；容器内并发由 `worker.max_concurrency` 控制，VM 内容器数固定为 1（可配）。
-- `VIEW-02` 中转带宽：screencast 单路 ~2–8 Mbps（视分辨率/帧率），一 VM 多容器会线性叠加出向带宽，是一 VM 一容器之外的另一条支撑论据。
+| 参数 | 现状（`rpa-worker/configs/config.yaml` + `deployments/docker-compose.yml`） | 目标（FLEET-02） |
+|---|---|---|
+| `worker.max_concurrency` | 5 | 与「并发页面数」同义，默认 5；8GB VM 可 8 |
+| `browser.max_pages` | 10（实际是 Chrome 进程数上限） | 与 `max_concurrency` 合并为单一值，旧键保留兼容并告警 |
+| 每 page 的 Chrome 进程 | 1 个（`chrome_page.go:MustLaunch`） | 共享 1 个 `rod.Browser` |
+| 容器内存上限 | 2G | 按 VM 规格与 N 计算，8GB VM 建议 6G 留 2G 给系统 |
+| `shm_size` | 2gb | 1gb（配合 `--disable-dev-shm-usage` 已存在） |
+| CPU | 2 | 8GB VM 建议 4 |
+| 每 VM 容器数 | 1（compose 单 service） | 1（默认）；多容器仅多租户/滚动升级场景 |
+
+## 6. 对 v1.56 的影响
+
+- `ENGINE-01`：Worker 池化改造 = 引入 `browser.Manager`（1 进程多 page），`Pool` 改为「page 池」而不是「Chrome 池」；`Page.Close()` 语义改为「关闭 page 而非关浏览器」。
+- `FLEET-01` + `FLEET-02`：`ScalingService` provider 化 + VDI VM 编排；容器内并发由 `worker.max_concurrency` 控制，VM 内容器数固定为 1（可配）。
+- `LIVEVIEW-01` 中转带宽：screencast 单路 ~2–8 Mbps（视分辨率/帧率），一 VM 多容器会线性叠加出向带宽，是一 VM 一容器之外的另一条支撑论据。
