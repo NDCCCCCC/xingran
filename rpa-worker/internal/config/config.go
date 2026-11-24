@@ -18,6 +18,11 @@ type Config struct {
 	Logging  LoggingConfig  `mapstructure:"logging"`
 	Monitor  MonitorConfig  `mapstructure:"monitor"`
 	Executor ExecutorConfig `mapstructure:"executor"`
+
+	// Warnings Phase 154 / ENGINE-01：配置加载期的兼容性告警（如旧键
+	// browser.max_pages 被合并）。mapstructure "-" 表示不从 yaml 读取，
+	// 由 Load 填充，Worker 启动时以 WARN 级别输出。
+	Warnings []string `mapstructure:"-"`
 }
 
 // WorkerConfig Worker 配置
@@ -77,12 +82,18 @@ type BrowserConfig struct {
 	SlowMo            time.Duration `mapstructure:"slow_mo"`
 	Timeout           time.Duration `mapstructure:"timeout"`
 	NavigationTimeout time.Duration `mapstructure:"navigation_timeout"`
-	MaxPages          int           `mapstructure:"max_pages"`
-	ViewportWidth     int           `mapstructure:"viewport_width"`
-	ViewportHeight    int           `mapstructure:"viewport_height"`
-	UserAgent         string        `mapstructure:"user_agent"`
-	ChromePath        string        `mapstructure:"chrome_path"`
-	ChromeFlags       []string      `mapstructure:"chrome_flags"`
+	// MaxPages 已废弃（Phase 154 / ENGINE-01）。历史语义是「Chrome 进程数」，
+	// 现语义与 worker.max_concurrency 合并为单一「并发页面数」。保留字段仅为
+	// 旧键可读 + 旧代码可读，值由 Load 归一化为 EffectiveMaxPages。
+	MaxPages int `mapstructure:"max_pages"`
+	// MaxConcurrency 是合并后的「并发页面数」浏览器侧只读视图，
+	// 永远等于 config.EffectiveMaxPages(cfg)。Phase 157 只读取它。
+	MaxConcurrency int      `mapstructure:"max_concurrency"`
+	ViewportWidth  int      `mapstructure:"viewport_width"`
+	ViewportHeight int      `mapstructure:"viewport_height"`
+	UserAgent      string   `mapstructure:"user_agent"`
+	ChromePath     string   `mapstructure:"chrome_path"`
+	ChromeFlags    []string `mapstructure:"chrome_flags"`
 }
 
 // LoggingConfig 日志配置
@@ -111,6 +122,28 @@ type ExecutorConfig struct {
 	InitialDelay  time.Duration `mapstructure:"retry_delay"`
 	MaxDelay      time.Duration `mapstructure:"max_retry_delay"`
 	BackoffFactor float64       `mapstructure:"backoff_factor"`
+	// UndefinedVariablePolicy Phase 154 / ENGINE-04：变量未定义策略。
+	// "strict" = 严格失败并终止该动作；"empty" = 替换为空串（默认，向后兼容）。
+	UndefinedVariablePolicy string `mapstructure:"undefined_variable_policy"`
+}
+
+// 变量未定义策略取值（ENGINE-04）。
+const (
+	UndefinedVariableStrict = "strict"
+	UndefinedVariableEmpty  = "empty"
+)
+
+// EffectiveMaxPages 返回合并后的「并发页面数」（唯一真相）。
+// Phase 154 / ENGINE-01：worker.max_concurrency 与 browser.max_pages 合并后
+// 仅剩这一个语义。Phase 155/157 必须读取本函数而非直接读任一侧字段。
+func EffectiveMaxPages(cfg *Config) int {
+	if cfg == nil {
+		return 0
+	}
+	if cfg.Worker.MaxConcurrency > 0 {
+		return cfg.Worker.MaxConcurrency
+	}
+	return cfg.Browser.MaxConcurrency
 }
 
 // HybridModeConfig 混合模式配置
@@ -143,11 +176,25 @@ func Load(path string) (*Config, error) {
 		return nil, fmt.Errorf("解析配置失败: %w", err)
 	}
 
+	// Phase 154 / ENGINE-01：旧键 browser.max_pages 与 worker.max_concurrency
+	// 合并为单一「并发页面数」。必须在 setDefaults 之前判定，否则默认值会
+	// 掩盖「旧键独有」的情形。
+	mergePageConcurrency(v, &cfg)
+
 	// 设置默认值
 	setDefaults(&cfg)
 
 	// 环境变量覆盖（直接读取）
 	overrideWithEnv(&cfg)
+
+	// 环境变量可能改写 worker.max_concurrency —— 归一化浏览器侧只读视图。
+	syncPageConcurrency(&cfg)
+
+	// Phase 154 / ENGINE-04：未定义变量策略校验（非法值在加载期即失败，
+	// 而不是到执行期才静默走错分支）。
+	if err := validateUndefinedVariablePolicy(&cfg); err != nil {
+		return nil, err
+	}
 
 	return &cfg, nil
 }
@@ -158,7 +205,10 @@ func setDefaults(cfg *Config) {
 		cfg.Worker.Name = "RPA Worker"
 	}
 	if cfg.Worker.MaxConcurrency == 0 {
-		cfg.Worker.MaxConcurrency = 3
+		// Phase 154 / ENGINE-01：默认并发页面数。历史默认 3（worker）与
+		// 10（browser.max_pages）均不再各自生效；合并后的默认取 5，
+		// 与 deployments/docker-compose.yml 的 MAX_CONCURRENCY 默认一致。
+		cfg.Worker.MaxConcurrency = 5
 	}
 	if cfg.Worker.BrowserPoolSize == 0 {
 		cfg.Worker.BrowserPoolSize = 5
@@ -252,6 +302,9 @@ func setDefaults(cfg *Config) {
 		cfg.Browser.ViewportHeight = 1080
 	}
 
+	// Phase 154 / ENGINE-01：浏览器侧只读视图永远跟随合并后的单一值。
+	syncPageConcurrency(cfg)
+
 	if cfg.Logging.Level == "" {
 		cfg.Logging.Level = "info"
 	}
@@ -290,6 +343,11 @@ func setDefaults(cfg *Config) {
 	if cfg.Executor.BackoffFactor == 0 {
 		cfg.Executor.BackoffFactor = 2.0
 	}
+	// Phase 154 / ENGINE-04：默认「空串」策略，保持既有任务脚本不因新增
+	// 严格模式而回归失败；需要强校验的任务显式配 strict。
+	if cfg.Executor.UndefinedVariablePolicy == "" {
+		cfg.Executor.UndefinedVariablePolicy = UndefinedVariableEmpty
+	}
 
 	// 混合模式默认配置
 	if cfg.Worker.HybridMode.Enabled {
@@ -305,6 +363,59 @@ func setDefaults(cfg *Config) {
 		if cfg.Worker.HybridMode.SubtaskPriority == 0 {
 			cfg.Worker.HybridMode.SubtaskPriority = 5
 		}
+	}
+}
+
+// mergePageConcurrency Phase 154 / ENGINE-01：旧键 browser.max_pages 兼容。
+//
+// 语义裁定（供 Phase 157 CI 漂移校验读取）：
+//  1. 若配置同时给出 worker.max_concurrency 与 browser.max_pages —— 以
+//     worker.max_concurrency 为准，browser.max_pages 仅作告警（不覆盖）。
+//  2. 若只给 browser.max_pages（旧部署形态）—— 取值迁移到
+//     worker.max_concurrency，并告警「旧键已合并，请改配 max_concurrency」。
+//  3. 两者都未给 —— 交给 setDefaults 的默认值（5）。
+//  4. 合并后 browser.MaxPages 字段保留原值（可读），browser.MaxConcurrency
+//     是唯一的派生只读视图（见 syncPageConcurrency）。
+func mergePageConcurrency(v *viper.Viper, cfg *Config) {
+	hasWorkerKey := v.IsSet("worker.max_concurrency")
+	hasLegacyKey := v.IsSet("browser.max_pages")
+
+	switch {
+	case hasWorkerKey && hasLegacyKey:
+		cfg.Warnings = append(cfg.Warnings, fmt.Sprintf(
+			"browser.max_pages=%d 已废弃并合并进 worker.max_concurrency=%d；"+
+				"本次以 max_concurrency 为准，请删除旧键",
+			cfg.Browser.MaxPages, cfg.Worker.MaxConcurrency))
+	case hasLegacyKey && !hasWorkerKey && cfg.Browser.MaxPages > 0:
+		cfg.Worker.MaxConcurrency = cfg.Browser.MaxPages
+		cfg.Warnings = append(cfg.Warnings, fmt.Sprintf(
+			"检测到旧键 browser.max_pages=%d，已合并为 worker.max_concurrency=%d；"+
+				"请迁移配置（旧键仍可读但不再有独立语义）",
+			cfg.Browser.MaxPages, cfg.Worker.MaxConcurrency))
+	}
+}
+
+// syncPageConcurrency 把合并值同步到浏览器侧只读视图。
+func syncPageConcurrency(cfg *Config) {
+	if cfg == nil {
+		return
+	}
+	if cfg.Worker.MaxConcurrency > 0 {
+		cfg.Browser.MaxConcurrency = cfg.Worker.MaxConcurrency
+	} else if cfg.Browser.MaxConcurrency > 0 {
+		cfg.Worker.MaxConcurrency = cfg.Browser.MaxConcurrency
+	}
+}
+
+// validateUndefinedVariablePolicy Phase 154 / ENGINE-04：策略取值校验。
+func validateUndefinedVariablePolicy(cfg *Config) error {
+	switch cfg.Executor.UndefinedVariablePolicy {
+	case "", UndefinedVariableStrict, UndefinedVariableEmpty:
+		return nil
+	default:
+		return fmt.Errorf(
+			"executor.undefined_variable_policy 取值非法: %q（允许 strict|empty）",
+			cfg.Executor.UndefinedVariablePolicy)
 	}
 }
 

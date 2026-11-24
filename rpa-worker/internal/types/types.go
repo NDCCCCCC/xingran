@@ -44,9 +44,15 @@ type Action struct {
 }
 
 // ActionType 动作类型
+//
+// Phase 154 / ENGINE-02：本文件是动作枚举的唯一真相（前端
+// ACTION_TYPE_OPTIONS 由 154 扩充、156 只消费）。新增动作必须同时在
+// internal/executor/engine.go 的 executeAction switch 里落 case，
+// 否则 engine_action_coverage_test.go 的静态断言会红。
 type ActionType string
 
 const (
+	// —— 基础动作 ——
 	ActionNavigate   ActionType = "navigate"
 	ActionClick      ActionType = "click"
 	ActionFill       ActionType = "fill"
@@ -64,6 +70,17 @@ const (
 	ActionPause      ActionType = "pause"     // Wait for human input
 	ActionCondition  ActionType = "condition" // Conditional branching
 	ActionAutoLogin  ActionType = "autologin" // Auto login with stored credentials
+
+	// —— Phase 154 / ENGINE-02 差集 B：常量与 case 双缺，本 phase 一并补齐 ——
+	ActionAssert      ActionType = "assert"      // 断言 + 失败即终止
+	ActionHover       ActionType = "hover"       // 悬停
+	ActionDoubleClick ActionType = "doubleClick" // 双击
+	ActionRightClick  ActionType = "rightClick"  // 右键
+	ActionDrag        ActionType = "drag"        // 拖拽（HTML5 兼容）
+	ActionKeyboard    ActionType = "keyboard"    // 组合键 / 快捷键
+	ActionSwitchTab   ActionType = "switchTab"   // 页签切换
+	ActionIframe      ActionType = "iframe"      // 进入 / 退出 frame
+	ActionScript      ActionType = "script"      // 自定义脚本（等价 evaluate）
 )
 
 // TaskMessage 任务消息（从 Redis）

@@ -3,7 +3,10 @@
 worker:
   id: ""                    # Worker ID (自动生成)
   name: "rpa-worker-1"      # Worker 名称
-  max_concurrency: 5        # 最大并发数（同时执行的任务数）
+  # Phase 154 / ENGINE-01：并发页面数 —— 唯一真相。
+  # 语义 = 同时执行的 RPA 任务数 = 同一 Chromium 内并行 page 数（1 Chrome + N page）。
+  # 旧键 browser.max_pages 已合并进本键（见 README/SUMMARY 的兼容说明）。
+  max_concurrency: 5
   loop_concurrency: 3       # 循环内并发数（单个任务内循环的并行执行数，0=串行，已废弃）
   version: "1.0.0"          # Worker 版本
   task_timeout: 10m         # 任务超时时间
@@ -47,7 +50,8 @@ browser:
   headless: true           # 无头模式
   timeout: 30s             # 元素等待超时
   navigation_timeout: 60s   # 页面导航超时
-  max_pages: 10            # 最大页面数
+  # max_pages: 10          # 【已废弃】Phase 154 起合并进 worker.max_concurrency；
+                           # 保留可读（若配置则告警并迁移），不再有独立语义
   viewport_width: 1920     # 界面宽度
   viewport_height: 1080    # 界面高度
 
@@ -62,6 +66,8 @@ monitor:
   metrics_path: "/metrics" # 指标路径
 
 executor:
+  # Phase 154 / ENGINE-04：变量未定义策略 strict|empty（默认 empty=空串，兼容旧脚本）
+  undefined_variable_policy: "empty"
   max_retries: 3           # 最大重试次数
   initial_delay: 1s        # 初始重试延迟
   retry_multiplier: 2.0    # 重试倍数
