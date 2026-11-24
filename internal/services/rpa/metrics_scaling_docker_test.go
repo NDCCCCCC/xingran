@@ -239,7 +239,9 @@ func TestScalingService_ManualScaleWithMockDocker(t *testing.T) {
 	cfg := DefaultScalingConfig()
 	cfg.EnableMockDocker = true
 	cfg.ScaleUpLimit = 3
-	svc := NewScalingService(db, cfg, nil).(*scalingServiceImpl)
+	svc, err := NewScalingService(db, cfg, nil)
+	require.NoError(t, err)
+	impl := svc.(*scalingServiceImpl)
 	ctx := context.Background()
 
 	// 5 个在线 worker, 缩容 2 个仍 >= MinWorkers(2)
@@ -278,7 +280,7 @@ func TestScalingService_ManualScaleWithMockDocker(t *testing.T) {
 	assert.Len(t, history, 2, "一次 scale_up + 一次 scale_down 成功事件（参数校验失败不落事件）")
 
 	// 指标未就绪
-	_, err = svc.GetWorkerStats(ctx)
+	_, err = impl.GetWorkerStats(ctx)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "指标数据未就绪")
 
@@ -286,7 +288,7 @@ func TestScalingService_ManualScaleWithMockDocker(t *testing.T) {
 	require.Error(t, svc.MonitorAndScale(ctx))
 
 	// FindIdleContainers: mock stats CPU=10.5 不满足 <10 → 空
-	idle, err := svc.FindIdleContainers(ctx, 5)
+	idle, err := impl.FindIdleContainers(ctx, 5)
 	require.NoError(t, err)
 	assert.Empty(t, idle)
 }
@@ -295,7 +297,8 @@ func TestScalingService_StartStop(t *testing.T) {
 	db := newMetricsTestDB(t)
 	cfg := DefaultScalingConfig()
 	cfg.EnableMockDocker = true
-	svc := NewScalingService(db, cfg, nil)
+	svc, err := NewScalingService(db, cfg, nil)
+	require.NoError(t, err)
 
 	// 未启用 → 直接返回
 	require.NoError(t, svc.Start(context.Background()))
@@ -303,7 +306,8 @@ func TestScalingService_StartStop(t *testing.T) {
 	cfg2 := DefaultScalingConfig()
 	cfg2.Enabled = true
 	cfg2.EnableMockDocker = true
-	svc2 := NewScalingService(db, cfg2, nil)
+	svc2, err := NewScalingService(db, cfg2, nil)
+	require.NoError(t, err)
 	require.NoError(t, svc2.Start(context.Background()))
 	assert.True(t, svc2.GetStatus().IsRunning)
 	svc2.Stop()
@@ -315,10 +319,11 @@ func TestScalingService_StartStop(t *testing.T) {
 	cfg3 := DefaultScalingConfig()
 	cfg3.Enabled = true
 	cfg3.EnableMockDocker = true
-	svc3 := NewScalingService(db, cfg3, nil)
-	err := svc3.Start(context.Background())
+	svc3, err := NewScalingService(db, cfg3, nil)
+	require.NoError(t, err)
+	err = svc3.Start(context.Background())
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "Docker 服务不可用")
+	assert.Contains(t, err.Error(), "不可用")
 }
 
 func TestScalingService_SyncWorkersWithContainers(t *testing.T) {
@@ -328,13 +333,15 @@ func TestScalingService_SyncWorkersWithContainers(t *testing.T) {
 		('sw2','online','container-gone')`).Error)
 
 	cfg := DefaultScalingConfig()
-	svc := NewScalingService(db, cfg, nil).(*scalingServiceImpl)
-	mock := NewMockDockerClient()
-	_, err := mock.ScaleUp(context.Background(), 1)
+	svc, err := NewScalingService(db, cfg, nil)
 	require.NoError(t, err)
-	svc.dockerClient = mock
+	implSync := svc.(*scalingServiceImpl)
+	mock := NewMockDockerClient()
+	_, err = mock.ScaleUp(context.Background(), 1)
+	require.NoError(t, err)
+	implSync.provider = NewContainerProvider(mock)
 
-	require.NoError(t, svc.SyncWorkersWithContainers(context.Background()))
+	require.NoError(t, implSync.SyncWorkersWithContainers(context.Background()))
 	var st2 string
 	require.NoError(t, db.Raw(`SELECT status FROM sys_rpa_workers WHERE id = 'sw2'`).Scan(&st2).Error)
 	assert.Equal(t, "offline", st2, "容器不存在的 worker 标记离线")

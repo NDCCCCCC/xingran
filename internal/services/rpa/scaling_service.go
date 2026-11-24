@@ -10,6 +10,7 @@ import (
 
 	"github.com/google/uuid"
 	rpamodels "github.com/xingran-next/xingran-go-backend/internal/models/rpa"
+	"github.com/xingran-next/xingran-go-backend/internal/services/vdi"
 	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"gorm.io/gorm"
 )
@@ -40,14 +41,16 @@ type ScalingService interface {
 
 // ScalingConfig 扩缩容配置
 type ScalingConfig struct {
-	Enabled           bool          `mapstructure:"enabled"`             // 是否启用自动扩缩容
-	CheckInterval     time.Duration `mapstructure:"check_interval"`      // 检查间隔
-	MinWorkers        int           `mapstructure:"min_workers"`         // 最小 Worker 数量
-	MaxWorkers        int           `mapstructure:"max_workers"`         // 最大 Worker 数量
-	ScaleUpThreshold  float64       `mapstructure:"scale_up_threshold"`  // 扩容阈值 (0-1)
-	ScaleDownCooldown time.Duration `mapstructure:"scale_down_cooldown"` // 缩容冷却时间
-	ScaleUpLimit      int           `mapstructure:"scale_up_limit"`      // 单次扩容上限
-	EnableMockDocker  bool          `mapstructure:"enable_mock_docker"`  // 是否使用模拟 Docker 客户端
+	Enabled           bool               `mapstructure:"enabled"`             // 是否启用自动扩缩容
+	CheckInterval     time.Duration      `mapstructure:"check_interval"`      // 检查间隔
+	MinWorkers        int                `mapstructure:"min_workers"`         // 最小 Worker 数量
+	MaxWorkers        int                `mapstructure:"max_workers"`         // 最大 Worker 数量
+	ScaleUpThreshold  float64            `mapstructure:"scale_up_threshold"`  // 扩容阈值 (0-1)
+	ScaleDownCooldown time.Duration      `mapstructure:"scale_down_cooldown"` // 缩容冷却时间
+	ScaleUpLimit      int                `mapstructure:"scale_up_limit"`      // 单次扩容上限
+	EnableMockDocker  bool               `mapstructure:"enable_mock_docker"`  // 是否使用模拟 Docker 客户端（仅 provider=container 时生效）
+	Provider          string             `mapstructure:"provider"`            // 算力提供者: container(默认) | vdivm（Phase 157 / FLEET-01）
+	VDI               *VDIProviderConfig `mapstructure:"vdi"`                 // VDI VM provider 配置（provider=vdivm 时必填）
 }
 
 // DefaultScalingConfig 默认扩缩容配置
@@ -70,7 +73,7 @@ type scalingServiceImpl struct {
 	config         *ScalingConfig
 	dockerConfig   *DockerConfig
 	metricsService MetricsService
-	dockerClient   DockerClient
+	provider       ComputeProvider // Phase 157 / FLEET-01: 底层算力抽象（container | vdivm）
 	collector      *MetricsCollector
 
 	stopCh        chan struct{}
@@ -90,17 +93,54 @@ type ScalingStatus struct {
 	AutoScalingEnabled bool      `json:"autoScalingEnabled"`
 }
 
-// NewScalingService 创建扩缩容服务
-func NewScalingService(db *gorm.DB, config *ScalingConfig, dockerConfig *DockerConfig) ScalingService {
+// NewScalingService 创建扩缩容服务。
+//
+// Phase 157 / FLEET-01：按 config.Provider 选择算力提供者（container | vdivm），
+// 未知值返回错误（启动即失败）。返回值改为 (ScalingService, error)。
+func NewScalingService(db *gorm.DB, config *ScalingConfig, dockerConfig *DockerConfig) (ScalingService, error) {
 	metricsService := NewMetricsService(db)
 
-	// 创建 Docker 客户端
+	// 创建 Docker 客户端（provider=container 使用；EnableMockDocker 保留本地 dev）
 	var dockerClient DockerClient
 	if config.EnableMockDocker {
 		dockerClient = NewMockDockerClient()
 		applogger.Warnf("RPA 扩缩容使用模拟 Docker 客户端（测试模式）")
 	} else {
 		dockerClient = NewDockerClient(dockerConfig)
+	}
+
+	// VDI 客户端工厂（惰性，仅 provider=vdivm 时调用）：
+	// 复用 internal/services/vdi 客户端与 sys_vdi_server 配置，不另写 HTTP。
+	vdiFactory := func() (VDIVMClient, error) {
+		cfg := config.VDI
+		if cfg == nil {
+			return nil, fmt.Errorf("未配置 rpa.scaling.vdi")
+		}
+		if cfg.ProvisionTimeout == 0 {
+			d := DefaultVDIProviderConfig()
+			cfg.ProvisionTimeout = d.ProvisionTimeout
+			cfg.PollInterval = d.PollInterval
+			cfg.HeartbeatWindow = d.HeartbeatWindow
+		}
+		client, err := vdi.BuildRPAVMClient(db, cfg.ServerID)
+		if err != nil {
+			return nil, err
+		}
+		return client, nil
+	}
+
+	// worker 在线探针（VDI Provision 的成功判据）
+	var presence WorkerPresenceChecker
+	if config.VDI != nil && config.VDI.HeartbeatWindow > 0 {
+		presence = NewDBWorkerPresence(db, config.VDI.HeartbeatWindow)
+	} else {
+		presence = NewDBWorkerPresence(db, DefaultVDIProviderConfig().HeartbeatWindow)
+	}
+
+	// 选择 provider（未知值在此报错）
+	provider, err := NewComputeProvider(config, dockerClient, vdiFactory, presence)
+	if err != nil {
+		return nil, err
 	}
 
 	// 创建指标采集器
@@ -111,13 +151,13 @@ func NewScalingService(db *gorm.DB, config *ScalingConfig, dockerConfig *DockerC
 		config:         config,
 		dockerConfig:   dockerConfig,
 		metricsService: metricsService,
-		dockerClient:   dockerClient,
+		provider:       provider,
 		collector:      collector,
 		stopCh:         make(chan struct{}),
 		status: &ScalingStatus{
 			AutoScalingEnabled: config.Enabled,
 		},
-	}
+	}, nil
 }
 
 // Start 启动自动扩缩容监控
@@ -127,9 +167,9 @@ func (s *scalingServiceImpl) Start(ctx context.Context) error {
 		return nil
 	}
 
-	// 检查 Docker 健康状态
-	if !s.dockerClient.IsHealthy(ctx) {
-		return fmt.Errorf("Docker 服务不可用，无法启动扩缩容服务")
+	// 检查底层算力健康状态
+	if !s.provider.Healthy(ctx) {
+		return fmt.Errorf("算力提供者 (%s) 不可用，无法启动扩缩容服务", s.config.Provider)
 	}
 
 	s.mu.Lock()
@@ -234,15 +274,17 @@ func (s *scalingServiceImpl) scaleUp(ctx context.Context, metrics *ScalingMetric
 	applogger.Infof("开始扩容: 当前 %d -> 目标 %d (本次 +%d)",
 		metrics.ActiveWorkers, targetWorkers, needCount)
 
-	containerIDs, err := s.dockerClient.ScaleUp(ctx, needCount)
+	refs, err := s.provider.Provision(ctx, needCount)
 	if err != nil {
 		s.recordScalingEvent(ctx, "scale_up", metrics.ActiveWorkers, metrics.ActiveWorkers,
 			metrics, fmt.Sprintf("扩容失败: %v", err), "failed", "")
-		return fmt.Errorf("Docker 扩容失败: %w", err)
+		return fmt.Errorf("算力扩容失败 (%s): %w", s.config.Provider, err)
 	}
 
+	instanceIDs := instanceRefIDs(refs)
+
 	// 记录扩容事件
-	containerIDsJSON, _ := json.Marshal(containerIDs)
+	containerIDsJSON, _ := json.Marshal(instanceIDs)
 	s.recordScalingEvent(ctx, "scale_up", metrics.ActiveWorkers, metrics.ActiveWorkers+needCount,
 		metrics, metrics.DescribeDecision("scale_up"), "success", string(containerIDsJSON))
 
@@ -251,7 +293,7 @@ func (s *scalingServiceImpl) scaleUp(ctx context.Context, metrics *ScalingMetric
 	s.status.TotalScaleUps++
 	s.mu.Unlock()
 
-	applogger.Infof("扩容完成: 创建了 %d 个 Worker 容器 %v", needCount, containerIDs)
+	applogger.Infof("扩容完成: 创建了 %d 个 Worker 实例 (%s) %v", needCount, s.config.Provider, instanceIDs)
 
 	return nil
 }
@@ -271,39 +313,38 @@ func (s *scalingServiceImpl) scaleDown(ctx context.Context, metrics *ScalingMetr
 	applogger.Infof("开始缩容: 当前 %d -> 目标 %d (本次 -%d)",
 		metrics.ActiveWorkers, metrics.ActiveWorkers-needCount, needCount)
 
-	// 获取需要停止的容器（选择最空闲的）
-	containers, err := s.dockerClient.ListContainers(ctx)
+	// 获取当前实例列表（选择最空闲的）
+	instances, err := s.provider.List(ctx)
 	if err != nil {
 		s.recordScalingEvent(ctx, "scale_down", metrics.ActiveWorkers, metrics.ActiveWorkers,
-			metrics, fmt.Sprintf("获取容器列表失败: %v", err), "failed", "")
-		return fmt.Errorf("获取容器列表失败: %w", err)
+			metrics, fmt.Sprintf("获取实例列表失败: %v", err), "failed", "")
+		return fmt.Errorf("获取实例列表失败: %w", err)
 	}
 
-	// 选择需要停止的容器（优先选择运行中的容器）
-	var containerIDs []string
-	for _, container := range containers {
-		if len(containerIDs) >= needCount {
+	// 选择需要回收的实例（优先选择运行中的实例）
+	var targets []InstanceRef
+	for _, inst := range instances {
+		if len(targets) >= needCount {
 			break
 		}
-		if container.State == "running" {
-			containerIDs = append(containerIDs, container.ID)
+		if inst.State == "running" {
+			targets = append(targets, inst)
 		}
 	}
 
-	if len(containerIDs) == 0 {
-		applogger.Infof("没有可缩容的容器")
+	if len(targets) == 0 {
+		applogger.Infof("没有可缩容的实例")
 		return nil
 	}
 
-	err = s.dockerClient.ScaleDown(ctx, containerIDs)
-	if err != nil {
+	if err := s.provider.Reclaim(ctx, targets); err != nil {
 		s.recordScalingEvent(ctx, "scale_down", metrics.ActiveWorkers, metrics.ActiveWorkers,
 			metrics, fmt.Sprintf("缩容失败: %v", err), "failed", "")
-		return fmt.Errorf("Docker 缩容失败: %w", err)
+		return fmt.Errorf("算力缩容失败 (%s): %w", s.config.Provider, err)
 	}
 
 	// 记录缩容事件
-	containerIDsJSON, _ := json.Marshal(containerIDs)
+	containerIDsJSON, _ := json.Marshal(instanceRefIDs(targets))
 	s.recordScalingEvent(ctx, "scale_down", metrics.ActiveWorkers, metrics.ActiveWorkers-needCount,
 		metrics, metrics.DescribeDecision("scale_down"), "success", string(containerIDsJSON))
 
@@ -314,7 +355,7 @@ func (s *scalingServiceImpl) scaleDown(ctx context.Context, metrics *ScalingMetr
 	s.status.TotalScaleDowns++
 	s.mu.Unlock()
 
-	applogger.Infof("缩容完成: 停止了 %d 个 Worker 容器 %v", needCount, containerIDs)
+	applogger.Infof("缩容完成: 回收了 %d 个 Worker 实例 (%s) %v", needCount, s.config.Provider, instanceRefIDs(targets))
 
 	return nil
 }
@@ -378,19 +419,20 @@ func (s *scalingServiceImpl) ScaleUp(ctx context.Context, count int) ([]string, 
 			metrics.ActiveWorkers+count, s.config.MaxWorkers)
 	}
 
-	containerIDs, err := s.dockerClient.ScaleUp(ctx, count)
+	refs, err := s.provider.Provision(ctx, count)
 	if err != nil {
 		return nil, err
 	}
+	instanceIDs := instanceRefIDs(refs)
 
 	// 记录事件
-	containerIDsJSON, _ := json.Marshal(containerIDs)
+	containerIDsJSON, _ := json.Marshal(instanceIDs)
 	s.recordScalingEvent(ctx, "scale_up", metrics.ActiveWorkers, metrics.ActiveWorkers+count,
 		metrics, fmt.Sprintf("手动扩容 +%d", count), "success", string(containerIDsJSON))
 
-	applogger.Infof("手动扩容: 创建了 %d 个 Worker 容器 %v", count, containerIDs)
+	applogger.Infof("手动扩容: 创建了 %d 个 Worker 实例 (%s) %v", count, s.config.Provider, instanceIDs)
 
-	return containerIDs, nil
+	return instanceIDs, nil
 }
 
 // ScaleDown 手动缩容
@@ -415,8 +457,13 @@ func (s *scalingServiceImpl) ScaleDown(ctx context.Context, containerIDs []strin
 			metrics.ActiveWorkers-len(containerIDs), s.config.MinWorkers)
 	}
 
-	err := s.dockerClient.ScaleDown(ctx, containerIDs)
+	// 由 ID 构建回收引用（List 补全 Kind/State，尽力而为）
+	targets, err := s.buildRefs(ctx, containerIDs)
 	if err != nil {
+		return err
+	}
+
+	if err := s.provider.Reclaim(ctx, targets); err != nil {
 		return err
 	}
 
@@ -425,7 +472,7 @@ func (s *scalingServiceImpl) ScaleDown(ctx context.Context, containerIDs []strin
 	s.recordScalingEvent(ctx, "scale_down", metrics.ActiveWorkers, metrics.ActiveWorkers-len(containerIDs),
 		metrics, fmt.Sprintf("手动缩容 -%d", len(containerIDs)), "success", string(containerIDsJSON))
 
-	applogger.Infof("手动缩容: 停止了 %d 个 Worker 容器 %v", len(containerIDs), containerIDs)
+	applogger.Infof("手动缩容: 回收了 %d 个 Worker 实例 (%s) %v", len(containerIDs), s.config.Provider, containerIDs)
 
 	return nil
 }
@@ -445,15 +492,16 @@ func (s *scalingServiceImpl) GetHistory(ctx context.Context, limit int) ([]Scali
 	return s.metricsService.GetScalingHistory(ctx, limit)
 }
 
-// SyncWorkersWithContainers 同步 Worker 记录与 Docker 容器状态
-// 这个方法用于确保数据库中的 Worker 记录与实际运行的容器一致
+// SyncWorkersWithInstances 同步 Worker 记录与底层算力实例状态
+// 这个方法用于确保数据库中的 Worker 记录与实际运行的实例一致。
+// 保留旧名 SyncWorkersWithContainers 作为兼容入口（Phase 157 / FLEET-01 provider 化）。
 func (s *scalingServiceImpl) SyncWorkersWithContainers(ctx context.Context) error {
-	containers, err := s.dockerClient.ListContainers(ctx)
+	instances, err := s.provider.List(ctx)
 	if err != nil {
-		return fmt.Errorf("获取容器列表失败: %w", err)
+		return fmt.Errorf("获取实例列表失败: %w", err)
 	}
 
-	// 获取数据库中的 Docker Worker 记录
+	// 获取数据库中的 Worker 记录
 	var dbWorkers []rpamodels.Worker
 	err = s.db.WithContext(ctx).
 		Where("docker_container_id IS NOT NULL AND docker_container_id != ''").
@@ -462,16 +510,16 @@ func (s *scalingServiceImpl) SyncWorkersWithContainers(ctx context.Context) erro
 		return fmt.Errorf("获取数据库 Worker 记录失败: %w", err)
 	}
 
-	// 构建 container ID 映射
-	containerMap := make(map[string]bool)
-	for _, container := range containers {
-		containerMap[container.ID] = true
+	// 构建 instance ID 映射
+	instanceMap := make(map[string]bool)
+	for _, inst := range instances {
+		instanceMap[inst.ID] = true
 	}
 
-	// 标记不存在的容器为离线
+	// 标记不存在的实例为离线
 	now := time.Now().Unix()
 	for _, worker := range dbWorkers {
-		if !containerMap[worker.DockerContainerID] {
+		if !instanceMap[worker.DockerContainerID] {
 			if err := s.db.WithContext(ctx).
 				Model(&rpamodels.Worker{}).
 				Where("id = ?", worker.ID).
@@ -496,17 +544,17 @@ func (s *scalingServiceImpl) GetWorkerStats(ctx context.Context) (*WorkerStats, 
 		return nil, fmt.Errorf("指标数据未就绪")
 	}
 
-	containers, err := s.dockerClient.ListContainers(ctx)
+	instances, err := s.provider.List(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("获取容器列表失败: %w", err)
+		return nil, fmt.Errorf("获取实例列表失败: %w", err)
 	}
 
 	var running, stopped, other int
-	for _, container := range containers {
-		switch container.State {
+	for _, inst := range instances {
+		switch inst.State {
 		case "running":
 			running++
-		case "exited", "dead":
+		case "exited", "dead", "stopped":
 			stopped++
 		default:
 			other++
@@ -514,7 +562,7 @@ func (s *scalingServiceImpl) GetWorkerStats(ctx context.Context) (*WorkerStats, 
 	}
 
 	return &WorkerStats{
-		TotalContainers:   len(containers),
+		TotalContainers:   len(instances),
 		RunningContainers: running,
 		StoppedContainers: stopped,
 		OtherContainers:   other,
@@ -537,21 +585,28 @@ type WorkerStats struct {
 	AverageExecTime   string `json:"averageExecTime"`
 }
 
-// FindIdleContainers 查找空闲容器
+// FindIdleContainers 查找空闲实例（仅 container provider 支持容器级统计；
+// VDIVMProvider 不实现 StatsAwareProvider，能力差异显式声明，直接返回空集）。
 func (s *scalingServiceImpl) FindIdleContainers(ctx context.Context, limit int) ([]string, error) {
-	containers, err := s.dockerClient.ListContainers(ctx)
+	statsProvider, ok := s.provider.(StatsAwareProvider)
+	if !ok {
+		applogger.Infof("provider (%s) 不支持容器级统计，跳过空闲实例查找", s.config.Provider)
+		return nil, nil
+	}
+
+	instances, err := s.provider.List(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	var idleContainers []string
-	for _, container := range containers {
+	for _, inst := range instances {
 		if len(idleContainers) >= limit {
 			break
 		}
 
-		// 获取容器统计信息
-		stats, err := s.dockerClient.GetContainerStats(ctx, container.ID)
+		// 获取实例统计信息
+		stats, err := statsProvider.Stats(ctx, inst.ID)
 		if err != nil {
 			continue
 		}
@@ -563,11 +618,39 @@ func (s *scalingServiceImpl) FindIdleContainers(ctx context.Context, limit int) 
 		}
 
 		if stats.CPUPercent < 10.0 && memoryPercent < 20.0 {
-			idleContainers = append(idleContainers, container.ID)
+			idleContainers = append(idleContainers, inst.ID)
 		}
 	}
 
 	return idleContainers, nil
+}
+
+// instanceRefIDs 提取 InstanceRef 的 ID 列表。
+func instanceRefIDs(refs []InstanceRef) []string {
+	ids := make([]string, 0, len(refs))
+	for _, ref := range refs {
+		ids = append(ids, ref.ID)
+	}
+	return ids
+}
+
+// buildRefs 由实例 ID 列表构建 InstanceRef（从 provider.List 匹配，未命中时用 config.Provider 兜底 Kind）。
+func (s *scalingServiceImpl) buildRefs(ctx context.Context, ids []string) ([]InstanceRef, error) {
+	byID := make(map[string]InstanceRef)
+	if instances, err := s.provider.List(ctx); err == nil {
+		for _, inst := range instances {
+			byID[inst.ID] = inst
+		}
+	}
+	refs := make([]InstanceRef, 0, len(ids))
+	for _, id := range ids {
+		if ref, ok := byID[id]; ok {
+			refs = append(refs, ref)
+		} else {
+			refs = append(refs, InstanceRef{ID: id, Kind: s.config.Provider})
+		}
+	}
+	return refs, nil
 }
 
 // ValidateScalingConfig 验证扩缩容配置

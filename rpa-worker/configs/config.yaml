@@ -6,7 +6,9 @@ worker:
   # Phase 154 / ENGINE-01：并发页面数 —— 唯一真相。
   # 语义 = 同时执行的 RPA 任务数 = 同一 Chromium 内并行 page 数（1 Chrome + N page）。
   # 旧键 browser.max_pages 已合并进本键（见 README/SUMMARY 的兼容说明）。
-  max_concurrency: 5
+  # Phase 157 / FLEET-02：8GB VM 基准取 N=8（与 deployments/docker-compose*.yml 的
+  # MAX_CONCURRENCY、deployments/README.md 容量表保持一致，由漂移校验测试锁定）。
+  max_concurrency: 8
   loop_concurrency: 3       # 循环内并发数（单个任务内循环的并行执行数，0=串行，已废弃）
   version: "1.0.0"          # Worker 版本
   task_timeout: 10m         # 任务超时时间

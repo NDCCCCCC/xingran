@@ -49,6 +49,33 @@ related:
 
 **结论二**：在 8–16 GB 的 VDI 规格下，**形态 A 明显占优**；只有当单 VM ≥ 32 GB 且需要强故障隔离/多租户时才值得上形态 B，且应把 shm 降为 512MB–1GB 并显式配置 `--disable-dev-shm-usage`（现已在 `chrome_page.go` launcher flags 里）。
 
+### 3.1 宿主机实测回填（Phase 157 / FLEET-03，2026-11-24）
+
+- **环境口径**：Windows 11 宿主机（无 Docker），直接以「1 Chromium + N page」为承载单元；
+  headless + `--disable-dev-shm-usage` + `--no-sandbox`；中等负载 data-URL 页面（~800 行）；
+  每档 3 轮独立浏览器生命周期，每轮 10 次 × 500ms 采样；PID 基线过滤排除用户自有浏览器进程。
+  工具：`rpa-worker/cmd/capacitybench/main.go`（rod + tasklist，零新增依赖）。
+- **⚠️ 口径限制**：宿主机数字 ≠ 容器内数字（无 cgroup 隔离、含系统页缓存差异）；
+  只校验「1 Chrome + N page」的 RSS 线性与崩溃率。容器/VM 内矩阵（P95 / OOM / screencast 带宽）
+  登记 UAT：`notes/261124-fleet03-uat-capacity.md`（UAT-FLEET-01）。
+
+| N | maxRSS(MB) | avgRSS(MB) | chrome 进程数(max) | pageLoadFail | browserCrash |
+|---|---|---|---|---|---|
+| 1 | 409 | 403 | 7 | 0 | 0 |
+| 2 | 485 | 468 | 9 | 0 | 0 |
+| 4 | 607 | 593 | 11 | 0 | 0 |
+| 8 | 859 | 843 | 15 | 0 | 0 |
+
+（原始输出：`out/capacity-bench-host.md` + `out/capacity-bench-host-n8.md`，未入库）
+
+**实测解读**：
+- RSS 线性关系成立且**优于 §3 推算**：N=1 基线 ≈ 405MB，每 page 边际增量 ≈ (859−409)/7 ≈ **64MB**；
+  8 page 全档仅 859MB，对 8GB VM 的 6G 容器限额余量 >5×。
+- Chrome 多进程模型（每 page 若干辅助进程，7→15 进程）不影响 RSS 单调性；本矩阵
+  **0 崩溃 / 0 加载失败**（8 page × 3 轮稳定）。
+- 决策结论：**「一 VM 一容器」被宿主机实测支持**（RSS 亚线性 + 零崩溃）；数字级默认 N=8
+  维持为待 UAT 确认的部署基线，P95/带宽/OOM 结论以 UAT-FLEET-01 为准。
+
 ## 4. 推荐决策（写入 v1.56 FLEET / ENGINE 交付）
 
 1. **默认形态 = A：一 VM 一 Worker 容器，容器内 1 个 Chromium + N 个 page。**
@@ -69,6 +96,11 @@ related:
 | `shm_size` | 2gb | 1gb（配合 `--disable-dev-shm-usage` 已存在） |
 | CPU | 2 | 8GB VM 建议 4 |
 | 每 VM 容器数 | 1（compose 单 service） | 1（默认）；多容器仅多租户/滚动升级场景 |
+
+**FLEET-02 落地状态（2026-11-24）**：两份 compose + `config.yaml` 已按 8GB 基准改值
+（shm 1gb / memory 6G / cpus '4' / N=8），漂移校验 `rpa-worker/deployments/drift_test.go`
+锁定三真相源（compose MAX_CONCURRENCY == config max_concurrency == README `capacity-n` 锚点），
+并容忍旧键 `max_pages` 存在（WARN 不阻塞，协议第 1 条中间态）。
 
 ## 6. 对 v1.56 的影响
 
