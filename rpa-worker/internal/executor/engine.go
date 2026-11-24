@@ -4,9 +4,12 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"strings"
 	"time"
 
+	"github.com/go-rod/rod/lib/proto"
 	"github.com/redis/go-redis/v9"
 	"github.com/xingran-next/rpa-worker/internal/browser"
 	"github.com/xingran-next/rpa-worker/internal/communication"
@@ -113,6 +116,15 @@ func (e *Engine) Execute(ctx context.Context, task *types.TaskMessage, workerID 
 	// Initialize variable context（Phase 154 / ENGINE-04：三层作用域显式化）
 	variables := NewVariableScope(task.Variables)
 
+	// Phase 153 / RUNTIME-02：任务携带 __sessionData 时真实注入会话
+	//（cookies + localStorage + token 头），先注入后导航保证目标页首载即登录态。
+	if sd, ok := task.Variables[types.VariableSessionData]; ok && sd != nil {
+		if err := e.applySessionData(ctx, page, sd, task.TargetURL); err != nil {
+			e.logger.Warn("apply session data failed",
+				logger.String("execution_id", task.ExecutionID), logger.Err(err))
+		}
+	}
+
 	// Navigate to target URL
 	if task.TargetURL != "" {
 		if err := pageMgr.Goto(task.TargetURL); err != nil {
@@ -124,6 +136,15 @@ func (e *Engine) Execute(ctx context.Context, task *types.TaskMessage, workerID 
 
 	// Execute script actions
 	for i, action := range task.Script {
+		// Phase 153 / RUNTIME-03：动作边界 ctx 取消检查点（每个动作至少一次）。
+		// 取消（用户 Cancel / 超时 / abort）后立即停止，结果状态为 cancelled，
+		// 绝不以 success 收尾。
+		if ctx.Err() != nil {
+			cancelled := e.createCancelledResult(result, ctx.Err(), i, len(task.Script))
+			e.reportSubTaskResult(ctx, task, cancelled)
+			return cancelled, nil
+		}
+
 		// Update current step and total for screenshot reporting
 		e.currentStep = i + 1
 		e.currentTotal = len(task.Script)
@@ -146,11 +167,25 @@ func (e *Engine) Execute(ctx context.Context, task *types.TaskMessage, workerID 
 		})
 
 		// Execute action
-		if err := e.executeAction(ctx, pageMgr, &action, variables); err != nil {
+		if err := e.executeAction(ctx, page, pageMgr, &action, variables); err != nil {
+			// RUNTIME-04：人工干预 abort → cancelled 终态
+			var abortErr *types.AbortError
+			if errors.As(err, &abortErr) {
+				cancelled := e.createCancelledResult(result, err, i+1, len(task.Script))
+				e.reportSubTaskResult(ctx, task, cancelled)
+				return cancelled, nil
+			}
+
 			// Retry logic
 			if action.Retry > 0 {
 				lastErr := err
 				for retry := 0; retry <= action.Retry; retry++ {
+					// RUNTIME-03：重试边界同样响应取消
+					if ctx.Err() != nil {
+						cancelled := e.createCancelledResult(result, ctx.Err(), i+1, len(task.Script))
+						e.reportSubTaskResult(ctx, task, cancelled)
+						return cancelled, nil
+					}
 					e.logger.Warn("action failed, retrying",
 						logger.Int("retry", retry),
 						logger.Int("max_retries", action.Retry),
@@ -158,7 +193,7 @@ func (e *Engine) Execute(ctx context.Context, task *types.TaskMessage, workerID 
 					)
 					time.Sleep(e.config.InitialDelay)
 
-					if err = e.executeAction(ctx, pageMgr, &action, variables); err == nil {
+					if err = e.executeAction(ctx, page, pageMgr, &action, variables); err == nil {
 						break
 					}
 					lastErr = err
@@ -210,7 +245,12 @@ func (e *Engine) extractSubTaskMeta(task *types.TaskMessage) (isSubTask bool, pa
 }
 
 // executeAction execute single action
-func (e *Engine) executeAction(ctx context.Context, pageMgr *browser.PageManager, action *types.Action, variables *VariableScope) error {
+func (e *Engine) executeAction(ctx context.Context, page browser.Page, pageMgr *browser.PageManager, action *types.Action, variables *VariableScope) error {
+	// Phase 153 / RUNTIME-03：动作入口 ctx 取消检查点
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
 	e.logger.Debug("executing action",
 		logger.String("type", string(action.Type)),
 		logger.String("selector", action.Selector),
@@ -306,7 +346,7 @@ func (e *Engine) executeAction(ctx context.Context, pageMgr *browser.PageManager
 
 	case types.ActionLoop:
 		// Loop action - iterate over data array and execute nested actions
-		return e.executeLoop(ctx, pageMgr, action, variables)
+		return e.executeLoop(ctx, page, pageMgr, action, variables)
 
 	case types.ActionPause:
 		// Pause action - wait for human input (for captcha handling)
@@ -322,7 +362,7 @@ func (e *Engine) executeAction(ctx context.Context, pageMgr *browser.PageManager
 
 	case types.ActionAutoLogin:
 		// Auto login action - use stored credentials or session
-		return e.executeAutoLogin(ctx, pageMgr, action, variables)
+		return e.executeAutoLogin(ctx, page, pageMgr, action, variables)
 
 	// ===== Phase 154 / ENGINE-02：差集 A（常量已声明、switch 原本无 case）=====
 	case types.ActionUpload:
@@ -338,7 +378,7 @@ func (e *Engine) executeAction(ctx context.Context, pageMgr *browser.PageManager
 		return e.executeClose(ctx, pageMgr, action, variables)
 
 	case types.ActionCondition:
-		return e.executeCondition(ctx, pageMgr, action, variables)
+		return e.executeCondition(ctx, page, pageMgr, action, variables)
 
 	// ===== Phase 154 / ENGINE-02：差集 B（常量与 case 双缺）=====
 	case types.ActionAssert:
@@ -376,7 +416,7 @@ func (e *Engine) executeAction(ctx context.Context, pageMgr *browser.PageManager
 // executeLoop execute loop action for batch processing
 // 注意：混合模式下，Loop 动作应该由 Worker 的 TaskSplitter 拆分为子任务
 // 这里保留简单的串行执行是为了向后兼容（当混合模式未启用时）
-func (e *Engine) executeLoop(ctx context.Context, pageMgr *browser.PageManager, action *types.Action, variables *VariableScope) error {
+func (e *Engine) executeLoop(ctx context.Context, page browser.Page, pageMgr *browser.PageManager, action *types.Action, variables *VariableScope) error {
 	// Get loop data source
 	dataSource, ok := action.Params["dataSource"]
 	if !ok {
@@ -462,7 +502,7 @@ func (e *Engine) executeLoop(ctx context.Context, pageMgr *browser.PageManager, 
 
 		// Execute nested actions
 		for _, nestedAction := range nestedActions {
-			if err := e.executeAction(ctx, pageMgr, &nestedAction, variables); err != nil {
+			if err := e.executeAction(ctx, page, pageMgr, &nestedAction, variables); err != nil {
 				return fmt.Errorf("loop iteration %d failed: %w", i, err)
 			}
 		}
@@ -522,17 +562,37 @@ func (e *Engine) executePause(ctx context.Context, pageMgr *browser.PageManager,
 	// 4. Wait for user input or timeout
 	select {
 	case input := <-userInputChan:
-		// User input received, add to variables（ENGINE-04：写任务层，
-		// 敏感键在日志中脱敏）。
-		for key, value := range input {
-			if err := variables.Set(ScopeTask, key, value); err != nil {
-				return fmt.Errorf("人工输入回写变量 %s 失败: %w", key, err)
+		// Phase 153 / RUNTIME-04：按干预类型分派
+		//   resume（含无 action 的纯输入）→ 输入写任务变量后继续
+		//   skip  → 跳过当前等待与后续动作？（跳过 pause 本身，继续执行）
+		//   abort → ErrExecutionAborted 哨兵，Execute 置 cancelled 终态
+		action, _ := input["action"].(string)
+		switch action {
+		case "abort":
+			e.logger.Info("human intervention abort received",
+				logger.String("execution_id", e.currentExecutionID),
+				logger.String("reason", fmt.Sprintf("%v", input["reason"])))
+			return types.ErrExecutionAborted
+		case "skip":
+			e.logger.Info("human intervention skip received, continuing without input",
+				logger.String("execution_id", e.currentExecutionID))
+			return nil
+		default: // resume / 未携带 action 的输入
+			// User input received, add to variables（ENGINE-04：写任务层，
+			// 敏感键在日志中脱敏）。
+			for key, value := range input {
+				if key == "action" || key == "reason" || key == "executionId" || key == "operator" {
+					continue // 控制字段不写入业务变量
+				}
+				if err := variables.Set(ScopeTask, key, value); err != nil {
+					return fmt.Errorf("人工输入回写变量 %s 失败: %w", key, err)
+				}
+				e.logger.Info("received user input",
+					logger.String("key", key),
+					logger.String("value", fmt.Sprintf("%v", MaskSensitive(key, value))))
 			}
-			e.logger.Info("received user input",
-				logger.String("key", key),
-				logger.String("value", fmt.Sprintf("%v", MaskSensitive(key, value))))
+			return nil
 		}
-		return nil
 
 	case <-time.After(timeout):
 		return fmt.Errorf("pause timeout: no user input received within %v", timeout)
@@ -691,7 +751,7 @@ func (e *Engine) executeScroll(ctx context.Context, pageMgr *browser.PageManager
 }
 
 // executeAutoLogin execute auto login action
-func (e *Engine) executeAutoLogin(ctx context.Context, pageMgr *browser.PageManager, action *types.Action, variables *VariableScope) error {
+func (e *Engine) executeAutoLogin(ctx context.Context, page browser.Page, pageMgr *browser.PageManager, action *types.Action, variables *VariableScope) error {
 	// Get login URL from params
 	loginURL, ok := action.Params["loginUrl"].(string)
 	if !ok {
@@ -712,7 +772,7 @@ func (e *Engine) executeAutoLogin(ctx context.Context, pageMgr *browser.PageMana
 		}
 
 		// Apply session data (cookies, localStorage)
-		return e.applySessionData(ctx, pageMgr, sessionDataInterface)
+		return e.applySessionData(ctx, page, sessionDataInterface, loginURL)
 	}
 
 	// If we have credentials, perform login
@@ -787,9 +847,17 @@ func (e *Engine) executeAutoLogin(ctx context.Context, pageMgr *browser.PageMana
 	return fmt.Errorf("no session data or credentials available for auto login")
 }
 
-// applySessionData applies stored session data (cookies, localStorage) to the page
-func (e *Engine) applySessionData(ctx context.Context, pageMgr *browser.PageManager, sessionDataInterface interface{}) error {
-	// Convert session data to proper format
+// applySessionData 把会话数据真实注入页面（Phase 153 / RUNTIME-02）。
+//
+// 注入通道（经 Page.RawPage() 消费 browser.Manager 冻结契约，不改 browser/*）：
+//  1. cookies   → rod Page.SetCookies（domain 缺省按 targetURL host 补齐）
+//  2. localStorage / token → EvalOnNewDocument：目标页每次文档创建前写入
+//     localStorage（键 + 常见 token 键），使 SPA 首载即登录态
+//  3. Authorization 头 → 同一脚本 patch window.fetch，为同源请求附加
+//     Authorization: Bearer <accessToken>
+//
+// 调用时机：Acquire 之后、导航之前 —— cookie 在首个请求即生效。
+func (e *Engine) applySessionData(ctx context.Context, page browser.Page, sessionDataInterface interface{}, targetURL string) error {
 	sessionDataBytes, err := json.Marshal(sessionDataInterface)
 	if err != nil {
 		return err
@@ -800,31 +868,96 @@ func (e *Engine) applySessionData(ctx context.Context, pageMgr *browser.PageMana
 		return err
 	}
 
-	// Apply cookies
+	raw := page.RawPage()
+	if raw == nil {
+		return fmt.Errorf("RawPage 不可用，无法注入会话")
+	}
+
+	// 1. cookies：缺省 domain/path 用 targetURL host 补齐
 	if len(sessionData.Cookies) > 0 {
+		cookieParams := make([]*proto.NetworkCookieParam, 0, len(sessionData.Cookies))
 		for _, cookie := range sessionData.Cookies {
-			// Set cookie via page manager (needs implementation)
+			param := &proto.NetworkCookieParam{
+				Name:     cookie.Name,
+				Value:    cookie.Value,
+				Path:     cookie.Path,
+				Secure:   cookie.Secure,
+				HTTPOnly: cookie.HTTPOnly,
+			}
+			if param.Path == "" {
+				param.Path = "/"
+			}
+			if cookie.Domain != "" {
+				param.Domain = cookie.Domain
+			} else if targetURL != "" {
+				param.URL = targetURL // rod 按 URL 推导 domain
+			}
+			if cookie.Expires != nil {
+				exp := float64(cookie.Expires.Unix())
+				param.Expires = proto.TimeSinceEpoch(exp)
+			}
+			cookieParams = append(cookieParams, param)
 			e.logger.Debug("setting cookie",
 				logger.String("name", cookie.Name),
 				logger.String("domain", cookie.Domain))
 		}
-	}
-
-	// Apply localStorage items
-	if sessionData.SessionData != nil {
-		for key := range sessionData.SessionData {
-			// Set localStorage item via page manager (needs implementation)
-			e.logger.Debug("setting localStorage",
-				logger.String("key", key))
+		if err := raw.SetCookies(cookieParams); err != nil {
+			return fmt.Errorf("注入 cookies 失败: %w", err)
 		}
 	}
 
-	// Apply access token if available (as Authorization header)
-	if sessionData.AccessToken != "" {
-		// This would be handled via API request interceptors
-		e.logger.Debug("setting access token")
+	// 2 + 3. localStorage / token / fetch 头 patch：EvalOnNewDocument
+	sessionItems := sessionData.SessionData
+	accessToken := sessionData.AccessToken
+	if sessionItems != nil {
+		if token, ok := sessionItems["accessToken"].(string); ok && accessToken == "" {
+			accessToken = token
+		}
+		if token, ok := sessionItems["token"].(string); ok && accessToken == "" {
+			accessToken = token
+		}
 	}
 
+	var jsParts []string
+	if sessionItems != nil {
+		for key, value := range sessionItems {
+			rawKey := strings.ReplaceAll(key, "'", "\\'")
+			valueJSON, err := json.Marshal(value)
+			if err != nil {
+				continue
+			}
+			jsParts = append(jsParts, fmt.Sprintf(
+				"try{localStorage.setItem('%s', %s);}catch(e){}", rawKey, string(valueJSON)))
+		}
+	}
+	if accessToken != "" {
+		// 常见 token 键兜底写入（各内网 SPA 读取习惯不一）
+		tokenJSON, _ := json.Marshal(accessToken)
+		jsParts = append(jsParts,
+			fmt.Sprintf("try{localStorage.setItem('token', %s);localStorage.setItem('accessToken', %s);}catch(e){}",
+				string(tokenJSON), string(tokenJSON)))
+		// 同源 API 请求附加 Authorization 头
+		jsParts = append(jsParts, fmt.Sprintf(
+			`try{(function(){var o=window.fetch;window.fetch=function(){var r=o.apply(this,arguments);`+
+				`try{var u=(typeof arguments[0]==='string')?arguments[0]:(arguments[0]&&arguments[0].url)||'';`+
+				`if(u && (u.startsWith('/')||u.indexOf(location.host)>-1)){var h=new Headers((arguments[0]&&arguments[0].headers)||{});`+
+				`if(!h.has('Authorization')){h.set('Authorization','Bearer %s');`+
+				`if(arguments[1]){arguments[1].headers=h;}}}}catch(e){}return r;};})();}catch(e){}`, accessToken))
+		e.logger.Debug("setting access token")
+	}
+	if len(jsParts) > 0 {
+		script := strings.Join(jsParts, "\n")
+		if _, err := raw.EvalOnNewDocument(script); err != nil {
+			return fmt.Errorf("EvalOnNewDocument 注入失败: %w", err)
+		}
+		// 已处于目标页时补一次即时注入（EvalOnNewDocument 只影响后续文档）
+		_, _ = raw.Eval(script)
+	}
+
+	e.logger.Info("session data injected",
+		logger.Int("cookies", len(sessionData.Cookies)),
+		logger.Int("storage_items", len(sessionItems)),
+		logger.String("has_token", fmt.Sprintf("%v", accessToken != "")))
 	return nil
 }
 
@@ -893,6 +1026,25 @@ func (e *Engine) replaceVariables(s string, variables *VariableScope) (string, e
 		policy = e.config.UndefinedVariablePolicy
 	}
 	return ResolveTemplate(s, variables.Flatten(), policy)
+}
+
+// createCancelledResult 取消/中止结果（Phase 153 / RUNTIME-03）。
+// 状态恒为 cancelled（绝不以 success 收尾），错误信息保留取消原因。
+func (e *Engine) createCancelledResult(result *types.ExecutionResult, cause error, step, total int) *types.ExecutionResult {
+	result.Status = types.StatusCancelled
+	result.ErrorMessage = "execution cancelled: " + cause.Error()
+	result.CompletedAt = time.Now()
+	result.Duration = result.CompletedAt.Sub(result.StartedAt)
+	result.Step = step
+	result.Total = total
+
+	e.logger.Info("task execution cancelled",
+		logger.String("execution_id", result.ExecutionID),
+		logger.Int("step", step),
+		logger.Int("total", total),
+		logger.Err(cause),
+	)
+	return result
 }
 
 // createErrorResult create error result

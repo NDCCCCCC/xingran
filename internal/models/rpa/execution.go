@@ -20,6 +20,9 @@ const (
 	RPAExecutionStatusFailed    RPAExecutionStatus = "failed"    // 失败
 	RPAExecutionStatusCancelled RPAExecutionStatus = "cancelled" // 已取消
 	RPAExecutionStatusTimeout   RPAExecutionStatus = "timeout"   // 超时
+	// RPAExecutionStatusPaused 暂停（Phase 153 / RUNTIME-05 状态机：
+	// pause 动作等待人工干预期间的状态；paused → running | cancelled）
+	RPAExecutionStatusPaused RPAExecutionStatus = "paused" // 暂停
 )
 
 // StringArray 用于存储字符串数组为 JSON 字符串

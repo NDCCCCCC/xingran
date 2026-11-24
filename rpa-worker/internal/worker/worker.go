@@ -7,6 +7,7 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -54,6 +55,11 @@ type Worker struct {
 	maxConcurrency   int
 	maxConcurrencyMu sync.RWMutex
 	scaleCommandChan chan scaleCommandWrapper
+
+	// activeCancels Phase 153 / RUNTIME-03：运行中执行的取消句柄。
+	// cancelCommandListener 收到 execution:cancel:{id} 后按 id 取消其 ctx。
+	activeCancels   map[string]context.CancelFunc
+	activeCancelsMu sync.Mutex
 
 	// Hybrid mode fields
 	taskSplitter *executor.TaskSplitter
@@ -140,6 +146,7 @@ func New(cfg *config.Config) (*Worker, error) {
 		state:            StateInitializing,
 		maxConcurrency:   initialMaxConcurrency,
 		scaleCommandChan: make(chan scaleCommandWrapper, 10),
+		activeCancels:    make(map[string]context.CancelFunc),
 	}
 	if err := w.initComponents(); err != nil {
 		cancel()
@@ -208,6 +215,10 @@ func (w *Worker) Start() error {
 	// Start scale command processor
 	w.wg.Add(1)
 	go w.processScaleCommands()
+
+	// Phase 153 / RUNTIME-03：取消指令监听
+	w.wg.Add(1)
+	go w.cancelCommandListener()
 
 	if w.config.Monitor.HealthEnabled {
 		w.wg.Add(1)
@@ -320,11 +331,12 @@ func (w *Worker) sendHeartbeat() {
 	}
 
 	req := &types.WorkerHeartbeatRequest{
-		WorkerID:      w.id,
-		CurrentTasks:  currentTasks,
-		TotalExecuted: int(w.tasksCompleted),
-		TotalFailed:   int(w.tasksFailed),
-		Status:        status,
+		WorkerID:            w.id,
+		CurrentTasks:        currentTasks,
+		TotalExecuted:       int(w.tasksCompleted),
+		TotalFailed:         int(w.tasksFailed),
+		Status:              status,
+		RunningExecutionIDs: w.runningExecutionIDs(), // RUNTIME-01：心跳补归属
 	}
 	if err := w.apiClient.Heartbeat(w.ctx, req); err != nil {
 		w.logger.Error("heartbeat failed", logger.Err(err))
@@ -404,6 +416,9 @@ func (w *Worker) executeTask(task *types.TaskMessage, messageID string) {
 		logger.String("task_id", task.TaskID))
 
 	ctx, cancel := context.WithTimeout(w.ctx, w.config.Worker.TaskTimeout)
+	// RUNTIME-03：登记取消句柄，cancelCommandListener 可按 executionID 取消
+	w.registerCancel(task.ExecutionID, cancel)
+	defer w.unregisterCancel(task.ExecutionID)
 	defer cancel()
 
 	// 检查是否正在关闭
@@ -535,6 +550,80 @@ func (w *Worker) scaleCommandListener() {
 					}
 				},
 			}
+		}
+	}
+}
+
+// registerCancel RUNTIME-03：登记执行取消句柄（executeTask 进入时调用）。
+func (w *Worker) registerCancel(executionID string, cancel context.CancelFunc) {
+	w.activeCancelsMu.Lock()
+	defer w.activeCancelsMu.Unlock()
+	w.activeCancels[executionID] = cancel
+}
+
+// unregisterCancel 注销取消句柄（executeTask 退出时调用）。
+func (w *Worker) unregisterCancel(executionID string) {
+	w.activeCancelsMu.Lock()
+	defer w.activeCancelsMu.Unlock()
+	delete(w.activeCancels, executionID)
+}
+
+// runningExecutionIDs 当前运行中的执行 ID 快照（心跳归属回写用）。
+func (w *Worker) runningExecutionIDs() []string {
+	w.activeCancelsMu.Lock()
+	defer w.activeCancelsMu.Unlock()
+	ids := make([]string, 0, len(w.activeCancels))
+	for id := range w.activeCancels {
+		ids = append(ids, id)
+	}
+	return ids
+}
+
+// cancelCommandListener Phase 153 / RUNTIME-03：订阅 execution:cancel:*，
+// 收到后 cancel 对应执行的 ctx —— 引擎在下一个动作边界停止并以
+// cancelled 终态上报（不会以 success 覆盖）。
+func (w *Worker) cancelCommandListener() {
+	defer w.wg.Done()
+
+	pubsub, err := w.redisClient.SubscribeExecutionCancel(w.ctx)
+	if err != nil {
+		w.logger.Error("subscribe execution cancel failed", logger.Err(err))
+		return
+	}
+	defer pubsub.Close()
+
+	for {
+		select {
+		case <-w.ctx.Done():
+			return
+		case <-w.shutdownSignal:
+			return
+		case msg := <-pubsub.Channel():
+			if msg == nil || msg.Payload == "" {
+				continue
+			}
+			// 频道 execution:cancel:{executionID}
+			executionID := strings.TrimPrefix(msg.Channel, "execution:cancel:")
+			if executionID == "" {
+				continue
+			}
+
+			w.activeCancelsMu.Lock()
+			cancelFn, ok := w.activeCancels[executionID]
+			w.activeCancelsMu.Unlock()
+
+			if !ok {
+				w.logger.Debug("cancel for unknown/finished execution, ignored",
+					logger.String("execution_id", executionID))
+				continue
+			}
+
+			var payload map[string]interface{}
+			_ = json.Unmarshal([]byte(msg.Payload), &payload)
+			w.logger.Warn("execution cancel received, cancelling context",
+				logger.String("execution_id", executionID),
+				logger.String("reason", fmt.Sprintf("%v", payload["reason"])))
+			cancelFn()
 		}
 	}
 }

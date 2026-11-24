@@ -308,7 +308,7 @@ func TestTaskService_Execute_WithCredentialSession(t *testing.T) {
 
 	// 有会话
 	_, err = credSvc.CreateSession(ctx, &rpamodels.SessionCreateRequest{
-		CredentialID: "cred1", TargetSystem: "default", AccessToken: "at",
+		CredentialID: "cred1", TargetSystem: "erp", AccessToken: "at",
 	})
 	require.NoError(t, err)
 	// 注: InputParams 必须非 nil —— publishTaskToRedis 对 Variables[__credentials] 赋值
@@ -319,10 +319,11 @@ func TestTaskService_Execute_WithCredentialSession(t *testing.T) {
 	last := c.payloads[len(c.payloads)-1]
 	c.mu.Unlock()
 	assert.Contains(t, last, `"accessToken":"at"`, "会话命中时传递 token")
+	assert.Contains(t, last, "__sessionData", "RUNTIME-02: 会话注入 __sessionData")
 
 	// 无会话 → 凭证兜底
 	_, err = credSvc.CreateCredential(ctx, &rpamodels.CredentialCreateRequest{
-		Name: "c", TargetSystem: "default", Username: "u", Password: "p",
+		Name: "c", TargetSystem: "erp", Username: "u", Password: "p",
 	}, "u1")
 	require.NoError(t, err)
 	_, err = svc.Execute(ctx, &ExecuteTaskRequest{TaskID: created.ID, CredentialID: "cred-none", InputParams: map[string]interface{}{}}, "u1")
@@ -343,7 +344,9 @@ func TestTaskService_Helpers(t *testing.T) {
 	assert.Equal(t, "", extractURLFromScript(nil))
 
 	assert.Equal(t, "unknown", extractTargetSystem(""))
-	assert.Equal(t, "default", extractTargetSystem("http://erp.local"))
+	assert.Equal(t, "erp", extractTargetSystem("http://erp.local"))
+	assert.Equal(t, "default", extractTargetSystem("http://192.168.1.5:8080/"))
+	assert.Equal(t, "erp", extractTargetSystem("http://ERP.Company.com/path"))
 
 	wa := convertToWorkerAction(rpamodels.ScriptAction{
 		Type: "fill", Value: "v", Attributes: map[string]interface{}{
@@ -382,7 +385,7 @@ func TestExecutionService_CRUD(t *testing.T) {
 	require.NoError(t, svc.UpdateProgress(ctx, created.ID, 4, 9, ""))
 
 	// Cancel: pending → cancelled
-	require.NoError(t, svc.Cancel(ctx, created.ID))
+	require.NoError(t, svc.Cancel(ctx, created.ID, "tester", ""))
 	got, err = svc.GetByID(ctx, created.ID)
 	require.NoError(t, err)
 	assert.Equal(t, string(rpamodels.RPAExecutionStatusCancelled), got.Status)
@@ -390,12 +393,13 @@ func TestExecutionService_CRUD(t *testing.T) {
 
 	// Cancel 已结束 → 报错
 	require.NoError(t, svc.Update(ctx, created.ID, map[string]interface{}{"status": "success"}))
-	err = svc.Cancel(ctx, created.ID)
+	err = svc.Cancel(ctx, created.ID, "tester", "")
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "执行已结束")
+	assert.Contains(t, err.Error(), "无法取消")
+	assert.Contains(t, err.Error(), "终态不可覆盖")
 
 	// Cancel 不存在
-	require.Error(t, svc.Cancel(ctx, "missing"))
+	require.Error(t, svc.Cancel(ctx, "missing", "tester", ""))
 
 	// List + 过滤
 	_, err = svc.Create(ctx, "t1", "task1", "u1")
