@@ -917,6 +917,11 @@ func (d *Database) AutoMigrate() error {
 			&rpamodels.RPACredential{},
 			&rpamodels.RPASession{},
 		)
+		// Phase 153 / RUNTIME-04: sys_rpa_human_interventions 与凭证两表同因
+		// —— sqlite 分支从未注册，干预事件落库直接 "no such table"。模型 tag
+		// （jsonb type-name / default:'pending'）为 sqlite 可接受语法，零漂移
+		// 原则同上方 RPA 块。
+		migrateList = append(migrateList, &svcrpa.HumanInterventionEvent{})
 		// sys_oper_log 历史由归档 SQL 创建,PG 存量库已存在;仅 sqlite 分支注册进
 		// AutoMigrate(全新文件库必须建表,否则 operlog.Record 写入报 "no such table")。
 		// PG 不注册的原因同上(零漂移);PG 新部署由 scripts/dbprovision 建表。

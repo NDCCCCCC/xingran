@@ -207,7 +207,58 @@ func (s *workerServiceImpl) Heartbeat(ctx context.Context, req *WorkerHeartbeatR
 		"status":         req.Status,
 	}
 
-	return s.db.WithContext(ctx).Model(&rpamodels.Worker{}).Where("worker_id = ?", req.WorkerID).Updates(updates).Error
+	if err := s.db.WithContext(ctx).Model(&rpamodels.Worker{}).Where("worker_id = ?", req.WorkerID).Updates(updates).Error; err != nil {
+		return err
+	}
+
+	// Phase 153 / RUNTIME-01：心跳通道顺带补归属 —— worker 上报的运行中执行
+	// 若 worker_id 仍为空，按 worker_id 反查回写（幂等：已有归属的跳过）。
+	for _, execID := range req.RunningExecutionIDs {
+		if execID == "" {
+			continue
+		}
+		if _, err := s.attributeExecution(ctx, execID, req.WorkerID); err != nil {
+			// 归属失败不阻断心跳（执行可能已结束被清理）
+			logger.Warnf("心跳回写执行归属失败: execution=%s, error=%v", execID, err)
+		}
+	}
+	return nil
+}
+
+// attributeExecution RUNTIME-01：把 execution 的归属回写为指定 Worker。
+// 仅当 execution.worker_id 为空时写入（首次上报归属，并发安全 + 幂等）。
+// 返回是否发生了回写。
+func (s *workerServiceImpl) attributeExecution(ctx context.Context, executionID, workerBusinessID string) (bool, error) {
+	if workerBusinessID == "" {
+		return false, nil
+	}
+	var execution rpamodels.Execution
+	if err := s.db.WithContext(ctx).Where("id = ?", executionID).First(&execution).Error; err != nil {
+		return false, err
+	}
+	if execution.WorkerID != nil && *execution.WorkerID != "" {
+		return false, nil // 已有归属，幂等跳过
+	}
+	workerID, workerName, err := s.resolveWorker(ctx, workerBusinessID)
+	if err != nil {
+		return false, err
+	}
+	if err := s.db.WithContext(ctx).Model(&rpamodels.Execution{}).Where("id = ?", executionID).
+		Updates(map[string]interface{}{"worker_id": workerID, "worker_name": workerName}).Error; err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+// resolveWorker 按 Worker 业务 ID 反查归属信息。
+// execution.worker_id 列为 uuid 类型，故存 Worker 主键 ID；
+// 业务 worker_id 由 sys_rpa_workers.worker_id 携带。
+func (s *workerServiceImpl) resolveWorker(ctx context.Context, workerBusinessID string) (string, string, error) {
+	var worker rpamodels.Worker
+	if err := s.db.WithContext(ctx).Where("worker_id = ?", workerBusinessID).First(&worker).Error; err != nil {
+		return "", "", fmt.Errorf("Worker 不存在: %w", err)
+	}
+	return worker.ID, worker.WorkerName, nil
 }
 
 // Progress 进度上报
@@ -218,29 +269,45 @@ func (s *workerServiceImpl) Progress(ctx context.Context, req *WorkerProgressReq
 		return fmt.Errorf("执行记录不存在: %w", err)
 	}
 
+	// RUNTIME-01：归属回写 —— 首次进度上报时按 worker_id 反查写归属。
+	if req.WorkerID != "" {
+		if _, err := s.attributeExecution(ctx, req.ExecutionID, req.WorkerID); err != nil {
+			logger.Warnf("进度上报回写执行归属失败: execution=%s, error=%v", req.ExecutionID, err)
+		}
+	}
+
 	// 更新执行记录进度
 	updates := map[string]interface{}{
 		"progress_current": req.ProgressCurrent,
 		"progress_total":   req.ProgressTotal,
 	}
 
-	// 更新状态
+	// RUNTIME-05：状态更新走状态机（唯一真相源）。
+	// 非法迁移拒绝（不静默覆盖终态）；终态幂等重放只更新进度字段。
 	if req.Status != "" {
-		updates["status"] = req.Status
+		idempotent, err := CheckTransition(
+			rpamodels.RPAExecutionStatus(execution.Status),
+			rpamodels.RPAExecutionStatus(req.Status))
+		if err != nil {
+			return fmt.Errorf("进度上报状态迁移被拒: %w", err)
+		}
+		if !idempotent {
+			updates["status"] = req.Status
 
-		// 根据状态更新开始/结束时间
-		switch req.Status {
-		case "running":
-			if execution.StartTime == nil {
+			// 根据状态更新开始/结束时间
+			switch req.Status {
+			case "running":
+				if execution.StartTime == nil {
+					now := time.Now()
+					updates["start_time"] = &now
+				}
+			case "success", "failed", "cancelled", "timeout":
 				now := time.Now()
-				updates["start_time"] = &now
-			}
-		case "success", "failed", "cancelled", "timeout":
-			now := time.Now()
-			updates["end_time"] = &now
-			if execution.StartTime != nil {
-				duration := now.Sub(*execution.StartTime).Milliseconds()
-				updates["duration"] = duration
+				updates["end_time"] = &now
+				if execution.StartTime != nil {
+					duration := now.Sub(*execution.StartTime).Milliseconds()
+					updates["duration"] = duration
+				}
 			}
 		}
 	}
@@ -286,22 +353,27 @@ func (s *workerServiceImpl) Progress(ctx context.Context, req *WorkerProgressReq
 
 	// 发布进度到 WebSocket
 	if s.executionService != nil {
-		workerID := ""
-		if execution.WorkerID != nil {
-			workerID = *execution.WorkerID
+		// RUNTIME-01：归属回写后重读执行记录 —— WS 推送体必须携带**新值**
+		//（旧实现读的是写入前快照，worker_id/worker_name 恒空）。
+		var latest rpamodels.Execution
+		if err := s.db.WithContext(ctx).Where("id = ?", req.ExecutionID).First(&latest).Error; err != nil {
+			latest = execution // 重读失败退回旧快照（不阻断推送）
 		}
-		workerName := execution.WorkerName
+		workerID := ""
+		if latest.WorkerID != nil {
+			workerID = *latest.WorkerID
+		}
 		progressUpdate := &ProgressUpdate{
 			ExecutionID:   req.ExecutionID,
-			TaskID:        execution.TaskID,
-			TaskName:      execution.TaskName,
+			TaskID:        latest.TaskID,
+			TaskName:      latest.TaskName,
 			Step:          req.ProgressCurrent,
 			Total:         req.ProgressTotal,
 			Message:       req.Message,
 			Status:        req.Status,
-			TriggeredBy:   execution.TriggeredBy,
+			TriggeredBy:   latest.TriggeredBy,
 			WorkerID:      workerID,
-			WorkerName:    workerName,
+			WorkerName:    latest.WorkerName,
 			ScreenshotURL: screenshotURL, // 使用文件路径 URL 而不是 base64 数据
 		}
 

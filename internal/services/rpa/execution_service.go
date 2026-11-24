@@ -16,7 +16,7 @@ type ExecutionService interface {
 	Update(ctx context.Context, id string, updates map[string]interface{}) error
 	UpdateProgress(ctx context.Context, id string, current, total int, message string) error
 	AddLog(ctx context.Context, id string, log string) error
-	Cancel(ctx context.Context, id string) error
+	Cancel(ctx context.Context, id, operator, reason string) error
 	List(ctx context.Context, params *ExecutionListParams) (*PageResult, error)
 	GetByID(ctx context.Context, id string) (*rpamodels.Execution, error)
 	PublishProgress(ctx context.Context, update *ProgressUpdate) error
@@ -91,17 +91,20 @@ func (s *executionServiceImpl) AddLog(ctx context.Context, id string, log string
 		Update("logs", gorm.Expr("COALESCE(logs, '') || ?", logEntry)).Error
 }
 
-// Cancel 取消执行
-func (s *executionServiceImpl) Cancel(ctx context.Context, id string) error {
+// Cancel 取消执行（RUNTIME-03：状态机校验 + 审计留痕）。
+// Redis publish 指令由 handler 层经 PublishExecutionCancel 发出（h.core.Cache），
+// 本方法只负责 DB 终态：谁/何时/原因写入 execution.logs。
+func (s *executionServiceImpl) Cancel(ctx context.Context, id, operator, reason string) error {
 	// 检查当前状态
 	var execution rpamodels.Execution
 	if err := s.db.WithContext(ctx).Where("id = ?", id).First(&execution).Error; err != nil {
 		return err
 	}
 
+	// RUNTIME-05：迁移合法性由状态机裁决（唯一真相源）
 	status := rpamodels.RPAExecutionStatus(execution.Status)
-	if status == rpamodels.RPAExecutionStatusSuccess || status == rpamodels.RPAExecutionStatusFailed || status == rpamodels.RPAExecutionStatusCancelled {
-		return fmt.Errorf("执行已结束，无法取消")
+	if _, err := CheckTransition(status, rpamodels.RPAExecutionStatusCancelled); err != nil {
+		return fmt.Errorf("无法取消: %w", err)
 	}
 
 	updates := map[string]interface{}{
@@ -114,6 +117,10 @@ func (s *executionServiceImpl) Cancel(ctx context.Context, id string) error {
 		duration := time.Since(*execution.StartTime).Milliseconds()
 		updates["duration"] = duration
 	}
+
+	// 审计留痕：谁、何时、原因（logs 由 Progress 通道的同一格式追加）
+	logLine := FormatLog(fmt.Sprintf("execution cancelled by %s, reason: %s", operator, reason))
+	updates["logs"] = gorm.Expr("COALESCE(logs, '') || ?", "\n"+logLine)
 
 	return s.db.WithContext(ctx).Model(&rpamodels.Execution{}).Where("id = ?", id).Updates(updates).Error
 }

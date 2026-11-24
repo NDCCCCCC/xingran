@@ -291,7 +291,7 @@ func (e *Engine) executeScript(ctx context.Context, pageMgr *browser.PageManager
 // 参数：mode=js（默认）时用 expression/condition 的 JS 表达式；
 // mode=variable 时用 left/op/right（op: eq|ne|gt|ge|lt|le|contains|empty）。
 // then / else 是嵌套动作数组，按分支执行。
-func (e *Engine) executeCondition(ctx context.Context, pageMgr *browser.PageManager,
+func (e *Engine) executeCondition(ctx context.Context, page browser.Page, pageMgr *browser.PageManager,
 	action *types.Action, scope *VariableScope) error {
 
 	mode := "js"
@@ -355,7 +355,7 @@ func (e *Engine) executeCondition(ctx context.Context, pageMgr *browser.PageMana
 		logger.Int("actions", len(nested)))
 
 	for i := range nested {
-		if err := e.executeAction(ctx, pageMgr, &nested[i], scope); err != nil {
+		if err := e.executeAction(ctx, page, pageMgr, &nested[i], scope); err != nil {
 			return fmt.Errorf("condition %s 分支第 %d 个动作失败: %w", branchKey, i+1, err)
 		}
 	}

@@ -4,7 +4,7 @@
 
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import type { FC } from "react";
-import { Table, Button, Space, Form, Card, Layout } from "antd";
+import { Table, Button, Space, Form, Card, Layout, Input, Modal, App } from "antd";
 import { SearchOutlined, ReloadOutlined } from "@ant-design/icons";
 import type { Execution } from "@/types/rpa";
 import type { PageResponse } from "@/types/base";
@@ -23,8 +23,10 @@ import { AppInput, AppSelect } from "@/components/ui";
 import { FilterBar, StatCards } from "@/components/shared";
 
 const { Content } = Layout;
+const { TextArea } = Input;
 
 const ExecutionManagement: FC = () => {
+  const { message } = App.useApp();
   const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
 
   // 统计数据(专用 COUNT 端点,不受分页/筛选影响,不依赖当前页列表)
@@ -151,14 +153,54 @@ const ExecutionManagement: FC = () => {
     setDetailModalVisible(true);
   }, []);
 
+  // Phase 153 / RUNTIME-03：行内取消入口（归属协议第 4 条 —— 落本 handler，
+  // 不进 ExecutionDetailModal footer）。二次确认 + 原因留痕（审计：谁/何时/原因）。
+  const handleCancelExecution = useCallback(
+    (record: Execution) => {
+      let reason = "";
+      Modal.confirm({
+        title: "确认取消执行",
+        content: (
+          <div>
+            <p>
+              确定要取消任务「{record.taskName}」的执行吗？Worker 将在下一个动作边界停止。
+            </p>
+            <TextArea
+              placeholder="取消原因（将记入审计日志）"
+              rows={2}
+              onChange={(e) => {
+                reason = e.target.value;
+              }}
+            />
+          </div>
+        ),
+        okText: "确认取消",
+        okButtonProps: { danger: true },
+        cancelText: "返回",
+        onOk: async () => {
+          try {
+            await post(`/rpa/executions/${record.id}/cancel`, { reason });
+            message.success("取消指令已下发，执行将在下一个动作边界停止");
+            loadExecutions();
+          } catch (_error) {
+            // 错误已在 errorHandler 中处理
+          }
+        },
+      });
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message/loadExecutions 由 hooks 稳定提供
+    [loadExecutions]
+  );
+
   const columns = useMemo(
     () =>
       getExecutionColumns({
         handleViewDetail,
+        handleCancel: handleCancelExecution,
         getSortOrder: (field) =>
           orderByColumn === field ? ((execSortOrder ?? null) as "ascend" | "descend" | null) : null,
       }),
-    [handleViewDetail, orderByColumn, execSortOrder]
+    [handleViewDetail, handleCancelExecution, orderByColumn, execSortOrder]
   );
 
   return (

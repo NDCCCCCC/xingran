@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net"
+	"strings"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -301,15 +303,26 @@ func (s *taskServiceImpl) publishTaskToRedis(
 		CredentialID: credentialID,
 	}
 
+	// Phase 153 / RUNTIME-02：会话数据迁移到 Variables["__sessionData"]。
+	// worker 端 engine.go（VariableSessionData 常量）按该键读取并真实注入
+	// cookie/localStorage/header。顶层 sessionData 字段保留一版（兼容旧 worker）。
+	if message.SessionData != nil {
+		if message.Variables == nil {
+			message.Variables = map[string]interface{}{}
+		}
+		message.Variables["__sessionData"] = message.SessionData
+	}
+
 	// 如果提供了凭证ID，尝试获取有效会话或凭证
 	if credentialID != "" && s.credentialService != nil {
-		// 从目标URL推断目标系统
+		// RUNTIME-02：目标系统按 URL host 规则解析（erp./hr./crm. 等子域 →
+		// 系统名），无法识别时才回退 "default"
 		targetSystem := extractTargetSystem(targetURL)
 
 		// 先尝试获取有效会话
 		session, err := s.credentialService.GetValidSession(ctx, credentialID, targetSystem)
 		if err == nil && session != nil {
-			// 有有效会话，传递会话数据
+			// 有有效会话，传递会话数据（顶层 + __sessionData 双写）
 			message.SessionID = session.ID
 			message.SessionData = map[string]interface{}{
 				"accessToken":  session.AccessToken,
@@ -317,16 +330,24 @@ func (s *taskServiceImpl) publishTaskToRedis(
 				"cookies":      session.Cookies,
 				"sessionData":  session.SessionData,
 			}
+			if message.Variables == nil {
+				message.Variables = map[string]interface{}{}
+			}
+			message.Variables["__sessionData"] = message.SessionData
 		} else {
 			// 没有有效会话，传递凭证信息用于自动登录
-			// 从用户ID获取部门ID（这里需要从上下文获取）
-			deptID := ""
+			// RUNTIME-02：deptID 从执行上下文取真实值（按 userID 查 sys_user），
+			// 查询失败不阻断（部门关联缺失时按空串降级）
+			deptID := s.resolveUserDeptID(ctx, userID)
 			cred, err := s.credentialService.GetCredentialForExecution(ctx, targetSystem, userID, deptID)
 			if err == nil && cred != nil {
 				// 解密凭证数据
 				credData, err := s.credentialService.DecryptCredential(ctx, cred)
 				if err == nil {
 					message.CredentialID = cred.ID
+					if message.Variables == nil {
+						message.Variables = map[string]interface{}{}
+					}
 					message.Variables["__credentials"] = map[string]interface{}{
 						"username":  credData.Username,
 						"password":  credData.Password,
@@ -397,19 +418,62 @@ func extractURLFromScript(actions []rpamodels.ScriptAction) string {
 
 // extractTargetSystem 从URL中提取目标系统标识
 func extractTargetSystem(url string) string {
-	// 简化版本：根据URL特征识别目标系统
-	// 实际应用中可以从任务配置或数据库获取
+	// Phase 153 / RUNTIME-02：可配置映射 —— URL host 规则优先。
+	// 规则：子域名首段即目标系统标识（erp.company.com → erp、hr.a.b → hr）；
+	// 裸 IP / localhost / 单标签 host 无法给出语义 → 回退 "default"。
 	if url == "" {
 		return "unknown"
 	}
 
-	// 内网系统可以根据URL特征识别
-	// 例如：erp.company.com -> erp
-	//       hr.company.com -> hr
-	//       crm.company.com -> crm
+	host := url
+	// 剥离 scheme
+	if i := strings.Index(host, "://"); i >= 0 {
+		host = host[i+3:]
+	}
+	// 剥离 path / query / port / userinfo
+	if i := strings.IndexAny(host, "/?#"); i >= 0 {
+		host = host[:i]
+	}
+	if i := strings.LastIndex(host, "@"); i >= 0 {
+		host = host[i+1:]
+	}
+	if i := strings.LastIndex(host, ":"); i >= 0 && !strings.Contains(host[i:], "]") {
+		host = host[:i]
+	}
+	host = strings.TrimSuffix(host, ".")
+	if host == "" {
+		return "default"
+	}
+	// 裸 IP / localhost 无语义
+	if net.ParseIP(host) != nil || strings.EqualFold(host, "localhost") {
+		return "default"
+	}
 
-	// 默认使用 "default"
+	labels := strings.Split(host, ".")
+	if len(labels) >= 2 {
+		first := strings.ToLower(labels[0])
+		if first != "" && first != "www" {
+			return first
+		}
+	}
 	return "default"
+}
+
+// resolveUserDeptID RUNTIME-02：按 userID 查真实部门 ID。
+// sys_user 表在测试/无用户场景可能缺失，查询失败降级为空串（不阻断发布）。
+func (s *taskServiceImpl) resolveUserDeptID(ctx context.Context, userID string) string {
+	if userID == "" {
+		return ""
+	}
+	var deptID string
+	if err := s.db.WithContext(ctx).
+		Table("sys_user").
+		Select("dept_id").
+		Where("id = ?", userID).
+		Scan(&deptID).Error; err != nil {
+		return ""
+	}
+	return deptID
 }
 
 // convertToWorkerAction 将 ScriptAction 转换为 Worker 期望的 Action 格式

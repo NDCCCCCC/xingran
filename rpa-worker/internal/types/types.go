@@ -11,6 +11,20 @@ const (
 	VariableCredentials       = "__credentials"
 )
 
+// ErrExecutionAborted 人工干预 abort 的哨兵错误（Phase 153 / RUNTIME-04）：
+// executePause 收到 action=abort 时返回，Execute 捕获后把结果置为 cancelled。
+var ErrExecutionAborted = NewAbortError()
+
+// AbortError abort 哨兵（独立类型便于 errors.Is 判定）。
+type AbortError struct{}
+
+func NewAbortError() *AbortError          { return &AbortError{} }
+func (e *AbortError) Error() string       { return "execution aborted by human intervention" }
+func (e *AbortError) Is(target error) bool {
+	_, ok := target.(*AbortError)
+	return ok
+}
+
 // Task 任务定义
 type Task struct {
 	ID          string                 `json:"id"`
@@ -201,6 +215,9 @@ type WorkerHeartbeatRequest struct {
 	TotalExecuted int    `json:"totalExecuted"`
 	TotalFailed   int    `json:"totalFailed"`
 	Status        string `json:"status"`
+	// RunningExecutionIDs Phase 153 / RUNTIME-01：当前运行中的执行 ID，
+	// 后端心跳通道据此为无归属执行补回写。
+	RunningExecutionIDs []string `json:"runningExecutionIds,omitempty"`
 }
 
 // APIResponse API 响应

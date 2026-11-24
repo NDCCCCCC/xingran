@@ -117,7 +117,7 @@ type mockRPAExecutionService struct {
 	UpdateFunc          func(ctx context.Context, id string, updates map[string]interface{}) error
 	UpdateProgressF     func(ctx context.Context, id string, current, total int, message string) error
 	AddLogFunc          func(ctx context.Context, id string, log string) error
-	CancelFunc          func(ctx context.Context, id string) error
+	CancelFunc          func(ctx context.Context, id, operator, reason string) error
 	ListFunc            func(ctx context.Context, params *ExecutionListParams) (*PageResult, error)
 	GetByIDFunc         func(ctx context.Context, id string) (*rpamodels.Execution, error)
 	PublishProgressFunc func(ctx context.Context, update *ProgressUpdate) error
@@ -148,9 +148,9 @@ func (m *mockRPAExecutionService) AddLog(ctx context.Context, id string, log str
 	}
 	return nil
 }
-func (m *mockRPAExecutionService) Cancel(ctx context.Context, id string) error {
+func (m *mockRPAExecutionService) Cancel(ctx context.Context, id, operator, reason string) error {
 	if m.CancelFunc != nil {
-		return m.CancelFunc(ctx, id)
+		return m.CancelFunc(ctx, id, operator, reason)
 	}
 	return nil
 }
@@ -351,4 +351,128 @@ func TestWorkerService_ListAndGetters(t *testing.T) {
 	require.NoError(t, svc.CheckOfflineWorkers(context.Background(), 120))
 	require.NoError(t, db.Raw(`SELECT status FROM sys_rpa_workers WHERE id = 'w3'`).Scan(&st).Error)
 	assert.Equal(t, "offline", st)
+}
+
+// newAttributionTestDB RUNTIME-01 用例：executions + workers 两表齐全。
+func newAttributionTestDB(t *testing.T) *gorm.DB {
+	t.Helper()
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	require.NoError(t, err)
+	require.NoError(t, db.Exec(`
+		CREATE TABLE sys_rpa_executions (
+			id TEXT PRIMARY KEY, created_at DATETIME, updated_at DATETIME, deleted_at DATETIME,
+			task_id TEXT, task_name TEXT, worker_id TEXT, worker_name TEXT,
+			status TEXT DEFAULT 'pending', start_time DATETIME, end_time DATETIME, duration INTEGER,
+			progress_current INTEGER DEFAULT 0, progress_total INTEGER DEFAULT 0,
+			screenshots TEXT, logs TEXT, error_message TEXT,
+			retry_count INTEGER DEFAULT 0, triggered_by TEXT, trigger_type TEXT
+		)
+	`).Error)
+	require.NoError(t, db.Exec(`
+		CREATE TABLE sys_rpa_workers (
+			id TEXT PRIMARY KEY NOT NULL, created_by TEXT DEFAULT '', updated_by TEXT DEFAULT '',
+			version INTEGER DEFAULT 0, worker_name TEXT, worker_id TEXT NOT NULL UNIQUE,
+			ip_address TEXT, port INTEGER DEFAULT 0, status TEXT DEFAULT 'offline',
+			capabilities TEXT, max_concurrency INTEGER DEFAULT 3, current_tasks INTEGER DEFAULT 0,
+			last_heartbeat INTEGER, docker_container_id TEXT, token TEXT,
+			token_expires_at DATETIME, last_token_rotation DATETIME,
+			created_at DATETIME, updated_at DATETIME, deleted_at DATETIME
+		)
+	`).Error)
+	return db
+}
+
+// TestWorkerService_Progress_AttributionWriteBack RUNTIME-01：
+// Worker 首次上报 progress 后反查回写 execution.worker_id/worker_name，
+// 且 WS 推送体携带**新值**（非写入前旧快照）。
+func TestWorkerService_Progress_AttributionWriteBack(t *testing.T) {
+	db := newAttributionTestDB(t)
+	now := time.Now().Format("2006-01-02 15:04:05")
+	require.NoError(t, db.Exec(`INSERT INTO sys_rpa_workers (id, worker_name, worker_id, status, created_at) VALUES ('worker-uuid-1', 'node-1', 'wk-9', 'online', ?)`, now).Error)
+	require.NoError(t, db.Exec(`INSERT INTO sys_rpa_executions (id, task_id, task_name, status, created_at) VALUES ('e1', 't1', 'task', 'pending', ?)`, now).Error)
+
+	published := make(chan *ProgressUpdate, 1)
+	execMock := &mockRPAExecutionService{
+		PublishProgressFunc: func(ctx context.Context, u *ProgressUpdate) error {
+			published <- u
+			return nil
+		},
+	}
+	svc := NewWorkerService(db, execMock, t.TempDir())
+
+	require.NoError(t, svc.Progress(context.Background(), &WorkerProgressRequest{
+		ExecutionID:     "e1",
+		WorkerID:        "wk-9", // 业务 worker_id
+		ProgressCurrent: 1,
+		ProgressTotal:   5,
+		Status:          "running",
+	}))
+
+	var workerID, workerName string
+	require.NoError(t, db.Raw(`SELECT worker_id, worker_name FROM sys_rpa_executions WHERE id = 'e1'`).Row().Scan(&workerID, &workerName))
+	assert.Equal(t, "worker-uuid-1", workerID, "worker_id 列（uuid）应回写 Worker 主键")
+	assert.Equal(t, "node-1", workerName)
+
+	// WS 推送体必须携带新值
+	select {
+	case u := <-published:
+		assert.Equal(t, "worker-uuid-1", u.WorkerID)
+		assert.Equal(t, "node-1", u.WorkerName)
+	case <-time.After(2 * time.Second):
+		t.Fatal("PublishProgress 未被调用")
+	}
+
+	// 幂等：第二次上报不覆盖已有归属（即使 worker 不同也不改写）
+	require.NoError(t, svc.Progress(context.Background(), &WorkerProgressRequest{
+		ExecutionID: "e1", WorkerID: "wk-other", ProgressCurrent: 2, Status: "running",
+	}))
+	require.NoError(t, db.Raw(`SELECT worker_id FROM sys_rpa_executions WHERE id = 'e1'`).Scan(&workerID).Error)
+	assert.Equal(t, "worker-uuid-1", workerID, "已有归属不得被覆盖")
+}
+
+// TestWorkerService_Heartbeat_AttributeRunning RUNTIME-01：心跳通道补归属。
+func TestWorkerService_Heartbeat_AttributeRunning(t *testing.T) {
+	db := newAttributionTestDB(t)
+	now := time.Now().Format("2006-01-02 15:04:05")
+	require.NoError(t, db.Exec(`INSERT INTO sys_rpa_workers (id, worker_name, worker_id, status, created_at) VALUES ('worker-uuid-2', 'node-2', 'wk-8', 'busy', ?)`, now).Error)
+	require.NoError(t, db.Exec(`INSERT INTO sys_rpa_executions (id, task_id, task_name, status, created_at) VALUES ('e2', 't2', 'task2', 'running', ?)`, now).Error)
+
+	svc := NewWorkerService(db, nil, "")
+	require.NoError(t, svc.Heartbeat(context.Background(), &WorkerHeartbeatRequest{
+		WorkerID:            "wk-8",
+		CurrentTasks:        1,
+		Status:              "busy",
+		RunningExecutionIDs: []string{"e2"},
+	}))
+
+	var workerID, workerName string
+	require.NoError(t, db.Raw(`SELECT worker_id, worker_name FROM sys_rpa_executions WHERE id = 'e2'`).Row().Scan(&workerID, &workerName))
+	assert.Equal(t, "worker-uuid-2", workerID)
+	assert.Equal(t, "node-2", workerName)
+}
+
+// TestWorkerService_Progress_TerminalNotOverwritten RUNTIME-05 集成面：
+// cancelled 终态后的 success 重放被拒绝（非法迁移返回明确 error），
+// cancelled 幂等重放被接受。
+func TestWorkerService_Progress_TerminalNotOverwritten(t *testing.T) {
+	db := newAttributionTestDB(t)
+	now := time.Now().Format("2006-01-02 15:04:05")
+	require.NoError(t, db.Exec(`INSERT INTO sys_rpa_executions (id, task_id, task_name, status, created_at) VALUES ('e3', 't3', 'task3', 'cancelled', ?)`, now).Error)
+	svc := NewWorkerService(db, nil, t.TempDir())
+
+	// 非法迁移：cancelled → success 必须拒绝
+	err := svc.Progress(context.Background(), &WorkerProgressRequest{
+		ExecutionID: "e3", Status: "success",
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "非法状态迁移")
+
+	var status string
+	require.NoError(t, db.Raw(`SELECT status FROM sys_rpa_executions WHERE id = 'e3'`).Scan(&status).Error)
+	assert.Equal(t, "cancelled", status, "终态不得被覆盖")
+
+	// 幂等重放：cancelled → cancelled 接受
+	require.NoError(t, svc.Progress(context.Background(), &WorkerProgressRequest{
+		ExecutionID: "e3", Status: "cancelled", ProgressCurrent: 9,
+	}))
 }

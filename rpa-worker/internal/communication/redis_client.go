@@ -133,3 +133,16 @@ func (r *RedisClient) Close() error {
 func (r *RedisClient) GetClient() *redis.Client {
 	return r.client
 }
+
+// SubscribeExecutionCancel Phase 153 / RUNTIME-03：订阅取消指令（模式匹配，
+// 后端发布 execution:cancel:{executionID}）。与 scaleCommandListener 同族
+// 的 Pub/Sub 先例。返回 pubsub 由调用方 Close。
+func (r *RedisClient) SubscribeExecutionCancel(ctx context.Context) (*redis.PubSub, error) {
+	pubsub := r.client.PSubscribe(ctx, "execution:cancel:*")
+	if _, err := pubsub.Receive(ctx); err != nil {
+		pubsub.Close()
+		return nil, fmt.Errorf("subscribe execution cancel failed: %w", err)
+	}
+	r.logger.Info("subscribed to execution cancel channel", logger.String("pattern", "execution:cancel:*"))
+	return pubsub, nil
+}

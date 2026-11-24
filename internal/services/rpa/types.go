@@ -226,11 +226,16 @@ type WorkerHeartbeatRequest struct {
 	TotalExecuted int    `json:"totalExecuted"`
 	TotalFailed   int    `json:"totalFailed"`
 	Status        string `json:"status"`
+	// RunningExecutionIDs Phase 153 / RUNTIME-01：worker 当前运行中的执行 ID 列表。
+	// 心跳通道顺带补归属：这些 execution 若 worker_id 为空则回写（无独立进度
+	// 上报的长任务在首个心跳前也有归属）。
+	RunningExecutionIDs []string `json:"runningExecutionIds,omitempty"`
 }
 
 // WorkerProgressRequest Worker 进度上报请求
 type WorkerProgressRequest struct {
 	ExecutionID     string `json:"executionId" binding:"required"`
+	WorkerID        string `json:"workerId"` // Phase 153 / RUNTIME-01：上报方 Worker 业务 ID（归属回写依据）
 	ProgressCurrent int    `json:"progressCurrent"`
 	ProgressTotal   int    `json:"progressTotal"`
 	Message         string `json:"message"`

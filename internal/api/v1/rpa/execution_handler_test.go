@@ -30,7 +30,7 @@ type mockExecutionService struct {
 	UpdateFunc          func(ctx context.Context, id string, updates map[string]interface{}) error
 	UpdateProgressFunc  func(ctx context.Context, id string, current, total int, message string) error
 	AddLogFunc          func(ctx context.Context, id string, log string) error
-	CancelFunc          func(ctx context.Context, id string) error
+	CancelFunc          func(ctx context.Context, id, operator, reason string) error
 	ListFunc            func(ctx context.Context, params *rpa.ExecutionListParams) (*rpa.PageResult, error)
 	GetByIDFunc         func(ctx context.Context, id string) (*rpamodels.Execution, error)
 	PublishProgressFunc func(ctx context.Context, update *rpa.ProgressUpdate) error
@@ -65,9 +65,9 @@ func (m *mockExecutionService) AddLog(ctx context.Context, id string, log string
 	return nil
 }
 
-func (m *mockExecutionService) Cancel(ctx context.Context, id string) error {
+func (m *mockExecutionService) Cancel(ctx context.Context, id, operator, reason string) error {
 	if m.CancelFunc != nil {
-		return m.CancelFunc(ctx, id)
+		return m.CancelFunc(ctx, id, operator, reason)
 	}
 	return nil
 }
@@ -239,7 +239,7 @@ func TestExecutionHandler_GetByID_NotFound(t *testing.T) {
 
 func TestExecutionHandler_Cancel_Success(t *testing.T) {
 	mock := &mockExecutionService{
-		CancelFunc: func(ctx context.Context, id string) error {
+		CancelFunc: func(ctx context.Context, id, operator, reason string) error {
 			assert.Equal(t, "exec-1", id)
 			return nil
 		},
@@ -262,7 +262,7 @@ func TestExecutionHandler_Cancel_EmptyID(t *testing.T) {
 
 func TestExecutionHandler_Cancel_ServiceError(t *testing.T) {
 	mock := &mockExecutionService{
-		CancelFunc: func(ctx context.Context, id string) error {
+		CancelFunc: func(ctx context.Context, id, operator, reason string) error {
 			return errors.New("cancel fail")
 		},
 	}
