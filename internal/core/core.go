@@ -1139,6 +1139,19 @@ func (c *Core) initRPAScalingService(rpaConfig *config.RPAConfig) error {
 		ScaleDownCooldown: parseDuration(rpaConfig.Scaling.ScaleDownCooldown, rpaDefaultScaleDownCooldown),
 		ScaleUpLimit:      rpaConfig.Scaling.ScaleUpLimit,
 		EnableMockDocker:  rpaConfig.Scaling.EnableMockDocker,
+		Provider:          rpaConfig.Scaling.Provider, // Phase 157 / FLEET-01: container | vdivm
+	}
+
+	// Phase 157 / FLEET-01: VDI provider 子配置（provider=vdivm 时使用）
+	if rpaConfig.Scaling.Provider == rpa.ProviderVDIVM {
+		vdiCfg := rpa.DefaultVDIProviderConfig()
+		vdiCfg.ServerID = rpaConfig.Scaling.VDI.ServerID
+		vdiCfg.ImageID = rpaConfig.Scaling.VDI.ImageID
+		vdiCfg.DesktopGroup = rpaConfig.Scaling.VDI.DesktopGroup
+		if rpaConfig.Scaling.VDI.VMNamePrefix != "" {
+			vdiCfg.VMNamePrefix = rpaConfig.Scaling.VDI.VMNamePrefix
+		}
+		scalingConfig.VDI = vdiCfg
 	}
 
 	dockerConfig := &rpa.DockerConfig{
@@ -1154,8 +1167,11 @@ func (c *Core) initRPAScalingService(rpaConfig *config.RPAConfig) error {
 		return fmt.Errorf("扩缩容配置无效: %w", err)
 	}
 
-	// 创建扩缩容服务
-	scalingService := rpa.NewScalingService(c.GetDB(), scalingConfig, dockerConfig)
+	// 创建扩缩容服务（未知 provider 值在此报错）
+	scalingService, err := rpa.NewScalingService(c.GetDB(), scalingConfig, dockerConfig)
+	if err != nil {
+		return fmt.Errorf("创建扩缩容服务失败: %w", err)
+	}
 
 	// 启动扩缩容监控
 	if err := scalingService.Start(context.Background()); err != nil {

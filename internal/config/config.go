@@ -264,8 +264,21 @@ type RPAScalingConfig struct {
 	ScaleUpThreshold  float64      `mapstructure:"scale_up_threshold"`  // 扩容阈值
 	ScaleDownCooldown string       `mapstructure:"scale_down_cooldown"` // 缩容冷却时间
 	ScaleUpLimit      int          `mapstructure:"scale_up_limit"`      // 单次扩容上限
-	EnableMockDocker  bool         `mapstructure:"enable_mock_docker"`  // 是否使用模拟 Docker 客户端
-	Docker            DockerConfig `mapstructure:"docker"`              // Docker 配置
+	EnableMockDocker  bool         `mapstructure:"enable_mock_docker"`  // 是否使用模拟 Docker 客户端（仅 provider=container 时生效）
+	Docker            DockerConfig `mapstructure:"docker"`              // Docker 配置（provider=container 使用）
+	Provider          string       `mapstructure:"provider"`            // 算力提供者: container(默认)|vdivm（Phase 157 / FLEET-01，未知值启动报错）
+	VDI               RPAScalingVDIConfig `mapstructure:"vdi"`          // VDI VM provider 子配置（provider=vdivm 时必填）
+}
+
+// RPAScalingVDIConfig RPA 扩缩容 VDI provider 子配置（Phase 157 / FLEET-01）。
+//
+// 注意：服务器地址与凭据不在此配置 —— 复用 sys_vdi_server 表
+// （与 VDI 虚拟机管理共用同一套客户端配置，不另造一套）。
+type RPAScalingVDIConfig struct {
+	ServerID     string `mapstructure:"server_id"`      // sys_vdi_server 记录 ID
+	ImageID      string `mapstructure:"image_id"`       // 预装 worker 的镜像 ID
+	DesktopGroup string `mapstructure:"desktop_group"`  // 桌面组
+	VMNamePrefix string `mapstructure:"vm_name_prefix"` // VM 命名前缀（默认 rpa-worker）
 }
 
 // DockerConfig Docker 配置。
