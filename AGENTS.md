@@ -51,6 +51,17 @@ go test -cover ./...
   - `tests/scripts/`：测试辅助脚本（按子域 `agent/ crypto/ rpa/ vdi/` 分目录）
 - 前端：组件/工具测试用 `*.test.ts(x)` 或 `src/**/__tests__/`，与被测模块就近；快照与截图证据放 `.planning/notes/v1.24-visual-evidence/`（唯一豁免的 png 目录）。
 - 禁止 `test_*.py` / `test_*.go` 这类「以 test 前缀命名源码」的写法散落在 `scripts/` 顶层；测试脚本归 `tests/scripts/` 并加对应子域目录。
+- **禁止在 handler 测试里用自建表 / mock service 掩盖真实 schema（2026-11-23 Phase 152 CONTRACT-06 强制）**：
+  - handler 层契约用例必须走 **httptest + 真实数据库（`db.NewDatabase` → `AutoMigrate()`，或真实迁移后的表）**，
+    不得用 `db.Exec("CREATE TABLE ...")` 手写表结构让用例变绿 —— 手写表与 model tag 漂移后，
+    生产仍是 `no such table` / `no such column`（RPA `selector_success_records` vs
+    `sys_rpa_selector_success`、`task_name` vs `name` 都是这样被掩盖了整整一个里程碑）。
+  - 同样不得用 mock service（`mockTaskService` / `mockCredentialService` 等）作为**契约验收**的替身；
+    mock 只能用于「handler 分支/错误映射」这类纯单元用途，且不得进入 CI 契约闸门。
+  - 唯一允许的外部替身是 **外部 HTTP 依赖**（AI provider、第三方 API）：用 `httptest.NewServer` 模拟，
+    因为那是系统边界而非内部 schema 边界。
+  - 权威样板：`internal/api/v1/rpa/contract_p0_smoke_test.go`（CONTRACT-01~06 冒烟，
+    `go test ./internal/api/v1/rpa/` 天然纳入 CI 硬门禁）。
 - **就近单测豁免（2026-11-09 quick 261109-wdu 登记）**：`internal/services/portwrite/` 包内的
   `physical_e2e_test.go` / `port_write_e2e_test.go` 虽名为 e2e，但依赖整套**同包私有 fixture**
   （`newTestDB` / `seedPortAndDevice` / `fileTransportExecutor` / `newTestService` 等，定义在同包其它

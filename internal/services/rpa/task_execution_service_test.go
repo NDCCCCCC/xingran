@@ -191,14 +191,14 @@ func TestTaskService_CRUD(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, int64(1), page.Total)
 
-	// List + Name 过滤走 task_name LIKE, 但 Task 模型列名是 name →
-	// sqlite 报 no such column (D-12 记录的 quirk, 不修业务码)
-	_, err = svc.List(ctx, &TaskListParams{ListParams: ListParams{BaseListRequest: base.BaseListRequest{Current: 1, PageSize: 10}}, Name: "t1"})
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "task_name")
+	// List + Name 过滤（CONTRACT-03 / D3）：真实列是 name，
+	// 旧实现写 task_name 会报 no such column，现修复后应命中。
+	page, err = svc.List(ctx, &TaskListParams{ListParams: ListParams{BaseListRequest: base.BaseListRequest{Current: 1, PageSize: 10}}, Name: "t1"})
+	require.NoError(t, err)
+	assert.Equal(t, int64(1), page.Total, "任务名过滤应命中真实 name 列")
 
-	// List + status/priority/tags 过滤
-	st := 0
+	// List + status/priority/tags 过滤（status 已是任务枚举类型）
+	st := rpamodels.TaskStatusEnabled
 	pr := 0
 	_, err = svc.List(ctx, &TaskListParams{ListParams: ListParams{BaseListRequest: base.BaseListRequest{Current: 1, PageSize: 10}}, Status: &st, Priority: &pr, Tags: "x"})
 	require.NoError(t, err)
@@ -258,7 +258,8 @@ func TestTaskService_Execute_Failures(t *testing.T) {
 	// 任务禁用
 	created, err := svc.Create(ctx, &CreateTaskRequest{Name: "t", Script: []interface{}{map[string]interface{}{"type": "click"}}}, "u1")
 	require.NoError(t, err)
-	require.NoError(t, svc.Update(ctx, &UpdateTaskRequest{ID: created.ID, Status: 1}, "u1"))
+	disabled := int(rpamodels.TaskStatusDisabled)
+	require.NoError(t, svc.Update(ctx, &UpdateTaskRequest{ID: created.ID, Status: &disabled}, "u1"))
 	_, err = svc.Execute(ctx, &ExecuteTaskRequest{TaskID: created.ID}, "u1")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "任务已禁用")
@@ -399,10 +400,11 @@ func TestExecutionService_CRUD(t *testing.T) {
 	// List + 过滤
 	_, err = svc.Create(ctx, "t1", "task1", "u1")
 	require.NoError(t, err)
-	st := 0
+	// 状态过滤按字符串（CONTRACT-02）：t1 新建记录为 pending，筛 timeout 应 0 命中
+	st := string(rpamodels.RPAExecutionStatusTimeout)
 	page, err := svc.List(ctx, &ExecutionListParams{ListParams: ListParams{BaseListRequest: base.BaseListRequest{Current: 1, PageSize: 10}}, TaskID: "t1", Status: &st})
 	require.NoError(t, err)
-	assert.Equal(t, int64(0), page.Total, "状态过滤: e1 已 cancelled, 新建为 pending")
+	assert.Equal(t, int64(0), page.Total, "状态过滤: t1 新建记录为 pending，按 timeout 筛应无命中")
 
 	wid := "w-9"
 	page, err = svc.List(ctx, &ExecutionListParams{ListParams: ListParams{BaseListRequest: base.BaseListRequest{Current: 1, PageSize: 10}}, WorkerID: wid})

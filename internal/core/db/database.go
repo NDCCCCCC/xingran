@@ -23,6 +23,7 @@ import (
 	"github.com/xingran-next/xingran-go-backend/internal/models/operations"
 	rpamodels "github.com/xingran-next/xingran-go-backend/internal/models/rpa"
 	sysmodels "github.com/xingran-next/xingran-go-backend/internal/models/system"
+	svcrpa "github.com/xingran-next/xingran-go-backend/internal/services/rpa"
 	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -894,6 +895,28 @@ func (d *Database) AutoMigrate() error {
 		// sys_rpa_schedules/variables/templates 未注册:services/api 无任何运行期
 		// 查询引用,不在本症链路,避免无谓漂移。
 		migrateList = append(migrateList, &rpamodels.Task{})
+		// CONTRACT-04（D4）: 选择器学习两表（sys_rpa_selector_success /
+		// sys_rpa_selector_failure）。模型定义在服务层（services/rpa/selector_learner.go
+		// 的 SelectorSuccessRecord / SelectorFailureRecord），已补 TableName。
+		// 仅 sqlite 分支注册（PG 新部署由 scripts/dbprovision 建表，存量库已有表，
+		// 零漂移原则同上方 RPA 块）。
+		// 两模型 tag 已去掉 PG-only 的 default:gen_random_uuid()（改由
+		// BeforeCreate 应用层填 UUID），故无需 sanitizeSQLiteModelDefaults 净化，
+		// 真实 AutoMigrate 在 sqlite 下可直接建表。
+		migrateList = append(migrateList,
+			&svcrpa.SelectorSuccessRecord{},
+			&svcrpa.SelectorFailureRecord{},
+		)
+		// CONTRACT-01: sys_rpa_credentials / sys_rpa_sessions 历史由归档 SQL
+		// (102_add_rpa_tables.sql 同族) 创建，sqlite 分支此前**从未注册** ——
+		// 全新 sqlite 文件库下凭证 CRUD 直接 "no such table: sys_rpa_credentials"
+		// （即使 cipher 注入修好了也 500）。仅 sqlite 分支注册（PG 零漂移）。
+		// 两模型 tag 已核查：RPACredential 的 check:status IN (0,1) 与
+		// RPASession 的 bool default 均为 sqlite 可接受语法，无 PG-only 片段。
+		migrateList = append(migrateList,
+			&rpamodels.RPACredential{},
+			&rpamodels.RPASession{},
+		)
 		// sys_oper_log 历史由归档 SQL 创建,PG 存量库已存在;仅 sqlite 分支注册进
 		// AutoMigrate(全新文件库必须建表,否则 operlog.Record 写入报 "no such table")。
 		// PG 不注册的原因同上(零漂移);PG 新部署由 scripts/dbprovision 建表。

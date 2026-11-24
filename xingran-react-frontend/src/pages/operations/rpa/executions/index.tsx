@@ -9,6 +9,7 @@ import { SearchOutlined, ReloadOutlined } from "@ant-design/icons";
 import type { Execution } from "@/types/rpa";
 import type { PageResponse } from "@/types/base";
 import { useTableManager } from "@/hooks/useTableManager";
+import { useRPAProgress } from "@/hooks/useRPAProgress";
 import { useServerSort } from "@/hooks/useServerSort";
 import { createSorterMeta } from "@/utils/tableHelpers";
 import { usePagination } from "@/hooks/usePagination";
@@ -105,11 +106,15 @@ const ExecutionManagement: FC = () => {
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [selectedExecution, setSelectedExecution] = useState<Execution | null>(null);
 
-  // 仅在有 running 任务时启用轮询
+  // CONTRACT-05（D16）：执行页不再 setInterval(5000) 轮询 running。
+  // 改为订阅全局 WebSocket 的 RPA 进度事件（useRPAProgress → noticeStore
+  // → NotificationBell 唯一连接），消息到达时刷新当前页与统计。
+  //
+  // 保留一个**低频**兜底刷新（30s）：WS 断线期间列表不能完全静默过期。
+  // 这与「轮询驱动实时进度」是两件事 —— 实时性由 WS 提供，兜底只防断线。
   const executionsRef = useRef<Execution[]>([]);
-  const hasRunningRef = useRef(false);
 
-  // 保持 ref 与 state 同步
+  // 保持 ref 与 state 同步（WS 回调里需要判断当前页是否有运行中任务）
   useEffect(() => {
     executionsRef.current = executions;
   }, [executions]);
@@ -118,17 +123,26 @@ const ExecutionManagement: FC = () => {
     loadExecutions();
   }, [loadExecutions]);
 
+  // WebSocket 实时进度：任一执行有进度/终态事件 → 刷新当前页 + 统计
+  const handleRealtimeProgress = useCallback(() => {
+    loadExecutions();
+  }, [loadExecutions]);
+
+  useRPAProgress({
+    onProgress: handleRealtimeProgress,
+    onCompleted: handleRealtimeProgress,
+    onFailed: handleRealtimeProgress,
+  });
+
   useEffect(() => {
     loadExecutions();
+    // WS 断线兜底：仅当本页存在 running 任务时才用 30s 低频对账，
+    // 与旧 5s 轮询区分（旧实现是唯一数据来源，现在只是兜底）。
     const interval = setInterval(() => {
-      // 有 running 状态才继续轮询
       if (executionsRef.current.some((e) => e.status === "running")) {
-        hasRunningRef.current = true;
         loadExecutions();
-      } else {
-        hasRunningRef.current = false;
       }
-    }, 5000);
+    }, 30000);
     return () => clearInterval(interval);
   }, [loadExecutions]);
 

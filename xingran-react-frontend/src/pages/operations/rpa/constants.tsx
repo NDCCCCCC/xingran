@@ -29,33 +29,38 @@ const TRIGGER_TYPE_COLOR_MAP: Record<string, string> = {
 };
 
 // ==================== 任务状态 ====================
+// CONTRACT-02：任务状态是「任务态」而非执行态 —— 与后端 models/rpa/task.go
+// 的 TaskStatus 枚举严格同构：0=启用(TaskStatusEnabled) / 1=停用(TaskStatusDisabled)。
+// 历史前端这里是 0草稿/1启用/2禁用，既多出一个后端不存在的 2，又把 0 的含义
+// 从「启用」错标成「草稿」，导致筛选与列表标签双双对不上真实数据。
 export const TASK_STATUS_OPTIONS = [
-  { label: "草稿", value: 0 },
-  { label: "启用", value: 1 },
-  { label: "禁用", value: 2 },
+  { label: "启用", value: 0 },
+  { label: "停用", value: 1 },
 ];
 
 // 任务状态文本映射
 const TASK_STATUS_TEXT_MAP: Record<number, string> = {
-  0: "草稿",
-  1: "启用",
-  2: "禁用",
+  0: "启用",
+  1: "停用",
 };
 
 // 任务状态颜色映射
 const TASK_STATUS_COLOR_MAP: Record<number, string> = {
-  0: "default",
-  1: "success",
-  2: "error",
+  0: "success",
+  1: "default",
 };
 
 // ==================== 执行状态 ====================
+// CONTRACT-02：必须覆盖后端 RPAExecutionStatus 全部 6 个取值
+// （pending/running/success/failed/cancelled/timeout）。历史缺 timeout ——
+// 超时的执行记录在按状态筛选时无从选中，列表标签也回落成 "-"。
 export const EXECUTION_STATUS_OPTIONS = [
   { label: "等待中", value: "pending" },
   { label: "运行中", value: "running" },
   { label: "成功", value: "success" },
   { label: "失败", value: "failed" },
   { label: "已取消", value: "cancelled" },
+  { label: "已超时", value: "timeout" },
 ];
 
 // 执行状态文本映射
@@ -65,6 +70,7 @@ const EXECUTION_STATUS_TEXT_MAP: Record<string, string> = {
   success: "成功",
   failed: "失败",
   cancelled: "已取消",
+  timeout: "已超时",
 };
 
 // 执行状态颜色映射
@@ -74,6 +80,7 @@ const EXECUTION_STATUS_COLOR_MAP: Record<string, string> = {
   success: "success",
   failed: "error",
   cancelled: "default",
+  timeout: "warning",
 };
 
 // ==================== Worker 状态 ====================

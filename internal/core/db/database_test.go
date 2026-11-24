@@ -209,6 +209,10 @@ func TestNewDatabaseSQLite(t *testing.T) {
 		// ADAccountPool.RecoverExpiredBreakers 每 5 分钟 cron 报 no such table
 		// (实测 585+ 次持续失败至 2026-08-18 10:20):
 		"sys_ad_service_accounts",
+		// CONTRACT-04（D4）: 选择器学习两表（模型在 services/rpa 包）。
+		// 不注册则 11 个 /rpa/ai/selector/* 端点与 LearnFromExecution
+		// 报 no such table: selector_success_records（TableName 缺省推导名）。
+		"sys_rpa_selector_success", "sys_rpa_selector_failure",
 	} {
 		if !d.DB.Migrator().HasTable(table) {
 			t.Errorf("HasTable(%q) = false after AutoMigrate on sqlite, want true", table)

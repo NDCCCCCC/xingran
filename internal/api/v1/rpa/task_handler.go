@@ -51,6 +51,9 @@ func (h *TaskHandler) List(c *gin.Context) {
 	if !bindAndValidate(c, &params) {
 		return
 	}
+	if !validateListParams(c, params.Validate()) {
+		return
+	}
 
 	setPaginationDefaults(&params.Current, &params.PageSize)
 
@@ -78,8 +81,11 @@ func (h *TaskHandler) Create(c *gin.Context) {
 	if !bindAndValidate(c, &req) {
 		return
 	}
+	if !validateListParams(c, req.Validate()) {
+		return
+	}
 
-	userID := c.GetString("userId")
+	userID := currentUserID(c)
 	task, err := h.taskService.Create(c.Request.Context(), &req, userID)
 	if handleError(c, err, http.StatusInternalServerError, "创建失败") {
 		return
@@ -135,9 +141,12 @@ func (h *TaskHandler) Update(c *gin.Context) {
 	if !bindAndValidate(c, &req) {
 		return
 	}
+	if !validateListParams(c, req.Validate()) {
+		return
+	}
 
 	req.ID = id
-	userID := c.GetString("userId")
+	userID := currentUserID(c)
 	if handleError(c, h.taskService.Update(c.Request.Context(), &req, userID), http.StatusInternalServerError, "更新失败") {
 		return
 	}
@@ -193,7 +202,7 @@ func (h *TaskHandler) Execute(c *gin.Context) {
 		req.TaskID = id
 	}
 
-	userID := c.GetString("userId")
+	userID := currentUserID(c)
 	execution, err := h.taskService.Execute(c.Request.Context(), &req, userID)
 	if handleError(c, err, http.StatusInternalServerError, "执行失败") {
 		return
@@ -280,7 +289,7 @@ func (h *TaskHandler) ExecuteWithExcel(c *gin.Context) {
 		},
 	}
 
-	userID := c.GetString("userId")
+	userID := currentUserID(c)
 	execution, err := h.taskService.Execute(c.Request.Context(), req, userID)
 	if handleError(c, err, http.StatusInternalServerError, "执行失败") {
 		return
