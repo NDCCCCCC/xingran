@@ -14,6 +14,7 @@ import (
 	"github.com/xingran-next/rpa-worker/internal/browser"
 	"github.com/xingran-next/rpa-worker/internal/communication"
 	"github.com/xingran-next/rpa-worker/internal/config"
+	"github.com/xingran-next/rpa-worker/internal/liveview"
 	"github.com/xingran-next/rpa-worker/internal/logger"
 	"github.com/xingran-next/rpa-worker/internal/types"
 )
@@ -31,6 +32,19 @@ type Engine struct {
 	currentStep        int
 	currentTotal       int
 	loopConcurrency    int // 循环内并发执行数量
+	// liveView Phase 155 / LIVEVIEW-01~05：实时画面会话表（nil 安全：单测与
+	// 离线执行可无推流）。归属：Worker 构造时注入，engine 只在该表上调用。
+	liveView *liveview.Hub
+}
+
+// SetLiveViewHub 注入实时画面会话表（Phase 155）。
+//
+// nil 安全：未启用 liveview 时传 nil，全部调用点短路，行为与 Phase 154 完全一致。
+func (e *Engine) SetLiveViewHub(hub *liveview.Hub) {
+	if e == nil {
+		return
+	}
+	e.liveView = hub
 }
 
 // NewEngine create execution engine
@@ -109,6 +123,11 @@ func (e *Engine) Execute(ctx context.Context, task *types.TaskMessage, workerID 
 		return errorResult, fmt.Errorf("failed to acquire browser: %w", err)
 	}
 	defer e.browserManager.Release(page)
+	// Phase 155 / LIVEVIEW：Attach 与 Release 的顺序必须谨慎 ——
+	// detach defer 在 Release defer 之后注册，LIFO 故先执行 Detach（停 screencast），
+	// 再由 Release 回收 page（「Close 只关 page」的语义由此保住）。
+	e.attachLiveView(task, workerID, page, len(task.Script))
+	defer e.detachLiveView(task.ExecutionID)
 
 	// Create page manager
 	pageMgr := browser.NewPageManager(page, e.logger)
@@ -166,6 +185,23 @@ func (e *Engine) Execute(ctx context.Context, task *types.TaskMessage, workerID 
 			Status:          types.StatusRunning,
 		})
 
+		// Phase 155 / LIVEVIEW-04：动作边界刷新叠加层（步骤/动作/脱敏变量）。
+		e.refreshLiveContext(task.ExecutionID, &action, i+1, len(task.Script),
+			types.StatusRunning, fmt.Sprintf("executing: %s %s", action.Type, action.Description), variables)
+
+		// Phase 155 / LIVEVIEW-02/03：动作执行前闸门 —— 接管中/copilot 关键节点/
+		// manual 会在此阻塞等人确认；返回 ctx 错误则走 RUNTIME-03 既有取消路径。
+		if gateErr := e.liveActionGate(ctx, task.ExecutionID, &action, false); gateErr != nil {
+			if ctx.Err() != nil {
+				cancelled := e.createCancelledResult(result, ctx.Err(), i, len(task.Script))
+				e.reportSubTaskResult(ctx, task, cancelled)
+				return cancelled, nil
+			}
+			errorResult := e.createErrorResult(result, gateErr, i+1, len(task.Script))
+			e.reportSubTaskResult(ctx, task, errorResult)
+			return errorResult, nil
+		}
+
 		// Execute action
 		if err := e.executeAction(ctx, page, pageMgr, &action, variables); err != nil {
 			// RUNTIME-04：人工干预 abort → cancelled 终态
@@ -178,6 +214,18 @@ func (e *Engine) Execute(ctx context.Context, task *types.TaskMessage, workerID 
 
 			// Retry logic
 			if action.Retry > 0 {
+				// Phase 155 / LIVEVIEW-03：失败自动暂停 —— copilot/manual 在重试前
+				// 停下等人看一眼；auto 不打断（否则自动任务会被人工拖死）。
+				if gateErr := e.liveActionGate(ctx, task.ExecutionID, &action, true); gateErr != nil {
+					if ctx.Err() != nil {
+						cancelled := e.createCancelledResult(result, ctx.Err(), i+1, len(task.Script))
+						e.reportSubTaskResult(ctx, task, cancelled)
+						return cancelled, nil
+					}
+					errorResult := e.createErrorResult(result, gateErr, i+1, len(task.Script))
+					e.reportSubTaskResult(ctx, task, errorResult)
+					return errorResult, nil
+				}
 				lastErr := err
 				for retry := 0; retry <= action.Retry; retry++ {
 					// RUNTIME-03：重试边界同样响应取消

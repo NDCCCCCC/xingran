@@ -17,6 +17,7 @@ import (
 	"github.com/xingran-next/rpa-worker/internal/communication"
 	"github.com/xingran-next/rpa-worker/internal/config"
 	"github.com/xingran-next/rpa-worker/internal/executor"
+	"github.com/xingran-next/rpa-worker/internal/liveview"
 	"github.com/xingran-next/rpa-worker/internal/logger"
 	"github.com/xingran-next/rpa-worker/internal/types"
 )
@@ -46,7 +47,10 @@ type Worker struct {
 	progressReporter *communication.ProgressReporter
 	browserManager   *browser.Manager
 	engine           *executor.Engine
-	state            WorkerState
+	// liveView Phase 155 / LIVEVIEW-01~05：实时画面会话表（单 Worker 一个，
+	// 内含唯一 janitor goroutine；随 Worker 关闭而关闭）。
+	liveView *liveview.Hub
+	state    WorkerState
 	stateMutex       sync.RWMutex
 	currentTasks     int
 	currentTasksMu   sync.Mutex
@@ -177,6 +181,20 @@ func (w *Worker) initComponents() error {
 	}
 	w.engine = executor.NewEngine(&w.config.Executor, &w.config.Worker, w.browserManager, w.progressReporter, w.logger, w.redisClient.GetClient())
 
+	// Phase 155 / LIVEVIEW-01/02/03/05：实时画面会话表。帧与审计走 APIClient
+	// 的 HTTP 上行（复用既有 communication 出口），下行指令走 Redis PubSub。
+	// 引擎在 Acquire 后 Attach、动作边界走闸门、Release 前 Detach。
+	w.liveView = liveview.NewHub(&w.config.LiveView, w.apiClient, w.apiClient, w.logger)
+	w.engine.SetLiveViewHub(w.liveView)
+	if w.config.LiveView.Enabled {
+		w.logger.Info("liveview hub initialized",
+			logger.Int("max_streams", w.liveView.MaxStreams()),
+			logger.String("default_mode", w.config.LiveView.DefaultMode),
+			logger.Int("max_width", w.config.LiveView.MaxWidth),
+			logger.Int("quality", w.config.LiveView.Quality),
+			logger.Duration("idle_timeout", w.config.LiveView.IdleTimeout))
+	}
+
 	// 初始化任务拆分器（混合模式）
 	if w.config.Worker.HybridMode.Enabled {
 		w.taskSplitter = executor.NewTaskSplitter(
@@ -219,6 +237,10 @@ func (w *Worker) Start() error {
 	// Phase 153 / RUNTIME-03：取消指令监听
 	w.wg.Add(1)
 	go w.cancelCommandListener()
+
+	// Phase 155 / LIVEVIEW：实时画面下行指令监听（watch/stop/input/takeover/...）
+	w.wg.Add(1)
+	go w.liveViewCommandListener()
 
 	if w.config.Monitor.HealthEnabled {
 		w.wg.Add(1)
@@ -794,6 +816,11 @@ func (w *Worker) waitForShutdown() {
 // cleanup cleanup resources
 func (w *Worker) cleanup() error {
 	var errs []error
+	// Phase 155 / LIVEVIEW：先停所有实时画面流（只 stopScreencast，不关 page），
+	// 再由 browserManager.Close 回收 page 与 Chrome（154 生命周期语义不破）。
+	if w.liveView != nil {
+		w.liveView.Close()
+	}
 	if err := w.browserManager.Close(); err != nil {
 		errs = append(errs, err)
 	}

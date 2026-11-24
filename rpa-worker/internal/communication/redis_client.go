@@ -146,3 +146,18 @@ func (r *RedisClient) SubscribeExecutionCancel(ctx context.Context) (*redis.PubS
 	r.logger.Info("subscribed to execution cancel channel", logger.String("pattern", "execution:cancel:*"))
 	return pubsub, nil
 }
+
+// SubscribeLiveView Phase 155 / LIVEVIEW-01/02：订阅实时画面下行指令
+// （watch/stop/input/takeover/release/mode/keepalive/continue/abort）。
+//
+// 与 SubscribeExecutionCancel 同族：模式订阅一次覆盖所有执行，频道名
+// execution:liveview:{executionId}，调用方从 Channel 反解 executionID。
+func (r *RedisClient) SubscribeLiveView(ctx context.Context) (*redis.PubSub, error) {
+	pubsub := r.client.PSubscribe(ctx, types.LiveViewPattern)
+	if _, err := pubsub.Receive(ctx); err != nil {
+		pubsub.Close()
+		return nil, fmt.Errorf("subscribe liveview failed: %w", err)
+	}
+	r.logger.Info("subscribed to liveview channel", logger.String("pattern", types.LiveViewPattern))
+	return pubsub, nil
+}

@@ -59,6 +59,19 @@ browser:
   viewport_width: 1920      # 界面宽度
   viewport_height: 1080     # 界面高度
 
+# Phase 155 / LIVEVIEW：实时画面（screencast 帧流 + 人工接管）
+# 与 config.LiveViewConfig 的 mapstructure key 一一对应（顶层 liveview 节）。
+liveview:
+  enabled: true            # 是否启用实时画面（未配置时默认启用）
+  max_streams: 2           # 单 Worker 并发推流路数上限（超限返回可读错误，不静默降级）
+  quality: 50              # JPEG 质量 0-100（40-60 是 headless 的甜点区间）
+  max_width: 1280          # 最大像素宽（与 max_height 等比缩放）
+  max_height: 720
+  every_nth_frame: 2       # 每 N 帧只发 1 帧；实测第 2 帧降采样会把 fps 砍半
+  ack_timeout: 800ms       # 单帧等消费 ACK 的上限（超时强制 ACK 并计 drop）
+  idle_timeout: 30s        # 无下行指令超过该时限即停流（前端断开/关页签时兜底）
+  takeover_timeout: 120s   # 接管者长时间无输入自动释放（防僵尸占用）
+  default_mode: copilot    # 默认协作模式 auto|copilot|manual（copilot 符合一般员工信任曲线）
 logging:
   level: "info"             # 日志级别: debug, info, warn, error
   format: "console"         # 日志格式: json, console (console 格式更易读)

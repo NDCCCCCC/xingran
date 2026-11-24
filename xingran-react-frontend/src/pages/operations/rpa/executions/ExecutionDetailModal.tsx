@@ -323,6 +323,32 @@ export function ExecutionDetailModal({ open, execution, onClose }: ExecutionDeta
         >
           下载执行产物
         </Button>,
+        // Phase 155 / LIVEVIEW-04：实时画面入口（归属协议 §9）。
+        // 目标页由 migration_255 的 sys_menu 播种（component=pages/operations/rpa/live/index）。
+        // ⚠ 真实路由是 `vdi/rpa/live`，不是 `operations/rpa/live`：RPA 管理菜单的父级是
+        // 「虚拟机」目录（path=vdi, menu_catalog_seed.sql:213），中间层 RPA 管理 path=rpa
+        // （:193），本页 path=live ⇒ RouteGenerator.resolvePath 逐级拼接得 vdi/rpa/live。
+        // 页面从 location.search 读 ?executionId= 直接定位到该执行。
+        // 这里刻意只做「同源整页跳转」：本 phase 只允许改本 footer，不新增 import；
+        // 且项目用 BrowserRouter + basename，任务说明里的 `#/...` hash 形式在本站无效。
+        <Button
+          key="live"
+          type="primary"
+          onClick={() => {
+            if (!execution?.id) return;
+            const base =
+              import.meta.env.BASE_URL && import.meta.env.BASE_URL !== "/"
+                ? import.meta.env.BASE_URL.replace(/\/$/, "")
+                : "";
+            onClose();
+            window.location.assign(
+              `${base}/vdi/rpa/live?executionId=${encodeURIComponent(execution.id)}`
+            );
+          }}
+          disabled={!execution?.id}
+        >
+          实时画面
+        </Button>,
         <Button key="close" onClick={onClose}>
           关闭
         </Button>,

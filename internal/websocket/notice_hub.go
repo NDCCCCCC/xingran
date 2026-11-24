@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -19,6 +20,13 @@ const (
 	// MessageTypeADSyncDriftAlert Phase 144：AD 同步漂移告警 WS 事件。
 	// 前端 noticeStore 按 type 分流；business payload JSON 内嵌 Content。
 	MessageTypeADSyncDriftAlert = "ad_sync_drift_alert"
+
+	// MessageTypeRPALiveFrame Phase 155 / LIVEVIEW-01：实时画面帧（可丢）。
+	// Content 是 {"frame":{...},"context":{...}} 的 JSON 字符串。
+	MessageTypeRPALiveFrame = "rpa_liveview_frame"
+	// MessageTypeRPALiveState Phase 155 / LIVEVIEW-04：叠加层情境（不可丢）。
+	// Content 是 {"context":{...}} 的 JSON 字符串。
+	MessageTypeRPALiveState = "rpa_liveview_state"
 )
 
 // noticeHubBufferSize NoticeHub 内部 channel 缓冲大小
@@ -342,6 +350,119 @@ func (h *NoticeHub) encodeMessage(msg NoticeMessage) ([]byte, error) {
 		return nil, fmt.Errorf("消息序列化失败: %w", err)
 	}
 	return data, nil
+}
+
+// ============================================================================
+// Phase 155 / LIVEVIEW-01：实时画面专用广播（**可丢帧，绝不掉连接**）
+//
+// 为什么不能复用 BroadcastToUsers：它会用 select/default 在 client.send 满时
+// 把该用户**整个从 hub 删除并 close(send)**（见 Run 与 BroadcastToUsers 的实现）。
+// 对通知事件这是合理的「慢消费者保护」，但帧流是持续高频（2–10fps），任何一次
+// 瞬时拥塞都会导致用户被踢下线——前端一次 5 秒卡顿就永久失去 WS 连接。
+//
+// 因此新增本方法：队列满 → 计数丢弃该帧，连接保留；其它消息照旧走原路径。
+// droppedFrames 为进程级累计（观测用，不参与业务）。
+// ============================================================================
+
+// liveFrameDropped 帧丢弃累计（atomic 语义足够，仅观测）。
+var liveFrameDropped int64
+
+// DroppedLiveFrames 返回进程累计丢弃的实时画面帧数（观测/诊断）。
+func DroppedLiveFrames() int64 { return atomic.LoadInt64(&liveFrameDropped) }
+
+// PublishLiveToUsers 向指定用户推送一帧实时画面（可丢）。
+//
+// 返回本次实际被丢弃的用户数。队列满只丢这一帧，用户连接保持。
+func (h *NoticeHub) PublishLiveToUsers(userIDs []string, executionID, msgType, payload string) int {
+	if h == nil || len(userIDs) == 0 || payload == "" {
+		return 0
+	}
+	data, err := h.encodeMessage(NoticeMessage{
+		Type:      msgType,
+		Content:   payload,
+		Timestamp: time.Now().Unix(),
+	})
+	if err != nil {
+		applogger.Errorf("实时画面帧序列化失败: %v", err)
+		return 0
+	}
+	_ = executionID // 信封不带业务 ID（前端从 Content 解析，协议 §1）
+
+	dropped := 0
+	h.mu.RLock()
+	for _, userID := range userIDs {
+		client, ok := h.clients[userID]
+		if !ok {
+			// 用户不在线：算作「没有推送到」，但不是丢弃（不计数）。
+			continue
+		}
+		select {
+		case client.send <- data:
+			// 入队成功
+		default:
+			// 队列满 → 丢帧，**不**删除连接。
+			dropped++
+		case <-h.stop:
+			// hub 已停：直接返回，不再推。
+			h.mu.RUnlock()
+			return dropped
+		}
+	}
+	h.mu.RUnlock()
+	if dropped > 0 {
+		atomic.AddInt64(&liveFrameDropped, int64(dropped))
+	}
+	return dropped
+}
+
+// PublishLiveStateToUsers 向指定用户推送叠加层情境（**不可丢**）。
+//
+// 顺序：先尝试非阻塞入队；队列满时**降级为删除该用户的旧帧**是无意义的，
+// 这里选择「阻塞一小段时间后丢弃该状态帧并记日志」——状态帧每秒至多几帧，
+// 丢一次可由下一帧补齐（Worker 每帧都带 context，最终一致）。
+func (h *NoticeHub) PublishLiveStateToUsers(userIDs []string, executionID, msgType, payload string) int {
+	if h == nil || len(userIDs) == 0 || payload == "" {
+		return 0
+	}
+	data, err := h.encodeMessage(NoticeMessage{
+		Type:      msgType,
+		Content:   payload,
+		Timestamp: time.Now().Unix(),
+	})
+	if err != nil {
+		applogger.Errorf("实时画面状态序列化失败: %v", err)
+		return 0
+	}
+	_ = executionID
+
+	dropped := 0
+	h.mu.RLock()
+	for _, userID := range userIDs {
+		client, ok := h.clients[userID]
+		if !ok {
+			continue
+		}
+		// 状态帧给一次短重试（10ms），仍满则丢弃并计数（不删连接）。
+		sent := false
+		for attempt := 0; attempt < 3; attempt++ {
+			select {
+			case client.send <- data:
+				sent = true
+			default:
+				time.Sleep(10 * time.Millisecond)
+			}
+			if sent {
+				break
+			}
+		}
+		if !sent {
+			dropped++
+			atomic.AddInt64(&liveFrameDropped, 1)
+			applogger.Warnf("实时画面状态帧丢弃（用户 %s 队列拥塞）", userID)
+		}
+	}
+	h.mu.RUnlock()
+	return dropped
 }
 
 // writePump 写入循环

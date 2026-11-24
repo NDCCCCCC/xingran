@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/spf13/viper"
 	"github.com/xingran-next/xingran-go-backend/pkg/cache"
@@ -183,12 +184,33 @@ type BaiduConfig struct {
 
 // RPAConfig RPA配置。
 type RPAConfig struct {
-	Enabled bool             `mapstructure:"enabled"` // 是否启用RPA功能
-	AI      RPAAIConfig      `mapstructure:"ai"`      // AI配置
-	Worker  RPAWorkerConfig  `mapstructure:"worker"`  // Worker配置
-	Scaling RPAScalingConfig `mapstructure:"scaling"` // 扩缩容配置
-	Storage RPAStorageConfig `mapstructure:"storage"` // 存储配置
+	Enabled  bool             `mapstructure:"enabled"`  // 是否启用RPA功能
+	AI       RPAAIConfig      `mapstructure:"ai"`       // AI配置
+	Worker   RPAWorkerConfig  `mapstructure:"worker"`   // Worker配置
+	Scaling  RPAScalingConfig `mapstructure:"scaling"`  // 扩缩容配置
+	Storage  RPAStorageConfig `mapstructure:"storage"`  // 存储配置
+	// LiveView Phase 155 / LIVEVIEW-01~05：实时画面参数（后端侧只读展示与限流文案）。
+	// 真正的 screencast 参数在 rpa-worker 的 worker.liveview 节（Worker 是执行端）。
+	LiveView RPALiveViewConfig `mapstructure:"liveview"`
 }
+
+// RPALiveViewConfig Phase 155：后端侧实时画面配置。
+//
+// 分工：帧率/画质/ACK 超时等**执行端参数**归 rpa-worker；本结构只保留
+// 后端自己需要裁决的三项 —— 是否启用、单 Worker 推流上限（用于错误文案与
+// 前端展示）、观看者心跳超时（断流判定，LIVEVIEW-05）。三者必须与 Worker
+// 侧同名配置保持一致，默认值集中在下方常量里。
+type RPALiveViewConfig struct {
+	Enabled     bool          `mapstructure:"enabled"`      // 是否启用实时画面（默认启用）
+	MaxStreams  int           `mapstructure:"max_streams"`  // 单 Worker 并发推流上限（默认 2）
+	IdleTimeout time.Duration `mapstructure:"idle_timeout"` // 观看者无心跳即停流（默认 30s）
+}
+
+// Phase 155 / LIVEVIEW 默认值（与 rpa-worker config 的同名默认保持一致）。
+const (
+	DefaultRPALiveViewMaxStreams  = 2
+	DefaultRPALiveViewIdleTimeout = 30 * time.Second
+)
 
 // RPAAIConfig RPA AI配置。
 type RPAAIConfig struct {
@@ -585,6 +607,15 @@ func setDefaults(v *viper.Viper) {
 	// 默认 30s,与 FIX-12 之前 core.go 里 context.WithTimeout(..., 30*time.Second)
 	// 硬编码值完全一致,零配置部署行为不变。
 	v.SetDefault("reconciliation.mv_refresh_timeout_sec", 30)
+
+	// Phase 155 / LIVEVIEW-05：实时画面后端侧默认值。
+	// enabled 默认 true（LIVEVIEW 是里程碑交付项，默认可用；运维要关写 false）。
+	// max_streams 与 rpa-worker 的 worker.liveview.max_streams 同值（默认 2），
+	// 用于前端展示与超限文案；真正的限流裁决在 Worker 侧。
+	// idle_timeout 是「观看者心跳超时即停流」的窗口（LIVEVIEW-05，默认 30s）。
+	v.SetDefault("rpa.liveview.enabled", true)
+	v.SetDefault("rpa.liveview.max_streams", DefaultRPALiveViewMaxStreams)
+	v.SetDefault("rpa.liveview.idle_timeout", DefaultRPALiveViewIdleTimeout)
 }
 
 // GetDSN 获取数据库连接字符串(URL 格式)。

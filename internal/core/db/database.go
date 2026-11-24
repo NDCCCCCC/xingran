@@ -259,6 +259,12 @@ func (d *Database) sanitizeSQLiteModelDefaults() error {
 	// 该模型在 sqlite 分支注册进 AutoMigrate,故必须一并净化;剥离后由
 	// BeforeCreate 钩子(uuid.New()) 填充 ID,PG 下行为等价。
 	modelsToSanitize = append(modelsToSanitize, &models.DeptOUMapping{})
+	// Phase 155 / LIVEVIEW-05: sys_rpa_audit_logs 的 ID tag 含
+	// default:gen_random_uuid()（PG-only 函数式默认），sqlite 建表报
+	// near "(": syntax error。该模型在 sqlite 分支单独 append 进 migrateList
+	// （不在 MigrateModelList），故必须在此显式纳入净化；剥离后由
+	// AuditLog.BeforeCreate（uuid.New()）填充 ID，PG 下行为等价。
+	modelsToSanitize = append(modelsToSanitize, &rpamodels.AuditLog{})
 	for _, model := range modelsToSanitize {
 		stmt := &gorm.Statement{DB: d.DB}
 		if err := stmt.Parse(model); err != nil {
@@ -922,6 +928,11 @@ func (d *Database) AutoMigrate() error {
 		// （jsonb type-name / default:'pending'）为 sqlite 可接受语法，零漂移
 		// 原则同上方 RPA 块。
 		migrateList = append(migrateList, &svcrpa.HumanInterventionEvent{})
+		// Phase 155 / LIVEVIEW-05：sys_rpa_audit_logs 与上两表同族缺漏 —— sqlite
+		// 分支从未注册，实时画面审计（以及 VDI 审计）落库直接 "no such table"。
+		// 模型 tag 已核查：jsonb type-name 为 sqlite 可接受语法（GORM 归一为 text），
+		// OldValue/NewValue 加了 serializer:json，零漂移原则同上方 RPA 块。
+		migrateList = append(migrateList, &rpamodels.AuditLog{})
 		// sys_oper_log 历史由归档 SQL 创建,PG 存量库已存在;仅 sqlite 分支注册进
 		// AutoMigrate(全新文件库必须建表,否则 operlog.Record 写入报 "no such table")。
 		// PG 不注册的原因同上(零漂移);PG 新部署由 scripts/dbprovision 建表。
@@ -1210,6 +1221,12 @@ func (d *Database) AutoMigrate() error {
 		if err := d.runAndRecord(245, "rpa_permission_f_type_seed", migrations.Migrate245RpaPermissionFTypeSeed); err != nil {
 			applogger.Errorf("rpa 域权限种子迁移失败 (非阻断,留待下次启动): %v", err)
 		}
+		// 255：Phase 155 / LIVEVIEW-04 —— RPA 实时画面页面菜单（C 型，父=「RPA 管理」）。
+		// 归属协议第 6 条：live 页面只走 sys_menu seed 注册，前端不改 componentLoader/
+		// DynamicRoutes。不扩权限面（复用 ops:rpa:execution:list）。**非阻断**。
+		if err := d.runAndRecord(255, "rpa_liveview_menu", migrations.Migrate255LiveViewMenu); err != nil {
+			applogger.Errorf("RPA 实时画面菜单播种失败 (非阻断,留待下次启动): %v", err)
+		}
 		// G4 整改（task-3）：system:backup:remove 备份删除独立码 F 型种子。**非阻断**：
 		// 缺权限行只让普通角色备份删除 403 / 前端删除按钮不显示；父菜单缺失时迁移内部降级返回 nil。
 		if err := d.runAndRecord(246, "backup_remove_permission_f_type_seed", migrations.Migrate246BackupRemovePermissionFTypeSeed); err != nil {
@@ -1393,6 +1410,10 @@ func (d *Database) AutoMigrate() error {
 		// sqlite 分支: G4 整改 system:backup:remove 备份删除独立码 F 型种子（双方言迁移）。**非阻断**。
 		if err := d.runAndRecord(246, "backup_remove_permission_f_type_seed", migrations.Migrate246BackupRemovePermissionFTypeSeed); err != nil {
 			applogger.Errorf("备份删除权限种子迁移失败 (非阻断,留待下次启动): %v", err)
+		}
+		// sqlite 分支: 255 Phase 155 / LIVEVIEW-04 RPA 实时画面菜单（双方言迁移）。**非阻断**。
+		if err := d.runAndRecord(255, "rpa_liveview_menu", migrations.Migrate255LiveViewMenu); err != nil {
+			applogger.Errorf("RPA 实时画面菜单播种失败 (非阻断,留待下次启动): %v", err)
 		}
 		// sqlite 分支: 杂项 RBAC F 型种子（task-4，双方言迁移）。**非阻断**。
 		if err := d.runAndRecord(247, "misc_rbac_f_type_seed", migrations.Migrate247MiscRbacFTypeSeed); err != nil {

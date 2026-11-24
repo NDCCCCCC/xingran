@@ -39,6 +39,13 @@ func SetupPublicWorkerRouter(r *gin.RouterGroup, core *core.Core) {
 	workerGuard := middleware.WorkerAuth(tokenSvc, required)
 	r.POST("/workers/:id/heartbeat", workerGuard, handler.Heartbeat)
 	r.POST("/workers/progress", middleware.WorkerAuth(tokenSvc, required), handler.Progress)
+
+	// Phase 155 / LIVEVIEW-01/05：实时画面的 Worker 上行端点（帧 + 审计）。
+	// 与 heartbeat/progress 同一处置：WorkerAuth 而非用户权限码（Worker 不是用户，
+	// 无 RBAC 主体）。scan-routes 会把本组登记为无权限码，与既有 worker 组一致。
+	liveHandler := NewLiveViewHandler(services.LiveViewService, services.ExecutionService).WithCore(core)
+	r.POST("/workers/liveview/frame", middleware.WorkerAuth(tokenSvc, required), liveHandler.IngestWorkerFrame)
+	r.POST("/workers/liveview/event", middleware.WorkerAuth(tokenSvc, required), liveHandler.IngestWorkerAudit)
 }
 
 // SetupRPARouter 设置 RPA 路由（统一入口）
@@ -75,6 +82,10 @@ func SetupRPARouter(r *gin.RouterGroup, core *core.Core) {
 
 	// AI 辅助路由
 	SetupAIRouter(r.Group("/ai"), NewAIHandler(services.AIService).WithCore(core), core)
+
+	// Phase 155 / LIVEVIEW-01~05：实时画面端点组（在 /executions 前缀下追加
+	// /:id/liveview/* 子组；尾追加不改既有执行路由行，归属协议第 6 条）。
+	SetupLiveViewRouter(r.Group("/executions"), services, core)
 }
 
 // SetupTaskRouter 设置任务路由（读端点 ANY-of ops:rpa:task:list；写端点 strict 单码）
@@ -128,6 +139,10 @@ func SetupExecutionRouter(r *gin.RouterGroup, handler *ExecutionHandler, core *c
 	r.GET("/:id/batch-report", middleware.RequirePermissions([]string{string(permission.RpaExecutionList)}, core), handler.GetBatchReport)
 	r.GET("/:id/human-intervention", middleware.RequirePermissions([]string{string(permission.RpaExecutionList)}, core), handler.RequestHumanIntervention)
 	r.POST("/:id/human-intervention", middleware.RequirePermissions([]string{string(permission.RpaExecutionList)}, core), handler.SubmitHumanIntervention)
+
+	// Phase 155 / LIVEVIEW-01~05：实时画面端点组由 SetupLiveViewRouter 注册
+	// （见 liveview_router.go，在 SetupRPARouter 内对同一 /executions 前缀追加
+	// /:id/liveview/* 子组）。此处不挂载，保持本函数的既有行不变。
 }
 
 // SetupAIRouter 设置 AI 辅助路由（11 端点统一 strict rpa:ai:use；逐行显式挂载

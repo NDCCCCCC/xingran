@@ -201,10 +201,15 @@ func (p *ExecutionListParams) Validate() error {
 	switch rpamodels.RPAExecutionStatus(*p.Status) {
 	case rpamodels.RPAExecutionStatusPending, rpamodels.RPAExecutionStatusRunning,
 		rpamodels.RPAExecutionStatusSuccess, rpamodels.RPAExecutionStatusFailed,
-		rpamodels.RPAExecutionStatusCancelled, rpamodels.RPAExecutionStatusTimeout:
+		rpamodels.RPAExecutionStatusCancelled, rpamodels.RPAExecutionStatusTimeout,
+		// Phase 155 / LIVEVIEW-03：Phase 153 引入了 paused 状态（RUNTIME-05 状态机
+		// 的 running→paused 合法迁移），但列表筛选的值域当时漏补 —— 前端按
+		// status=paused 精确筛选会被这里 400 拒绝。实时画面页要列出「执行中 +
+		// 人工干预暂停中」两类可观看对象，故一并补齐（值域与模型常量保持同源）。
+		rpamodels.RPAExecutionStatusPaused:
 		return nil
 	}
-	return fmt.Errorf("status 非法取值 %q：执行状态只接受 pending/running/success/failed/cancelled/timeout", *p.Status)
+	return fmt.Errorf("status 非法取值 %q：执行状态只接受 pending/running/paused/success/failed/cancelled/timeout", *p.Status)
 }
 
 // WorkerRegisterRequest Worker 注册请求

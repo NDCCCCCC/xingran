@@ -73,6 +73,9 @@ var ActiveMigrations = []struct {
 	// 两分支已注册但漏入本清单，MissingRecords 会把它们误判为 Extra）。
 	{244, "monitor_permission_f_type_seed"},
 	{245, "rpa_permission_f_type_seed"},
+	// Phase 155 / LIVEVIEW-04：RPA 实时画面页面菜单（C 型，父=「RPA 管理」）。
+	// 按维护约定同步登记（PG + sqlite 两分支都已调用）。
+	{255, "rpa_liveview_menu"},
 	{246, "backup_remove_permission_f_type_seed"},
 	{247, "misc_rbac_f_type_seed"},
 	// 工单分类读权限载体：补 ops:workorder:category:list 的 status=0 F 行

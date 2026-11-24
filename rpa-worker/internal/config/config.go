@@ -23,6 +23,11 @@ type Config struct {
 	// browser.max_pages 被合并）。mapstructure "-" 表示不从 yaml 读取，
 	// 由 Load 填充，Worker 启动时以 WARN 级别输出。
 	Warnings []string `mapstructure:"-"`
+
+	// LiveView Phase 155 / LIVEVIEW-01/05：实时画面推流参数（顶层节 worker.liveview）。
+	// 归属协议第 1 条：154 拥有 browser 侧的页并发 schema（max_pages→max_concurrency
+	// 合并已完成）；155 只新增 screencast 相关键，**不动**任何既有判定。
+	LiveView LiveViewConfig `mapstructure:"liveview"`
 }
 
 // WorkerConfig Worker 配置
@@ -49,6 +54,48 @@ type WorkerConfig struct {
 	MinScaleDownConcurrency int              `mapstructure:"min_scale_down_concurrency"` // 最小缩容并发数
 	HybridMode              HybridModeConfig `mapstructure:"hybrid_mode"`                // 混合模式配置
 }
+
+// LiveViewConfig Phase 155：screencast 帧流与接管的运行参数。
+//
+// 单位与语义：
+//   - MaxStreams：单 Worker 同时推流路数上限（LIVEVIEW-01/05，默认 2）。
+//     超限必须返回可读错误给前端，不得静默降级。
+//   - Quality/MaxWidth/MaxHeight/EveryNthFrame：CDP startScreencast 参数，
+//     默认 50/1280/720/2（调研 §1 的降档甜点）。
+//   - AckTimeout：单帧等消费确认上限，超时强制 ACK 并计 drop（背压兜底）。
+//   - IdleTimeout：无任何下行指令（含 keepalive）超过该时限即停流（默认 30s）。
+//   - TakeoverTimeout：接管者无输入超过该时限自动释放（防僵尸占用，默认 120s）。
+type LiveViewConfig struct {
+	Enabled         bool          `mapstructure:"enabled"`
+	MaxStreams      int           `mapstructure:"max_streams"`
+	Quality         int           `mapstructure:"quality"`
+	MaxWidth        int           `mapstructure:"max_width"`
+	MaxHeight       int           `mapstructure:"max_height"`
+	EveryNthFrame   int           `mapstructure:"every_nth_frame"`
+	AckTimeout      time.Duration `mapstructure:"ack_timeout"`
+	IdleTimeout     time.Duration `mapstructure:"idle_timeout"`
+	TakeoverTimeout time.Duration `mapstructure:"takeover_timeout"`
+	// DefaultMode 未显式指定时的协作模式（copilot 为默认，符合 LIVEVIEW-03
+	// 的「一般员工信任曲线」）。
+	DefaultMode string `mapstructure:"default_mode"`
+
+	// EnabledSet 内部标记（不从 yaml 读）：显式配置了 liveview.enabled 时为 true。
+	// 用于区分「未配置」与「显式 false」—— 未配置默认开启，显式 false 保持关闭。
+	EnabledSet bool `mapstructure:"-"`
+}
+
+// Phase 155 默认值（与 browser/screencast.go 的常量保持一致，避免两处漂移）。
+const (
+	DefaultLiveViewMaxStreams      = 2
+	DefaultLiveViewQuality         = 50
+	DefaultLiveViewMaxWidth        = 1280
+	DefaultLiveViewMaxHeight       = 720
+	DefaultLiveViewEveryNthFrame   = 2
+	DefaultLiveViewAckTimeout      = 800 * time.Millisecond
+	DefaultLiveViewIdleTimeout     = 30 * time.Second
+	DefaultLiveViewTakeoverTimeout = 120 * time.Second
+	DefaultLiveViewMode            = "copilot"
+)
 
 // BackendConfig 后端 API 配置
 type BackendConfig struct {
@@ -189,6 +236,12 @@ func Load(path string) (*Config, error) {
 
 	// 环境变量可能改写 worker.max_concurrency —— 归一化浏览器侧只读视图。
 	syncPageConcurrency(&cfg)
+
+	// Phase 155 / LIVEVIEW：screencast 默认值。需要 viper 判定 liveview.enabled
+	// 是否显式配置（未配置=默认开启，显式 false=关闭），故在 Load 内单独调用。
+	// 注意：setDefaults 已用 v==nil 路径填过一次默认（把 Enabled 置 true），
+	// 因此这里必须先修正 EnabledSet 与 Enabled，否则显式 false 会被默认值覆盖。
+	applyLiveViewDefaults(v, &cfg.LiveView)
 
 	// Phase 154 / ENGINE-04：未定义变量策略校验（非法值在加载期即失败，
 	// 而不是到执行期才静默走错分支）。
@@ -363,6 +416,74 @@ func setDefaults(cfg *Config) {
 		if cfg.Worker.HybridMode.SubtaskPriority == 0 {
 			cfg.Worker.HybridMode.SubtaskPriority = 5
 		}
+	}
+
+	// Phase 155 / LIVEVIEW：纯结构体路径的兜底默认（v==nil → 默认开启）。
+	applyLiveViewDefaults(nil, &cfg.LiveView)
+}
+
+// applyLiveViewDefaults Phase 155 / LIVEVIEW：填 screencast 默认值。
+//
+// 「未配置」与「显式 false」的区分：viper 的 IsSet 能判定键是否存在，因此
+// worker.liveview.enabled / liveview.enabled 未出现在 yaml 时默认开启
+// （LIVEVIEW 是本里程碑交付项，默认可用）；显式写 enabled: false 才关闭。
+//
+// v == nil 时（单测直接构造 Config 的路径）一律填默认值并默认开启。
+func applyLiveViewDefaults(v *viper.Viper, lv *LiveViewConfig) {
+	if lv == nil {
+		return
+	}
+	switch {
+	case v == nil:
+		// 纯结构体路径（单测直接构造 Config）：默认开启。
+		lv.Enabled = true
+	case v.IsSet("liveview.enabled"), v.IsSet("worker.liveview.enabled"):
+		// 用户显式给出 → 以 yaml 值为准（含 false）。这里必须**重置** Enabled：
+		// setDefaults 的 v==nil 兜底路径已把它置 true，若不重置，显式 false 会被
+		// 默认值静默覆盖（配置语义失效，已由 TestLiveView_ExplicitDisable 锁定）。
+		lv.EnabledSet = true
+		if yamlFlag := v.GetBool("liveview.enabled"); yamlFlag {
+			lv.Enabled = true
+		} else if yamlFlag2 := v.GetBool("worker.liveview.enabled"); yamlFlag2 {
+			lv.Enabled = true
+		} else {
+			lv.Enabled = false
+		}
+	default:
+		lv.Enabled = true
+	}
+	if lv.MaxStreams <= 0 {
+		lv.MaxStreams = DefaultLiveViewMaxStreams
+	}
+	if lv.Quality <= 0 || lv.Quality > 100 {
+		lv.Quality = DefaultLiveViewQuality
+	}
+	if lv.MaxWidth <= 0 {
+		lv.MaxWidth = DefaultLiveViewMaxWidth
+	}
+	if lv.MaxHeight <= 0 {
+		lv.MaxHeight = DefaultLiveViewMaxHeight
+	}
+	if lv.EveryNthFrame <= 0 {
+		lv.EveryNthFrame = DefaultLiveViewEveryNthFrame
+	}
+	if lv.AckTimeout <= 0 {
+		lv.AckTimeout = DefaultLiveViewAckTimeout
+	}
+	if lv.IdleTimeout <= 0 {
+		lv.IdleTimeout = DefaultLiveViewIdleTimeout
+	}
+	if lv.TakeoverTimeout <= 0 {
+		lv.TakeoverTimeout = DefaultLiveViewTakeoverTimeout
+	}
+	switch lv.DefaultMode {
+	case "":
+		lv.DefaultMode = DefaultLiveViewMode
+	case "auto", "copilot", "manual":
+		// 合法取值保持。
+	default:
+		// 非法模式回落默认（配置期不静默走错分支：Load 输出 WARN）。
+		lv.DefaultMode = DefaultLiveViewMode
 	}
 }
 
