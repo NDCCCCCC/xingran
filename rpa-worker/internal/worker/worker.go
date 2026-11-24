@@ -43,7 +43,7 @@ type Worker struct {
 	redisClient      *communication.RedisClient
 	apiClient        *communication.APIClient
 	progressReporter *communication.ProgressReporter
-	browserPool      *browser.Pool
+	browserManager   *browser.Manager
 	engine           *executor.Engine
 	state            WorkerState
 	stateMutex       sync.RWMutex
@@ -157,11 +157,18 @@ func (w *Worker) initComponents() error {
 	}
 	w.apiClient = communication.NewAPIClient(&w.config.Backend, w.logger)
 	w.progressReporter = communication.NewProgressReporter(w.apiClient, w.id, w.logger)
-	w.browserPool, err = browser.NewPool(&w.config.Browser, w.logger)
+	// Phase 154 / ENGINE-01：1 Chrome + N page。浏览器侧并发页面数由
+	// 合并后的单一配置驱动（worker.max_concurrency）。
+	w.config.Browser.MaxConcurrency = w.config.Worker.MaxConcurrency
+	w.browserManager, err = browser.NewManager(&w.config.Browser, w.logger)
 	if err != nil {
-		return fmt.Errorf("init browser pool failed: %w", err)
+		return fmt.Errorf("init browser manager failed: %w", err)
 	}
-	w.engine = executor.NewEngine(&w.config.Executor, &w.config.Worker, w.browserPool, w.progressReporter, w.logger, w.redisClient.GetClient())
+	// 旧键兼容告警（ENGINE-01：browser.max_pages 已合并）。
+	for _, warning := range w.config.Warnings {
+		w.logger.Warn(warning)
+	}
+	w.engine = executor.NewEngine(&w.config.Executor, &w.config.Worker, w.browserManager, w.progressReporter, w.logger, w.redisClient.GetClient())
 
 	// 初始化任务拆分器（混合模式）
 	if w.config.Worker.HybridMode.Enabled {
@@ -604,6 +611,11 @@ func (w *Worker) scaleUp(targetConcurrency int, reason string) error {
 
 	oldValue := w.maxConcurrency
 	w.maxConcurrency = targetConcurrency
+	// Phase 154 / ENGINE-01：并发页面数上调必须同步到浏览器管理器，
+	// 否则池容量仍停在旧值，扩容只改了消费循环的计数（空放）。
+	if w.browserManager != nil {
+		w.browserManager.SetCapacity(targetConcurrency)
+	}
 
 	w.logger.Info("scaled up",
 		logger.Int("from", oldValue),
@@ -644,6 +656,9 @@ func (w *Worker) scaleDown(targetConcurrency int, reason string) error {
 
 	oldValue := w.maxConcurrency
 	w.maxConcurrency = targetConcurrency
+	if w.browserManager != nil {
+		w.browserManager.SetCapacity(targetConcurrency)
+	}
 
 	w.logger.Info("scaled down",
 		logger.Int("from", oldValue),
@@ -690,7 +705,7 @@ func (w *Worker) waitForShutdown() {
 // cleanup cleanup resources
 func (w *Worker) cleanup() error {
 	var errs []error
-	if err := w.browserPool.Close(); err != nil {
+	if err := w.browserManager.Close(); err != nil {
 		errs = append(errs, err)
 	}
 	if err := w.redisClient.Close(); err != nil {

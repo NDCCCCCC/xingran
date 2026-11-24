@@ -5,7 +5,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -20,7 +19,7 @@ import (
 type Engine struct {
 	config             *config.ExecutorConfig
 	workerConfig       *config.WorkerConfig
-	browserPool        *browser.Pool
+	browserManager     *browser.Manager
 	progressReporter   *communication.ProgressReporter
 	logger             logger.Logger
 	redisClient        *redis.Client
@@ -35,7 +34,7 @@ type Engine struct {
 func NewEngine(
 	cfg *config.ExecutorConfig,
 	workerCfg *config.WorkerConfig,
-	browserPool *browser.Pool,
+	browserManager *browser.Manager,
 	progressReporter *communication.ProgressReporter,
 	log logger.Logger,
 	redisClient *redis.Client,
@@ -43,11 +42,21 @@ func NewEngine(
 	return &Engine{
 		config:           cfg,
 		workerConfig:     workerCfg,
-		browserPool:      browserPool,
+		browserManager:   browserManager,
 		progressReporter: progressReporter,
 		logger:           log,
 		redisClient:      redisClient,
 		loopConcurrency:  workerCfg.LoopConcurrency, // 从配置中获取循环并发数
+	}
+}
+
+// reportProgress 统一上报入口（nil 安全：集成测试与离线执行可无上报器）。
+func (e *Engine) reportProgress(ctx context.Context, req *types.ProgressReport) {
+	if e.progressReporter == nil {
+		return
+	}
+	if err := e.progressReporter.ReportProgress(ctx, req); err != nil {
+		e.logger.Warn("failed to report progress", logger.Err(err))
 	}
 }
 
@@ -89,23 +98,20 @@ func (e *Engine) Execute(ctx context.Context, task *types.TaskMessage, workerID 
 		Total:       len(task.Script),
 	}
 
-	// Acquire browser page
-	pooledPage, err := e.browserPool.Acquire(ctx)
+	// Acquire browser page（Phase 154 / ENGINE-01：1 Chrome + N page）
+	page, err := e.browserManager.Acquire(ctx)
 	if err != nil {
 		errorResult := e.createErrorResult(result, err, 0, len(task.Script))
 		e.reportSubTaskResult(ctx, task, errorResult)
 		return errorResult, fmt.Errorf("failed to acquire browser: %w", err)
 	}
-	defer e.browserPool.Release(pooledPage)
+	defer e.browserManager.Release(page)
 
 	// Create page manager
-	pageMgr := browser.NewPageManager(pooledPage.Page(), e.logger)
+	pageMgr := browser.NewPageManager(page, e.logger)
 
-	// Initialize variable context
-	variables := make(map[string]interface{})
-	for k, v := range task.Variables {
-		variables[k] = v
-	}
+	// Initialize variable context（Phase 154 / ENGINE-04：三层作用域显式化）
+	variables := NewVariableScope(task.Variables)
 
 	// Navigate to target URL
 	if task.TargetURL != "" {
@@ -131,15 +137,13 @@ func (e *Engine) Execute(ctx context.Context, task *types.TaskMessage, workerID 
 			e.reportSubTaskProgress(ctx, parentExecutionID, subTaskIndex, i+1, len(task.Script), types.StatusRunning, fmt.Sprintf("executing: %s %s", action.Type, action.Description))
 		}
 
-		if err := e.progressReporter.ReportProgress(ctx, &types.ProgressReport{
+		e.reportProgress(ctx, &types.ProgressReport{
 			ExecutionID:     task.ExecutionID,
 			ProgressCurrent: i + 1,
 			ProgressTotal:   len(task.Script),
 			Message:         fmt.Sprintf("executing: %s %s", action.Type, action.Description),
 			Status:          types.StatusRunning,
-		}); err != nil {
-			e.logger.Warn("failed to report progress", logger.Err(err))
-		}
+		})
 
 		// Execute action
 		if err := e.executeAction(ctx, pageMgr, &action, variables); err != nil {
@@ -206,15 +210,18 @@ func (e *Engine) extractSubTaskMeta(task *types.TaskMessage) (isSubTask bool, pa
 }
 
 // executeAction execute single action
-func (e *Engine) executeAction(ctx context.Context, pageMgr *browser.PageManager, action *types.Action, variables map[string]interface{}) error {
+func (e *Engine) executeAction(ctx context.Context, pageMgr *browser.PageManager, action *types.Action, variables *VariableScope) error {
 	e.logger.Debug("executing action",
 		logger.String("type", string(action.Type)),
 		logger.String("selector", action.Selector),
 		logger.String("description", action.Description),
 	)
 
-	// Substitute variables
-	params := e.substituteVariables(action.Params, variables)
+	// Substitute variables（ENGINE-04：${var} + 嵌套 a.b[0].c，策略可配）
+	params, err := e.substituteVariables(action.Params, variables)
+	if err != nil {
+		return err
+	}
 
 	// Execute by action type
 	switch action.Type {
@@ -276,18 +283,14 @@ func (e *Engine) executeAction(ctx context.Context, pageMgr *browser.PageManager
 		}
 
 		// 通过进度上报发送截图
-		if e.progressReporter != nil {
-			if err := e.progressReporter.ReportProgress(ctx, &types.ProgressReport{
-				ExecutionID:     e.currentExecutionID,
-				ProgressCurrent: e.currentStep,
-				ProgressTotal:   e.currentTotal,
-				Message:         fmt.Sprintf("截图: %s", screenshotName),
-				Status:          types.StatusRunning,
-				Screenshot:      base64Data,
-			}); err != nil {
-				e.logger.Warn("failed to report screenshot", logger.Err(err))
-			}
-		}
+		e.reportProgress(ctx, &types.ProgressReport{
+			ExecutionID:     e.currentExecutionID,
+			ProgressCurrent: e.currentStep,
+			ProgressTotal:   e.currentTotal,
+			Message:         fmt.Sprintf("截图: %s", screenshotName),
+			Status:          types.StatusRunning,
+			Screenshot:      base64Data,
+		})
 
 		return nil
 
@@ -321,6 +324,50 @@ func (e *Engine) executeAction(ctx context.Context, pageMgr *browser.PageManager
 		// Auto login action - use stored credentials or session
 		return e.executeAutoLogin(ctx, pageMgr, action, variables)
 
+	// ===== Phase 154 / ENGINE-02：差集 A（常量已声明、switch 原本无 case）=====
+	case types.ActionUpload:
+		return e.executeUpload(ctx, pageMgr, action, variables)
+
+	case types.ActionDownload:
+		return e.executeDownload(ctx, pageMgr, action, variables)
+
+	case types.ActionEvaluate:
+		return e.executeEvaluate(ctx, pageMgr, action, variables)
+
+	case types.ActionClose:
+		return e.executeClose(ctx, pageMgr, action, variables)
+
+	case types.ActionCondition:
+		return e.executeCondition(ctx, pageMgr, action, variables)
+
+	// ===== Phase 154 / ENGINE-02：差集 B（常量与 case 双缺）=====
+	case types.ActionAssert:
+		return e.executeAssert(ctx, pageMgr, action, variables)
+
+	case types.ActionHover:
+		return e.executeHover(ctx, pageMgr, action, variables)
+
+	case types.ActionDoubleClick:
+		return e.executeDoubleClick(ctx, pageMgr, action, variables)
+
+	case types.ActionRightClick:
+		return e.executeRightClick(ctx, pageMgr, action, variables)
+
+	case types.ActionDrag:
+		return e.executeDrag(ctx, pageMgr, action, variables)
+
+	case types.ActionKeyboard:
+		return e.executeKeyboard(ctx, pageMgr, action, variables)
+
+	case types.ActionSwitchTab:
+		return e.executeSwitchTab(ctx, pageMgr, action, variables)
+
+	case types.ActionIframe:
+		return e.executeIframe(ctx, pageMgr, action, variables)
+
+	case types.ActionScript:
+		return e.executeScript(ctx, pageMgr, action, variables)
+
 	default:
 		return fmt.Errorf("unsupported action type: %s", action.Type)
 	}
@@ -329,7 +376,7 @@ func (e *Engine) executeAction(ctx context.Context, pageMgr *browser.PageManager
 // executeLoop execute loop action for batch processing
 // 注意：混合模式下，Loop 动作应该由 Worker 的 TaskSplitter 拆分为子任务
 // 这里保留简单的串行执行是为了向后兼容（当混合模式未启用时）
-func (e *Engine) executeLoop(ctx context.Context, pageMgr *browser.PageManager, action *types.Action, variables map[string]interface{}) error {
+func (e *Engine) executeLoop(ctx context.Context, pageMgr *browser.PageManager, action *types.Action, variables *VariableScope) error {
 	// Get loop data source
 	dataSource, ok := action.Params["dataSource"]
 	if !ok {
@@ -386,32 +433,36 @@ func (e *Engine) executeLoop(ctx context.Context, pageMgr *browser.PageManager, 
 		logger.Int("iterations", len(dataArray)))
 
 	// 串行执行（向后兼容）
+	//
+	// Phase 154 / ENGINE-04：每轮迭代使用独立 Loop 作用域 —— 上一轮的
+	// item.* / index 不会泄漏到下一轮；Task 与 Session 层共享同一份数据。
+	// 嵌套结构用 item 对象整体挂载（支持 ${item.a.b[0].c}），同时保留
+	// 扁平字段直取（${fieldName}）的向后兼容。
 	for i, item := range dataArray {
 		e.logger.Debug("loop iteration",
 			logger.Int("index", i),
 			logger.Int("total", len(dataArray)),
 		)
 
-		// Create new variable context for this iteration
-		iterationVars := make(map[string]interface{})
-		for k, v := range variables {
-			iterationVars[k] = v
+		variables.BreakLoopScope()
+		if err := variables.Set(ScopeLoop, itemName, item); err != nil {
+			return fmt.Errorf("loop iteration %d 注入 item 失败: %w", i, err)
 		}
-
-		// Add current item to variables (can access with ${item.fieldName})
+		if err := variables.Set(ScopeLoop, itemName+".index", i); err != nil {
+			return fmt.Errorf("loop iteration %d 注入 index 失败: %w", i, err)
+		}
+		if err := variables.Set(ScopeLoop, "index", i); err != nil {
+			return fmt.Errorf("loop iteration %d 注入 index 失败: %w", i, err)
+		}
 		for k, v := range item {
-			iterationVars[itemName+"."+k] = v
-			// Also add direct access with field name
-			iterationVars[k] = v
+			if err := variables.Set(ScopeLoop, k, v); err != nil {
+				return fmt.Errorf("loop iteration %d 注入字段 %s 失败: %w", i, k, err)
+			}
 		}
-
-		// Add iteration index
-		iterationVars[itemName+".index"] = i
-		iterationVars["index"] = i
 
 		// Execute nested actions
 		for _, nestedAction := range nestedActions {
-			if err := e.executeAction(ctx, pageMgr, &nestedAction, iterationVars); err != nil {
+			if err := e.executeAction(ctx, pageMgr, &nestedAction, variables); err != nil {
 				return fmt.Errorf("loop iteration %d failed: %w", i, err)
 			}
 		}
@@ -422,7 +473,7 @@ func (e *Engine) executeLoop(ctx context.Context, pageMgr *browser.PageManager, 
 }
 
 // executePause execute pause action for human intervention
-func (e *Engine) executePause(ctx context.Context, pageMgr *browser.PageManager, action *types.Action, variables map[string]interface{}) error {
+func (e *Engine) executePause(ctx context.Context, pageMgr *browser.PageManager, action *types.Action, variables *VariableScope) error {
 	// Get pause message
 	message := "等待人工输入..."
 	if msg, ok := action.Params["message"].(string); ok && msg != "" {
@@ -457,11 +508,7 @@ func (e *Engine) executePause(ctx context.Context, pageMgr *browser.PageManager,
 		Screenshot:  screenshot,
 	}
 
-	if e.progressReporter != nil {
-		if err := e.progressReporter.ReportProgress(ctx, progressReport); err != nil {
-			e.logger.Warn("failed to report pause status", logger.Err(err))
-		}
-	}
+	e.reportProgress(ctx, progressReport)
 
 	// 2. Create input channel to receive user response
 	userInputChan := make(chan map[string]interface{}, 1)
@@ -475,12 +522,15 @@ func (e *Engine) executePause(ctx context.Context, pageMgr *browser.PageManager,
 	// 4. Wait for user input or timeout
 	select {
 	case input := <-userInputChan:
-		// User input received, add to variables
+		// User input received, add to variables（ENGINE-04：写任务层，
+		// 敏感键在日志中脱敏）。
 		for key, value := range input {
-			variables[key] = value
+			if err := variables.Set(ScopeTask, key, value); err != nil {
+				return fmt.Errorf("人工输入回写变量 %s 失败: %w", key, err)
+			}
 			e.logger.Info("received user input",
 				logger.String("key", key),
-				logger.String("value", fmt.Sprintf("%v", value)))
+				logger.String("value", fmt.Sprintf("%v", MaskSensitive(key, value))))
 		}
 		return nil
 
@@ -530,7 +580,7 @@ func (e *Engine) subscribeForHumanInput(ctx context.Context, executionID, worker
 }
 
 // executeExtract execute extract action to get data from page
-func (e *Engine) executeExtract(ctx context.Context, pageMgr *browser.PageManager, action *types.Action, variables map[string]interface{}) error {
+func (e *Engine) executeExtract(ctx context.Context, pageMgr *browser.PageManager, action *types.Action, variables *VariableScope) error {
 	if action.Selector == "" {
 		return fmt.Errorf("extract action requires selector")
 	}
@@ -572,19 +622,32 @@ func (e *Engine) executeExtract(ctx context.Context, pageMgr *browser.PageManage
 		return fmt.Errorf("extract failed: %w", err)
 	}
 
-	// Store extracted value in variables
-	variables[targetVar] = extractedValue
+	// Store extracted value in variables（ENGINE-04：支持嵌套路径写入
+	// 如 rows[0].name；默认写任务层）。
+	scope := ScopeTask
+	if sc, ok := action.Params["scope"].(string); ok {
+		switch sc {
+		case "session":
+			scope = ScopeSession
+		case "loop":
+			scope = ScopeLoop
+		}
+	}
+	if err := variables.Set(scope, targetVar, extractedValue); err != nil {
+		return fmt.Errorf("extract 回写变量 %s 失败: %w", targetVar, err)
+	}
 
 	e.logger.Debug("data extracted",
 		logger.String("target_var", targetVar),
-		logger.String("value", fmt.Sprintf("%v", extractedValue)),
+		logger.String("scope", scope.String()),
+		logger.String("value", fmt.Sprintf("%v", MaskSensitive(targetVar, extractedValue))),
 	)
 
 	return nil
 }
 
 // executeScroll execute scroll action
-func (e *Engine) executeScroll(ctx context.Context, pageMgr *browser.PageManager, action *types.Action, variables map[string]interface{}) error {
+func (e *Engine) executeScroll(ctx context.Context, pageMgr *browser.PageManager, action *types.Action, variables *VariableScope) error {
 	// Get scroll direction (down, up, toElement)
 	direction := "down"
 	if d, ok := action.Params["direction"].(string); ok && d != "" {
@@ -609,13 +672,26 @@ func (e *Engine) executeScroll(ctx context.Context, pageMgr *browser.PageManager
 			return fmt.Errorf("scroll to element requires selector")
 		}
 		return pageMgr.ScrollToElement(action.Selector)
+	case "in", "element":
+		// ENGINE-02：元素内滚动（滚动条在容器里，不滚动整页）
+		if action.Selector == "" {
+			return fmt.Errorf("scroll in element requires selector")
+		}
+		dx, _ := action.Params["deltaX"].(int)
+		dy, _ := action.Params["deltaY"].(int)
+		if dy == 0 {
+			if p, ok := action.Params["pixels"].(int); ok && p != 0 {
+				dy = p
+			}
+		}
+		return pageMgr.ScrollInElement(action.Selector, dx, dy)
 	default:
 		return fmt.Errorf("unsupported scroll direction: %s", direction)
 	}
 }
 
 // executeAutoLogin execute auto login action
-func (e *Engine) executeAutoLogin(ctx context.Context, pageMgr *browser.PageManager, action *types.Action, variables map[string]interface{}) error {
+func (e *Engine) executeAutoLogin(ctx context.Context, pageMgr *browser.PageManager, action *types.Action, variables *VariableScope) error {
 	// Get login URL from params
 	loginURL, ok := action.Params["loginUrl"].(string)
 	if !ok {
@@ -623,8 +699,8 @@ func (e *Engine) executeAutoLogin(ctx context.Context, pageMgr *browser.PageMana
 	}
 
 	// Get session data from variables (passed from TaskMessage)
-	sessionDataInterface, hasSession := variables[types.VariableSessionData]
-	credInterface, hasCred := variables[types.VariableCredentials]
+	sessionDataInterface, _, hasSession := variables.Lookup(types.VariableSessionData)
+	credInterface, _, hasCred := variables.Lookup(types.VariableCredentials)
 
 	// If we have session data (token/cookies), apply it directly
 	if hasSession && sessionDataInterface != nil {
@@ -786,28 +862,37 @@ func (e *Engine) mapToAction(m map[string]interface{}) types.Action {
 	return action
 }
 
-// substituteVariables substitute variables
-func (e *Engine) substituteVariables(params map[string]interface{}, variables map[string]interface{}) map[string]interface{} {
-	result := make(map[string]interface{})
-	for k, v := range params {
-		switch val := v.(type) {
-		case string:
-			result[k] = e.replaceVariables(val, variables)
-		default:
-			result[k] = v
-		}
+// substituteVariables substitute variables（ENGINE-04）。
+//
+// 递归处理参数树，支持 ${var} / ${a.b[0].c} / ${a.b[0].c:default}；
+// 未定义策略由 executor.undefined_variable_policy 决定。
+func (e *Engine) substituteVariables(params map[string]interface{}, variables *VariableScope) (map[string]interface{}, error) {
+	if params == nil {
+		return map[string]interface{}{}, nil
 	}
-	return result
+	policy := config.UndefinedVariableEmpty
+	if e.config != nil && e.config.UndefinedVariablePolicy != "" {
+		policy = e.config.UndefinedVariablePolicy
+	}
+	resolved, err := ResolveValue(params, variables.Flatten(), policy)
+	if err != nil {
+		return nil, err
+	}
+	out, ok := resolved.(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("参数求值结果不是对象: %T", resolved)
+	}
+	return out, nil
 }
 
-// replaceVariables replace variables in string
-func (e *Engine) replaceVariables(s string, variables map[string]interface{}) string {
-	result := s
-	for k, v := range variables {
-		placeholder := fmt.Sprintf("${%s}", k)
-		result = strings.ReplaceAll(result, placeholder, fmt.Sprintf("%v", v))
+// replaceVariables replace variables in string（供单值模板使用，
+// 语义与 substituteVariables 一致）。
+func (e *Engine) replaceVariables(s string, variables *VariableScope) (string, error) {
+	policy := config.UndefinedVariableEmpty
+	if e.config != nil && e.config.UndefinedVariablePolicy != "" {
+		policy = e.config.UndefinedVariablePolicy
 	}
-	return result
+	return ResolveTemplate(s, variables.Flatten(), policy)
 }
 
 // createErrorResult create error result
