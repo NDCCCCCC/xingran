@@ -296,24 +296,18 @@ func (f *fakeSelectorCache) GetStats(ctx context.Context) (*base.CacheStats, err
 	return nil, nil
 }
 
+// newSelectorTestDB CONTRACT-04（D4）：真实 AutoMigrate，禁止手写表 DDL 掩盖。
+// 见 selector_learner_learn_test.go:setupLearnTestDB 的详细说明。
 func newSelectorTestDB(t *testing.T) *gorm.DB {
 	t.Helper()
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	require.NoError(t, err)
-	require.NoError(t, db.Exec(`
-		CREATE TABLE selector_success_records (
-			id TEXT PRIMARY KEY NOT NULL DEFAULT (lower(hex(randomblob(16)))),
-			page_url TEXT, element_id TEXT, selector TEXT, selector_type TEXT,
-			success_count INTEGER DEFAULT 1, avg_duration INTEGER DEFAULT 0,
-			last_used_at DATETIME, created_at DATETIME, metadata TEXT
-		);
-		CREATE TABLE selector_failure_records (
-			id TEXT PRIMARY KEY NOT NULL DEFAULT (lower(hex(randomblob(16)))),
-			page_url TEXT, element_id TEXT, selector TEXT, error_type TEXT,
-			error_message TEXT, failure_count INTEGER DEFAULT 1,
-			created_at DATETIME, resolved_at DATETIME, resolved_with TEXT
-		)
-	`).Error)
+	require.NoError(t, db.AutoMigrate(
+		&SelectorSuccessRecord{},
+		&SelectorFailureRecord{},
+	), "真实 AutoMigrate 必须能建出 sys_rpa_selector_success/_failure")
+	require.Equal(t, "sys_rpa_selector_success", (&SelectorSuccessRecord{}).TableName())
+	require.Equal(t, "sys_rpa_selector_failure", (&SelectorFailureRecord{}).TableName())
 	return db
 }
 
@@ -409,11 +403,11 @@ func TestSelectorLearner_NilResultNotCached(t *testing.T) {
 func TestSelectorLearner_ScoreAndAlternatives(t *testing.T) {
 	db := newSelectorTestDB(t)
 	now := time.Now()
-	require.NoError(t, db.Exec(`INSERT INTO selector_success_records (id, page_url, element_id, selector, selector_type, success_count, avg_duration, last_used_at, created_at) VALUES
+	require.NoError(t, db.Exec(`INSERT INTO sys_rpa_selector_success (id, page_url, element_id, selector, selector_type, success_count, avg_duration, last_used_at, created_at) VALUES
 		('s1','http://p','btn','#btn','css',10,5,?,?),
 		('s2','http://p','btn','[data-testid=btn]','data-testid',8,5,?,?),
 		('s3','http://other','x','#x','css',5,5,?,?)`, now, now, now, now, now, now).Error)
-	require.NoError(t, db.Exec(`INSERT INTO selector_failure_records (id, page_url, element_id, selector, failure_count, created_at) VALUES
+	require.NoError(t, db.Exec(`INSERT INTO sys_rpa_selector_failure (id, page_url, element_id, selector, failure_count, created_at) VALUES
 		('f1','http://p','btn','#btn',2,?)`, now).Error)
 
 	l := NewSelectorLearner(db, &fakeSelectorCache{}, newAICfg("", "", false, false))

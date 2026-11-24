@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/xingran-next/xingran-go-backend/internal/config"
 	rpamodels "github.com/xingran-next/xingran-go-backend/internal/models/rpa"
 	"github.com/xingran-next/xingran-go-backend/internal/services/base"
@@ -57,7 +58,12 @@ func NewSelectorLearner(db *gorm.DB, cache base.CacheProvider, cfg *config.Confi
 
 // SelectorSuccessRecord 选择器成功记录
 type SelectorSuccessRecord struct {
-	ID           string    `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
+	// CONTRACT-04: 主键不再声明 PG-only 的 default:gen_random_uuid()。
+	// 函数式默认在 sqlite 建表即 "near (": syntax error"，此前只能靠
+	// sanitizeSQLiteModelDefaults 事后剥离 + 测试手写同名表掩盖。
+	// 改由 BeforeCreate 在应用层填 UUID（PG/sqlite 行为一致），
+	// 真实 AutoMigrate 因此双方言都可直接建表。
+	ID           string    `json:"id" gorm:"primaryKey;type:uuid"`
 	PageURL      string    `json:"pageUrl" gorm:"index;not null"`
 	ElementID    string    `json:"elementId" gorm:"index;not null"`
 	Selector     string    `json:"selector" gorm:"not null"`
@@ -69,9 +75,32 @@ type SelectorSuccessRecord struct {
 	Metadata     string    `json:"metadata"` // JSON 格式的额外信息
 }
 
+// TableName 指定表名（CONTRACT-04 / D4）。
+//
+// 缺省 TableName 时 GORM 按结构体复数化推导 → selector_success_records，
+// 而真实表是 sys_rpa_selector_success（migration_102 系列建表命名族）。
+// 缺这一行会导致 11 个 AI 选择器端点 + LearnFromExecution 全部
+// "no such table: selector_success_records"。
+func (SelectorSuccessRecord) TableName() string {
+	return "sys_rpa_selector_success"
+}
+
+// BeforeCreate 在应用层填充 UUID 主键（CONTRACT-04）。
+//
+// 两模型 ID tag 为 default:gen_random_uuid()（PG-only 函数式默认）。sqlite 的
+// AutoMigrate 会经 sanitizeSQLiteModelDefaults 剥离该默认值，若不在此兜底，
+// sqlite 路径 Create 会写入空主键（进而让后续 Updates 丢 WHERE，见 RecordFailure
+// 的显式三元组注释）。与 models.BaseModel.BeforeCreate 同一策略。
+func (r *SelectorSuccessRecord) BeforeCreate(tx *gorm.DB) error {
+	if r.ID == "" {
+		r.ID = uuid.New().String()
+	}
+	return nil
+}
+
 // SelectorFailureRecord 选择器失败记录
 type SelectorFailureRecord struct {
-	ID           string     `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
+	ID           string     `json:"id" gorm:"primaryKey;type:uuid"`
 	PageURL      string     `json:"pageUrl" gorm:"index;not null"`
 	ElementID    string     `json:"elementId" gorm:"index;not null"`
 	Selector     string     `json:"selector" gorm:"not null"`
@@ -81,6 +110,19 @@ type SelectorFailureRecord struct {
 	CreatedAt    time.Time  `json:"createdAt" gorm:"autoCreateTime"`
 	ResolvedAt   *time.Time `json:"resolvedAt"`   // 是否已解决
 	ResolvedWith string     `json:"resolvedWith"` // 解决方案
+}
+
+// TableName 指定表名（CONTRACT-04 / D4），真实表 sys_rpa_selector_failure。
+func (SelectorFailureRecord) TableName() string {
+	return "sys_rpa_selector_failure"
+}
+
+// BeforeCreate 同 SelectorSuccessRecord.BeforeCreate：应用层兜底 UUID 主键。
+func (r *SelectorFailureRecord) BeforeCreate(tx *gorm.DB) error {
+	if r.ID == "" {
+		r.ID = uuid.New().String()
+	}
+	return nil
 }
 
 // SelectorRecommendation 选择器推荐

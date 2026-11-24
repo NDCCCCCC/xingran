@@ -93,10 +93,26 @@ func (s *taskServiceImpl) Create(ctx context.Context, req *CreateTaskRequest, us
 		RetryCount:  req.MaxRetry,
 		Priority:    rpamodels.TaskPriority(req.Priority),
 		Status:      rpamodels.TaskStatus(req.Status),
+		// CONTRACT-03（D5）: tags 是 req 已有字段但旧实现从未赋值 —— 标签死字段。
+		Tags: req.Tags,
 	}
 
 	if err := s.db.WithContext(ctx).Create(task).Error; err != nil {
 		return nil, err
+	}
+
+	// CONTRACT-03: Task.Priority 的 model tag 是 `default:1`（语义已裁定放宽为
+	// 0-100，0 是合法值）。GORM 的 Create 会把「零值 + HasDefaultValue」的字段
+	// 替换成 DB 默认值，于是显式传 priority:0 会被写成 1 —— 与本 REQ 要求的
+	// 「0 可写回」冲突。这里在创建后按请求值补偿一次（仅当落库值与请求值不同，
+	// 避免无谓 UPDATE）。Update 路径走 map，不受 default tag 影响。
+	if int(task.Priority) != req.Priority {
+		if err := s.db.WithContext(ctx).Model(&rpamodels.Task{}).
+			Where("id = ?", task.ID).
+			Update("priority", req.Priority).Error; err != nil {
+			return nil, fmt.Errorf("回写任务优先级失败: %w", err)
+		}
+		task.Priority = rpamodels.TaskPriority(req.Priority)
 	}
 
 	return task, nil
@@ -122,14 +138,23 @@ func (s *taskServiceImpl) Update(ctx context.Context, req *UpdateTaskRequest, us
 	if req.Timeout > 0 {
 		updates["timeout_seconds"] = req.Timeout
 	}
-	if req.MaxRetry >= 0 {
+	// CONTRACT-03（D5）: MaxRetry 的旧判定 `>= 0` 恒真 —— 未传（零值 0）时会
+	// 把既有 retry_count 清零。改为「显式传了才写」：req.MaxRetry > 0。
+	// （maxRetry=0 的「不重试」语义仍可通过 Create 表达；Update 侧保守保留原值。）
+	if req.MaxRetry > 0 {
 		updates["retry_count"] = req.MaxRetry
 	}
-	if req.Status > 0 {
-		updates["status"] = req.Status
+	// CONTRACT-03（D5）: 指针语义 —— nil=未传（保留原值），非 nil=写回（含 0）。
+	if req.Status != nil {
+		updates["status"] = *req.Status
 	}
-	if req.Priority > 0 {
-		updates["priority"] = req.Priority
+	if req.Priority != nil {
+		updates["priority"] = *req.Priority
+	}
+	// CONTRACT-03（D5）: tags 旧实现从未落库（只有 req 字段没有赋值）。
+	// 空串视为「未传」，保持既有「只改 name/desc 不误清空标签」的 update 语义。
+	if req.Tags != "" {
+		updates["tags"] = req.Tags
 	}
 
 	updates["updated_by"] = userID
@@ -161,8 +186,10 @@ func (s *taskServiceImpl) List(ctx context.Context, params *TaskListParams) (*Pa
 	query := s.db.WithContext(ctx).Model(&rpamodels.Task{}).Where("deleted_at IS NULL")
 
 	// 添加过滤条件
+	// CONTRACT-03（D3）: 真实列名是 `name`（Task.TaskName 的 gorm column:name），
+	// 旧实现写 task_name → sqlite/PG 均报 "no such column: task_name"。
 	if params.Name != "" {
-		query = query.Where("task_name LIKE ?", "%"+params.Name+"%")
+		query = query.Where("name LIKE ?", "%"+params.Name+"%")
 	}
 	if params.Status != nil {
 		query = query.Where("status = ?", *params.Status)

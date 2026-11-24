@@ -97,6 +97,13 @@ func extraModels() []interface{} {
 		&rpamodels.RPACredential{},
 		&rpamodels.RPASession{},
 		&rpamodels.Notification{},
+		// CONTRACT-04（D4）: 选择器学习两表。模型定义在服务层
+		// （services/rpa/selector_learner.go 的 SelectorSuccessRecord /
+		// SelectorFailureRecord，已补 TableName 指向 sys_rpa_selector_success /
+		// sys_rpa_selector_failure）。不注册则新部署缺表，11 个
+		// /rpa/ai/selector/* 端点与 LearnFromExecution 全部 500。
+		&svcrpa.SelectorSuccessRecord{},
+		&svcrpa.SelectorFailureRecord{},
 		// RPA 服务层内嵌模型
 		&svcrpa.HumanInterventionEvent{},
 		&svcrpa.ScalingEvent{},

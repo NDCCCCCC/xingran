@@ -7,7 +7,7 @@ import { App, Modal, Form, InputNumber, Switch, Tabs, Button, Card, Row, Col } f
 import { PlusOutlined, DeleteOutlined, RobotOutlined } from "@ant-design/icons";
 import type { FormInstance } from "antd/es/form";
 import type { Task, Action, ActionType } from "@/types/rpa";
-import { ACTION_TYPE_OPTIONS } from "../../constants";
+import { ACTION_TYPE_OPTIONS, TASK_STATUS_OPTIONS } from "../../constants";
 // Phase 71 (W3)：裸 Input/Select/TextArea → 契约组件。
 // - 动作类型 Select：固定枚举 → options 改写 + showSearch={false}
 // - tags Select：mode="tags"（⑦ 自由输入）→ 显式 showSearch（否则无法输入新标签）
@@ -126,7 +126,10 @@ export function TaskEditModal({ open, form, editingTask, onOk, onCancel }: TaskE
     if (open && !editingTask?.id) {
       form.resetFields();
       form.setFieldsValue({
-        status: "pending",
+        // CONTRACT-03：status 是任务态数字 0=启用 / 1=停用（后端 TaskStatus）。
+        // 历史这里传执行态字符串 "pending"，后端 *int 会直接 400，
+        // 且「新建任务」的默认状态也落不到真实列上。
+        status: 0,
         priority: 50,
         timeout: 300,
         retryOnFailure: true,
@@ -142,7 +145,8 @@ export function TaskEditModal({ open, form, editingTask, onOk, onCancel }: TaskE
         timeout: editingTask.timeout || 300,
         retryOnFailure: true,
         maxRetries: editingTask.retryCount || editingTask.maxRetries || 3,
-        status: editingTask.status === 0 ? "pending" : "disabled",
+        // 数字 0 必须原样回填（不能写成 falsy 判定，否则 0 会回落默认值）
+        status: editingTask.status === undefined || editingTask.status === null ? 0 : editingTask.status,
         // tags 是字符串，需要转换为数组（用逗号分隔）
         tags: editingTask.tags
           ? editingTask.tags
@@ -290,7 +294,9 @@ export function TaskEditModal({ open, form, editingTask, onOk, onCancel }: TaskE
 
                     <Row gutter={16}>
                       <Col span={12}>
-                        <Form.Item name="priority" label="优先级" initialValue={50}>
+                        {/* CONTRACT-03 裁定：优先级统一为 0-100（后端 TaskPriorityMax
+                            同步放宽为 100，SMALLINT 无需迁移）。 */}
+                        <Form.Item name="priority" label="优先级(0-100)" initialValue={50}>
                           <InputNumber min={0} max={100} style={{ width: "100%" }} />
                         </Form.Item>
                       </Col>
@@ -299,6 +305,17 @@ export function TaskEditModal({ open, form, editingTask, onOk, onCancel }: TaskE
                           <InputNumber min={10} max={3600} style={{ width: "100%" }} />
                         </Form.Item>
                       </Col>
+                    </Row>
+
+                    <Row gutter={16}>
+                      <Col span={12}>
+                        {/* CONTRACT-03：status 用数字枚举 0=启用 / 1=停用，
+                            后端指针语义可把停用任务改回启用（0 不再被当「未传」）。 */}
+                        <Form.Item name="status" label="任务状态" initialValue={0}>
+                          <AppSelect options={TASK_STATUS_OPTIONS} showSearch={false} />
+                        </Form.Item>
+                      </Col>
+                      <Col span={12} />
                     </Row>
 
                     <Row gutter={16}>

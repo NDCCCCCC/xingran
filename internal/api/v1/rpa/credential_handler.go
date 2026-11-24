@@ -51,8 +51,8 @@ func (h *CredentialHandler) List(c *gin.Context) {
 	setPaginationDefaults(&params.Current, &params.PageSize)
 
 	// 获取用户信息
-	userID := c.GetString("userId")
-	deptID := c.GetString("deptId")
+	userID := currentUserID(c)
+	deptID := currentDeptID(c)
 
 	result, total, err := h.credentialService.ListCredentials(c.Request.Context(), &params, userID, deptID)
 	if handleError(c, err, http.StatusInternalServerError, "查询失败") {
@@ -82,7 +82,7 @@ func (h *CredentialHandler) Create(c *gin.Context) {
 		return
 	}
 
-	userID := c.GetString("userId")
+	userID := currentUserID(c)
 	cred, err := h.credentialService.CreateCredential(c.Request.Context(), &req, userID)
 	if handleError(c, err, http.StatusInternalServerError, "创建失败") {
 		return
@@ -109,7 +109,7 @@ func (h *CredentialHandler) GetByID(c *gin.Context) {
 		return
 	}
 
-	userID := c.GetString("userId")
+	userID := currentUserID(c)
 	cred, err := h.credentialService.GetCredential(c.Request.Context(), id, userID)
 	if err != nil {
 		response.Error(c, http.StatusNotFound, "凭证不存在")
@@ -141,7 +141,7 @@ func (h *CredentialHandler) Update(c *gin.Context) {
 		return
 	}
 
-	userID := c.GetString("userId")
+	userID := currentUserID(c)
 	if handleError(c, h.credentialService.UpdateCredential(c.Request.Context(), id, &req, userID), http.StatusInternalServerError, "更新失败") {
 		return
 	}
@@ -167,7 +167,7 @@ func (h *CredentialHandler) Delete(c *gin.Context) {
 		return
 	}
 
-	userID := c.GetString("userId")
+	userID := currentUserID(c)
 	if handleError(c, h.credentialService.DeleteCredential(c.Request.Context(), id, userID), http.StatusInternalServerError, "删除失败") {
 		return
 	}

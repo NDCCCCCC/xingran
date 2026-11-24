@@ -54,3 +54,34 @@ describe("getTaskStatusText/Color", () => {
     expect(getTaskStatusColor(1)).toBeTruthy();
   });
 });
+
+// CONTRACT-02（D2）：三张列表状态筛选前后端同构的前端侧断言。
+//
+// 这两组断言是 CONTRACT-02 的「前端可观察证据」：
+//   1. 任务页筛选值必须是**任务态数字 0/1**（启用/停用），不得再是执行态字符串
+//      —— 旧实现传 "pending"/"running" 会被后端 TaskStatus(*int) 直接 400。
+//   2. 执行态枚举必须覆盖后端 RPAExecutionStatus 全部 6 个取值（含 timeout）
+//      —— 旧实现缺 timeout，超时记录无从筛选、标签回落成 "-"。
+describe("CONTRACT-02 前后端状态枚举同构", () => {
+  it("TASK_STATUS_OPTIONS 是任务态数字 0/1，且不含后端不存在的 2", () => {
+    expect(TASK_STATUS_OPTIONS.map((o) => o.value)).toEqual([0, 1]);
+    for (const opt of TASK_STATUS_OPTIONS) {
+      expect(typeof opt.value).toBe("number");
+    }
+  });
+
+  it("TASK_STATUS_OPTIONS 语义为启用/停用（不是草稿/禁用）", () => {
+    expect(getTaskStatusText(0)).toBe("启用");
+    expect(getTaskStatusText(1)).toBe("停用");
+  });
+
+  it("EXECUTION_STATUS_OPTIONS 覆盖后端全部 6 个执行态（含 timeout）", () => {
+    expect(EXECUTION_STATUS_OPTIONS.map((o) => o.value).sort()).toEqual(
+      ["cancelled", "failed", "pending", "running", "success", "timeout"].sort()
+    );
+  });
+
+  it("执行态枚举里不得出现后端没有的 completed", () => {
+    expect(EXECUTION_STATUS_OPTIONS.map((o) => o.value)).not.toContain("completed");
+  });
+});

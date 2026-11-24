@@ -18,9 +18,10 @@ import { TaskEditModal } from "./modals";
 import { post } from "@/lib/api";
 // Phase 71 (W3)：裸 Input/Select → 契约组件。
 // 任务状态为固定枚举（业务禁搜）→ children 改写 options + showSearch={false}。
-// 注意：搜索区这组值是「执行态」字符串（pending/running/completed/failed/cancelled），
-// 与 constants.tsx 里 TASK_STATUS_OPTIONS（0/1/2 草稿/启用/禁用）和
-// EXECUTION_STATUS_OPTIONS（success 而非 completed）都不同，故就地命名保留原值。
+// CONTRACT-02：任务页筛选必须筛「任务态」——与后端 TaskListParams.Status
+// (*rpamodels.TaskStatus，0=启用 / 1=停用) 同构。历史这里是执行态字符串
+// （pending/running/completed/failed/cancelled），后端 Status 是 *int → 请求体
+// 直接 unmarshal 失败 400（D2 实证 "cannot unmarshal string into ... status of type int"）。
 import { AppInput, AppSelect } from "@/components/ui";
 import { useActionPermission } from "@/components/shared/useActionPermission";
 import FilterBar from "@/components/shared/FilterBar";
@@ -28,13 +29,11 @@ import { PERMISSION_CODES } from "@/constants/permissionCodes";
 
 const { Content } = Layout;
 
-// 搜索区任务状态（沿用本页原有值，勿与 constants.tsx 的两组枚举混用）
+// 搜索区任务状态：任务态 0/1（启用/停用），与后端 TaskStatus 枚举同构。
+// 数值必须保持 number —— 传字符串会被后端 binding 拒绝（CONTRACT-02）。
 const TASK_SEARCH_STATUS_OPTIONS = [
-  { label: "等待中", value: "pending" },
-  { label: "运行中", value: "running" },
-  { label: "已完成", value: "completed" },
-  { label: "失败", value: "failed" },
-  { label: "已取消", value: "cancelled" },
+  { label: "启用", value: 0 },
+  { label: "停用", value: 1 },
 ];
 
 const TaskManagement: FC = () => {

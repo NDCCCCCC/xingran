@@ -77,6 +77,10 @@ func (h *WorkerHandler) List(c *gin.Context) {
 	if !bindAndValidate(c, &params) {
 		return
 	}
+	if !validateListParams(c, params.Validate()) {
+		return
+	}
+	params.Status = normalizeOptionalStringFilter(params.Status)
 
 	setPaginationDefaults(&params.Current, &params.PageSize)
 

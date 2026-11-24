@@ -21,7 +21,12 @@ func workerAuthConfig(core *core.Core) (rpa.WorkerTokenService, bool) {
 // SetupPublicWorkerRouter 设置公开的 Worker 路由（不需要认证）
 func SetupPublicWorkerRouter(r *gin.RouterGroup, core *core.Core) {
 	// Phase 103 CONV-03 (D-103-20): 第 6 参数注入 base.CacheProvider
-	services := rpa.NewServiceGroup(core.GetDB(), core.Config, core.NoticeHub, core.Cache, nil, system.NewCacheProvider(core.DataCacheService))
+	// CONTRACT-01（D1）: 第 5 参 passwordCipher 必须注入 core.SM4Cipher。
+	// 历史传 nil → CredentialService 的加解密辅助方法 nil 解引用 panic，
+	// 凭证创建/更新必然 500。core 在 initSM4Cipher 阶段已构造该 cipher
+	// （security.sm4Key 缺失时 core.SM4Cipher 为 nil，服务层将返回
+	// 「凭证加密器未配置」可读错误，而不是 panic）。
+	services := rpa.NewServiceGroup(core.GetDB(), core.Config, core.NoticeHub, core.Cache, core.SM4Cipher, system.NewCacheProvider(core.DataCacheService))
 	tokenSvc, required := workerAuthConfig(core)
 	handler := NewWorkerHandler(services.WorkerService, core).WithTokenService(tokenSvc)
 
@@ -48,7 +53,12 @@ func SetupPublicWorkerRouter(r *gin.RouterGroup, core *core.Core) {
 // 不经 HTTP。原 SetupFlowRouter 与其注册一并移除。
 func SetupRPARouter(r *gin.RouterGroup, core *core.Core) {
 	// Phase 103 CONV-03 (D-103-20): 第 6 参数注入 base.CacheProvider
-	services := rpa.NewServiceGroup(core.GetDB(), core.Config, core.NoticeHub, core.Cache, nil, system.NewCacheProvider(core.DataCacheService))
+	// CONTRACT-01（D1）: 第 5 参 passwordCipher 必须注入 core.SM4Cipher。
+	// 历史传 nil → CredentialService 的加解密辅助方法 nil 解引用 panic，
+	// 凭证创建/更新必然 500。core 在 initSM4Cipher 阶段已构造该 cipher
+	// （security.sm4Key 缺失时 core.SM4Cipher 为 nil，服务层将返回
+	// 「凭证加密器未配置」可读错误，而不是 panic）。
+	services := rpa.NewServiceGroup(core.GetDB(), core.Config, core.NoticeHub, core.Cache, core.SM4Cipher, system.NewCacheProvider(core.DataCacheService))
 	excelService := rpa.NewRPAExcelService(core.GetDB())
 
 	// 任务路由

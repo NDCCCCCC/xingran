@@ -3,7 +3,7 @@
  * 使用 AI 从自然语言描述生成 RPA 脚本
  */
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import {
   App,
   Modal,
@@ -24,8 +24,9 @@ import {
   CheckOutlined,
   LoadingOutlined,
 } from "@ant-design/icons";
-import type { Action } from "@/types/rpa";
-import { ACTION_TYPE_TEXT_MAP } from "../../constants";
+import type { Action, ActionType } from "@/types/rpa";
+import { ACTION_TYPE_OPTIONS, ACTION_TYPE_TEXT_MAP } from "../../constants";
+import { api } from "@/lib/api";
 // Phase 71 (W3)：裸 TextArea → AppTextArea。
 // 任务描述是受控 Form.Item（disabled 依赖生成状态），显式 allowClear={false}
 // 保持原有「无清空按钮」交互（清空会绕过 disabled 的生成态约束）。
@@ -39,53 +40,71 @@ export interface AIScriptEditorProps {
   onConfirm: (actions: Action[]) => void;
 }
 
-// 示例生成的动作（模拟 AI 返回结果）
-const mockGeneratedActions: Action[] = [
-  {
-    id: "action_1",
-    type: "navigate",
-    description: "打开登录页面",
-    selector: { type: "css", value: "" },
-    params: { value: "https://example.com/login" },
-    timeout: 30000,
-  },
-  {
-    id: "action_2",
-    type: "fill",
-    description: "输入用户名",
-    selector: { type: "css", value: "#username" },
-    params: { value: "${username}" },
-    timeout: 10000,
-  },
-  {
-    id: "action_3",
-    type: "fill",
-    description: "输入密码",
-    selector: { type: "css", value: "#password" },
-    params: { value: "${password}" },
-    timeout: 10000,
-  },
-  {
-    id: "action_4",
-    type: "click",
-    description: "点击登录按钮",
-    selector: { type: "css", value: 'button[type="submit"]' },
-    timeout: 10000,
-  },
-  {
-    id: "action_5",
-    type: "screenshot",
-    description: "验证登录成功",
-    selector: { type: "css", value: ".user-profile" },
-    timeout: 10000,
-  },
-];
+// CONTRACT-05（D15）：这里原本有一份 mockGeneratedActions 常量 + setTimeout(1500)
+// 假延迟 —— 后端 11 个 AI 端点因此「零调用」，用户看到的步骤永远是写死的 5 条演示。
+// 现已删除，改为实调 POST /rpa/ai/generate（见下方 handleGenerate 与 mapAIActions）。
+
+/** 后端 POST /rpa/ai/generate 返回的单个动作（models/rpa ScriptAction 形状）。 */
+interface AIScriptActionDTO {
+  type?: string;
+  selector?: string;
+  value?: string;
+  attributes?: Record<string, unknown>;
+  timeout?: number;
+  retry?: number;
+}
+
+interface AIGenerateResponseDTO {
+  actions?: AIScriptActionDTO[];
+  explanation?: string;
+  confidence?: number;
+}
+
+// AI_GENERATE_TIMEOUT_MS 前端超时预算。后端 AIClient 自身超时是 30s，
+// 前端留出余量到 35s；超时后必须给出「可重试」的明确态，而不是无限转圈。
+const AI_GENERATE_TIMEOUT_MS = 35000;
+
+/** 已知动作类型白名单（与 constants.tsx ACTION_TYPE_OPTIONS 同源）。 */
+const KNOWN_ACTION_TYPES: readonly string[] = ACTION_TYPE_OPTIONS.map((o) => o.value);
+
+/**
+ * mapAIActions 把后端 ScriptAction DTO 映射成前端 Action。
+ *
+ * 契约要点（NOCODE-03 的校验在服务端做；前端只做防御性丢弃）：
+ *   - 未知 action.type 直接丢弃（不让非法动作进入编辑态）
+ *   - selector 文本 → {type:"css"}（后端 ScriptAction 只有字符串选择器）
+ *   - attributes.description → description
+ */
+export function mapAIActions(dtos: AIScriptActionDTO[] | undefined): Action[] {
+  if (!dtos || dtos.length === 0) return [];
+  return dtos
+    .filter((d) => d && typeof d.type === "string" && KNOWN_ACTION_TYPES.includes(d.type))
+    .map((d, index) => ({
+      id: `ai_action_${index + 1}`,
+      type: d.type as ActionType,
+      description: (d.attributes?.description as string) || ACTION_TYPE_TEXT_MAP[d.type as string] || d.type,
+      selector: { type: "css", value: d.selector || "" },
+      params: { value: d.value ?? "" },
+      timeout: d.timeout ?? 30000,
+      retry: d.retry ?? 0,
+    }));
+}
+
+/** AI 生成失败/超时/空结果三态。 */
+type GenerateErrorKind = "failed" | "timeout" | "empty";
 
 export function AIScriptEditor({ open, onClose, onConfirm }: AIScriptEditorProps) {
   const { message } = App.useApp();
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [generatedActions, setGeneratedActions] = useState<Action[]>([]);
+  // CONTRACT-05：失败/超时/空结果必须有可见、可重试的态，而不是只有一条 toast。
+  const [generateError, setGenerateError] = useState<{
+    kind: GenerateErrorKind;
+    text: string;
+  } | null>(null);
+  const [explanation, setExplanation] = useState<string>("");
+  const abortRef = useRef<AbortController | null>(null);
 
   const handleGenerate = useCallback(async () => {
     const description = form.getFieldValue("description");
@@ -95,18 +114,75 @@ export function AIScriptEditor({ open, onClose, onConfirm }: AIScriptEditorProps
     }
 
     setLoading(true);
+    setGenerateError(null);
+    setGeneratedActions([]);
+    setExplanation("");
+
+    // 前端侧超时预算：后端 AIClient 自己也会超时（30s），这里兜住
+    // 「请求挂住 / 代理不回包」的场景，保证 UI 不会无限转圈。
+    const controller = new AbortController();
+    abortRef.current = controller;
+    const timeoutId = setTimeout(() => controller.abort(), AI_GENERATE_TIMEOUT_MS);
+
     try {
-      // 模拟 API 调用
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-      setGeneratedActions(mockGeneratedActions);
+      // CONTRACT-05：实调后端 POST /rpa/ai/generate（不再 setTimeout + mock）。
+      // 用 api 实例（而非 post 封装）是因为需要透传 AbortSignal 以便超时中断。
+      const result = await api.post<AIGenerateResponseDTO>(
+        "/rpa/ai/generate",
+        { description },
+        { signal: controller.signal }
+      );
+
+      const mapped = mapAIActions(result.data?.actions);
+      if (mapped.length === 0) {
+        // 空结果态：后端 200 但没有任何可执行动作（或全部被白名单过滤掉）
+        setGenerateError({
+          kind: "empty",
+          text: "AI 未返回可执行的动作步骤，请补充更具体的任务描述后重试。",
+        });
+        message.warning("AI 未返回可执行动作");
+        return;
+      }
+
+      setGeneratedActions(mapped);
+      setExplanation(result.data?.explanation ?? "");
       message.success("AI 生成脚本成功！");
-    } catch (_error) {
-      message.error("AI 生成失败，请重试");
+    } catch (error) {
+      const aborted =
+        controller.signal.aborted ||
+        (error as { name?: string } | undefined)?.name === "AbortError" ||
+        (error as { code?: string } | undefined)?.code === "ERR_CANCELED";
+      if (aborted) {
+        setGenerateError({
+          kind: "timeout",
+          text: `AI 生成超时（超过 ${Math.round(AI_GENERATE_TIMEOUT_MS / 1000)} 秒），请稍后重试或改用「录制」方式创建任务。`,
+        });
+        message.error("AI 生成超时，请重试");
+      } else {
+        const detail =
+          (error as { message?: string } | undefined)?.message ||
+          (error as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+          "未知错误";
+        setGenerateError({ kind: "failed", text: `AI 生成失败：${detail}` });
+        message.error("AI 生成失败，请重试");
+      }
     } finally {
+      clearTimeout(timeoutId);
+      abortRef.current = null;
       setLoading(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [form]);
+
+  // 取消/关闭时中断在途请求，避免组件卸载后 setState。
+  useEffect(() => {
+    if (!open) {
+      abortRef.current?.abort();
+      abortRef.current = null;
+      setGenerateError(null);
+      setExplanation("");
+    }
+  }, [open]);
 
   const handleConfirm = useCallback(() => {
     if (generatedActions.length === 0) {
@@ -116,12 +192,18 @@ export function AIScriptEditor({ open, onClose, onConfirm }: AIScriptEditorProps
     onConfirm(generatedActions);
     form.resetFields();
     setGeneratedActions([]);
+    setGenerateError(null);
+    setExplanation("");
     // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [generatedActions, onConfirm, form]);
 
   const handleCancel = useCallback(() => {
+    abortRef.current?.abort();
+    abortRef.current = null;
     form.resetFields();
     setGeneratedActions([]);
+    setGenerateError(null);
+    setExplanation("");
     onClose();
   }, [form, onClose]);
 
@@ -236,6 +318,42 @@ export function AIScriptEditor({ open, onClose, onConfirm }: AIScriptEditorProps
               tip="AI 正在生成脚本，请稍候..."
             />
           </div>
+        )}
+
+        {/* CONTRACT-05：失败 / 超时 / 空结果三态的可见提示（可重试） */}
+        {!loading && generateError && (
+          <Alert
+            title={
+              generateError.kind === "timeout"
+                ? "AI 生成超时"
+                : generateError.kind === "empty"
+                  ? "AI 未返回可执行动作"
+                  : "AI 生成失败"
+            }
+            description={
+              <Space orientation="vertical" style={{ width: "100%" }}>
+                <Text type="danger">{generateError.text}</Text>
+                <Button size="small" onClick={handleGenerate} icon={<ThunderboltOutlined />}>
+                  重试生成
+                </Button>
+              </Space>
+            }
+            type={generateError.kind === "empty" ? "warning" : "error"}
+            showIcon
+            style={{ marginTop: 16 }}
+            data-testid="ai-generate-error"
+          />
+        )}
+
+        {!loading && !generateError && explanation && (
+          <Alert
+            title="AI 说明"
+            description={explanation}
+            type="info"
+            showIcon
+            style={{ marginTop: 16 }}
+            data-testid="ai-generate-explanation"
+          />
         )}
       </div>
     </Modal>

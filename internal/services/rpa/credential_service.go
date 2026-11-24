@@ -3,6 +3,7 @@ package rpa
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -71,6 +72,23 @@ func NewCredentialService(db *gorm.DB, passwordCipher addomain.PasswordCipher, c
 	}
 }
 
+// ErrCipherNotConfigured 凭证加密器未配置（CONTRACT-01）。
+//
+// 历史缺陷（D1）：NewServiceGroup 第 5 参传 nil，而 CredentialService 的加解密
+// 辅助方法直接调用 s.passwordCipher.Encrypt/Decrypt —— nil interface 调用必然
+// panic（nil pointer dereference），HTTP 层表现为 500 且无可读原因。
+// 现在所有加解密入口先做 nil 守卫，返回本错误；handler 层的 handleError 会把它
+// 拼进响应 message（"创建失败: 凭证加密器未配置"），前端可读、可定位。
+var ErrCipherNotConfigured = errors.New("凭证加密器未配置")
+
+// requireCipher 断言加密器已配置。nil 判定同时覆盖接口未赋值与 typed-nil 两种情况。
+func (s *credentialServiceImpl) requireCipher() error {
+	if s == nil || s.passwordCipher == nil {
+		return ErrCipherNotConfigured
+	}
+	return nil
+}
+
 // CreateCredential 创建凭证
 func (s *credentialServiceImpl) CreateCredential(ctx context.Context, req *rpamodels.CredentialCreateRequest, userID string) (*rpamodels.RPACredential, error) {
 	// 加密凭证
@@ -127,10 +145,20 @@ func (s *credentialServiceImpl) UpdateCredential(ctx context.Context, id string,
 		password := req.Password
 		extraData := req.ExtraData
 
+		// 解密现有密文以便「只改一项」时复用另一项
+		existingUsername, err := s.decryptString(existing.UsernameEncrypted)
+		if err != nil {
+			return err
+		}
+		existingPassword, err := s.decryptString(existing.PasswordEncrypted)
+		if err != nil {
+			return err
+		}
+
 		// 加密
 		encrypted, err := s.encryptCredentialData(
-			sOrDefault(username, s.decryptString(existing.UsernameEncrypted)),
-			sOrDefault(password, s.decryptString(existing.PasswordEncrypted)),
+			sOrDefault(username, existingUsername),
+			sOrDefault(password, existingPassword),
 			extraData,
 		)
 		if err != nil {
@@ -166,8 +194,12 @@ func (s *credentialServiceImpl) GetCredential(ctx context.Context, id string, us
 		return nil, err
 	}
 
-	// 返回用户名（不返回密码）
-	cred.Username = s.decryptString(cred.UsernameEncrypted)
+	// 返回用户名（不返回密码）；cipher 未配置 → 明确报错而非空值
+	username, err := s.decryptString(cred.UsernameEncrypted)
+	if err != nil {
+		return nil, err
+	}
+	cred.Username = username
 	return &cred, nil
 }
 
@@ -210,9 +242,13 @@ func (s *credentialServiceImpl) ListCredentials(ctx context.Context, params *rpa
 		Offset(offset).
 		Find(&credentials).Error
 
-	// 解密用户名供显示
+	// 解密用户名供显示；cipher 未配置 → 明确报错（不返回一列空用户名冒充成功）
 	for i := range credentials {
-		credentials[i].Username = s.decryptString(credentials[i].UsernameEncrypted)
+		username, err := s.decryptString(credentials[i].UsernameEncrypted)
+		if err != nil {
+			return nil, 0, err
+		}
+		credentials[i].Username = username
 	}
 
 	return credentials, total, err
@@ -245,10 +281,22 @@ func (s *credentialServiceImpl) GetCredentialForExecution(ctx context.Context, t
 
 // DecryptCredential 解密凭证（供执行时使用）
 func (s *credentialServiceImpl) DecryptCredential(ctx context.Context, cred *rpamodels.RPACredential) (*CredentialData, error) {
+	username, err := s.decryptString(cred.UsernameEncrypted)
+	if err != nil {
+		return nil, err
+	}
+	password, err := s.decryptString(cred.PasswordEncrypted)
+	if err != nil {
+		return nil, err
+	}
+	extraData, err := s.decryptExtraData(cred.ExtraDataEncrypted)
+	if err != nil {
+		return nil, err
+	}
 	return &CredentialData{
-		Username:  s.decryptString(cred.UsernameEncrypted),
-		Password:  s.decryptString(cred.PasswordEncrypted),
-		ExtraData: s.decryptExtraData(cred.ExtraDataEncrypted),
+		Username:  username,
+		Password:  password,
+		ExtraData: extraData,
 	}, nil
 }
 
@@ -301,8 +349,10 @@ func (s *credentialServiceImpl) GetValidSession(ctx context.Context, credentialI
 		return nil, err
 	}
 
-	// 解密会话数据
-	s.decryptSessionData(&session)
+	// 解密会话数据（cipher 未配置 → 明确报错）
+	if err := s.decryptSessionData(&session); err != nil {
+		return nil, err
+	}
 
 	return &session, nil
 }
@@ -369,6 +419,9 @@ type encryptedSessionData struct {
 }
 
 func (s *credentialServiceImpl) encryptCredentialData(username, password string, extraData map[string]interface{}) (*encryptedCredentialData, error) {
+	if err := s.requireCipher(); err != nil {
+		return nil, err
+	}
 	result := &encryptedCredentialData{}
 
 	// 加密用户名
@@ -398,6 +451,9 @@ func (s *credentialServiceImpl) encryptCredentialData(username, password string,
 }
 
 func (s *credentialServiceImpl) encryptSessionData(req *rpamodels.SessionCreateRequest) (*encryptedSessionData, error) {
+	if err := s.requireCipher(); err != nil {
+		return nil, err
+	}
 	result := &encryptedSessionData{}
 
 	// 加密 access token
@@ -435,32 +491,63 @@ func (s *credentialServiceImpl) encryptSessionData(req *rpamodels.SessionCreateR
 	return result, nil
 }
 
-func (s *credentialServiceImpl) decryptString(encrypted string) string {
-	if decrypted, err := s.passwordCipher.Decrypt(encrypted); err == nil {
-		return decrypted
+// decryptString 解密单个字段。
+//
+// CONTRACT-01：cipher 未配置时返回 ErrCipherNotConfigured 而非 panic。
+// 解密失败（密文损坏/密钥轮换）保留既有静默回退语义（返回 ""、nil error）——
+// 列表页不应因为历史脏密文整页 500。
+func (s *credentialServiceImpl) decryptString(encrypted string) (string, error) {
+	if err := s.requireCipher(); err != nil {
+		return "", err
 	}
-	return ""
+	decrypted, err := s.passwordCipher.Decrypt(encrypted)
+	if err != nil {
+		return "", nil
+	}
+	return decrypted, nil
 }
 
-func (s *credentialServiceImpl) decryptExtraData(encrypted string) map[string]interface{} {
-	if decrypted, err := s.passwordCipher.Decrypt(encrypted); err == nil {
-		var result map[string]interface{}
-		if err := json.Unmarshal([]byte(decrypted), &result); err == nil {
-			return result
-		}
+// decryptExtraData 解密并反序列化 extra data。
+//
+// CONTRACT-01：cipher 未配置时返回 (nil, ErrCipherNotConfigured)。
+func (s *credentialServiceImpl) decryptExtraData(encrypted string) (map[string]interface{}, error) {
+	if err := s.requireCipher(); err != nil {
+		return nil, err
 	}
-	return nil
+	if encrypted == "" {
+		return nil, nil
+	}
+	decrypted, err := s.passwordCipher.Decrypt(encrypted)
+	if err != nil {
+		return nil, nil
+	}
+	var result map[string]interface{}
+	if err := json.Unmarshal([]byte(decrypted), &result); err != nil {
+		return nil, nil
+	}
+	return result, nil
 }
 
-func (s *credentialServiceImpl) decryptSessionData(session *rpamodels.RPASession) {
+func (s *credentialServiceImpl) decryptSessionData(session *rpamodels.RPASession) error {
+	if err := s.requireCipher(); err != nil {
+		return err
+	}
 	// 解密 access token
 	if session.AccessTokenEncrypted != "" {
-		session.AccessToken = s.decryptString(session.AccessTokenEncrypted)
+		token, err := s.decryptString(session.AccessTokenEncrypted)
+		if err != nil {
+			return err
+		}
+		session.AccessToken = token
 	}
 
 	// 解密 refresh token
 	if session.RefreshTokenEncrypted != "" {
-		session.RefreshToken = s.decryptString(session.RefreshTokenEncrypted)
+		token, err := s.decryptString(session.RefreshTokenEncrypted)
+		if err != nil {
+			return err
+		}
+		session.RefreshToken = token
 	}
 
 	// 解密 cookies
@@ -480,6 +567,8 @@ func (s *credentialServiceImpl) decryptSessionData(session *rpamodels.RPASession
 			}
 		}
 	}
+
+	return nil
 }
 
 func sOrDefault(a, b string) string {
