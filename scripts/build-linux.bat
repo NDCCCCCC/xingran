@@ -3,13 +3,13 @@ setlocal enabledelayedexpansion
 
 REM ============================================================
 REM  Usage:
-REM    scripts\build-linux.bat        -> base=/xingran/  (default)
+REM    scripts\build-linux.bat        -> base=/  (default, root deployment)
 REM        Tencent Cloud nginx sub-path deployment:
 REM          location /xingran/ { proxy_pass http://127.0.0.1:9000/; }
 REM        nginx strips the /xingran/ prefix, so frontend asset URLs
 REM        and API URLs MUST carry that prefix.
 REM
-REM    scripts\build-linux.bat root  -> base=/
+REM    scripts\build-linux.bat /xingran/  -> legacy sub-path build (outputs -subpath artifact)
 REM        Direct :9000 deployment (no nginx sub-path):
 REM        browser opens http://<host>:9000/
 REM        assets and API calls carry no prefix.
@@ -31,7 +31,7 @@ REM  - Keep this file ASCII-only: cmd decodes .bat with the OEM code
 REM    page, so UTF-8 Chinese comments get misparsed into commands.
 REM ============================================================
 set "VITE_BASE=%~1"
-if "%VITE_BASE%"=="" set "VITE_BASE=/xingran/"
+if "%VITE_BASE%"=="" set "VITE_BASE=/"
 if /i "%VITE_BASE%"=="root" set "VITE_BASE=/"
 
 REM Derive API prefix from base: /xingran/ -> /xingran/api/v1 ; / -> /api/v1
@@ -42,7 +42,7 @@ set "VITE_API_BASE_URL=%BASE_NOSLASH%/api/v1"
 REM Distinct artifact name per base so the two deployments never mix up
 set "OUT_DIR=out"
 set "OUT_FILE=%OUT_DIR%\xingran-backend-embedded-linux"
-if not "%VITE_BASE%"=="/xingran/" set "OUT_FILE=%OUT_DIR%\xingran-backend-embedded-linux-root"
+if "%VITE_BASE%"=="/xingran/" set "OUT_FILE=%OUT_DIR%\xingran-backend-embedded-linux-subpath"
 
 echo ======================================
 echo   Build Embedded Executable (Linux)
@@ -77,6 +77,7 @@ echo.
 REM Step 3: Build frontend
 echo [3/5] Building frontend React app...
 cd xingran-react-frontend
+set "SKIP_AUTO_BUMP=1"
 call npm run build
 if errorlevel 1 (
     echo Frontend build FAILED!
@@ -102,7 +103,8 @@ if not exist "%OUT_DIR%" mkdir "%OUT_DIR%"
 set GOOS=linux
 set GOARCH=amd64
 set CGO_ENABLED=0
-go build -tags=embed -ldflags="-s -w" -o %OUT_FILE% ./cmd/main.go
+for /f "delims=" %%V in ('node scripts\build\bump-version.mjs --get') do set "APP_VER=%%V"
+go build -tags=embed -ldflags="-s -w -X main.Version=v%APP_VER%" -o %OUT_FILE% ./cmd/main.go
 if errorlevel 1 (
     echo Go build FAILED!
     exit /b 1
@@ -123,5 +125,6 @@ echo   chmod +x %OUT_FILE%
 echo   ./%OUT_FILE%
 echo.
 echo NOTE: artifacts always land in out/ (gitignored); see AGENTS.md.
+node scripts\build\bump-version.mjs --bump
 
 endlocal
