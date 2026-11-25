@@ -2,16 +2,20 @@
 
 # Milestones
 
-## 当前里程碑：v1.56 RPA 员工自助自动化 (Self-Service RPA for General Staff) — 进行中
+## 当前里程碑：v1.56 RPA 员工自助自动化 (Self-Service RPA for General Staff) — code-complete · verification-pending
 
-**Status:** INITIATED / ROADMAP CREATED 2026-11-23 · Phase **152-158** · **31 REQ / 7 Phase / 100% 映射**
+**Status:** 7/7 Phase 执行完毕（2026-11-25）· Phase **152-158** · **31 REQ / 7 Phase / 100% 映射** · **未 SHIPPED**（无真实环境 UAT 证据）
 
 - **Goal:** 让不会写代码的一般员工在 3 分钟内把重复浏览器流程变成自动任务；执行过程可视、可随时人工接管；承载模型纠正为「一 VM 一 Worker 一 Chromium 多 page」。
 - **三条用户方向 → 落点**：员工可用性 = NOCODE + CONTRACT；无头可视化与接管 = LIVEVIEW；VDI 承载模型 = FLEET。
 - **立项基线**：`REQUIREMENTS.md` 记录 D1-D20 共 20 条审计缺陷（探针实测 100% 复现）；承载模型推导见 `notes/261123-rpa-worker-capacity-model.md`。
 - **并入项**：上一「v1.56 候选」（备份恢复 / 设置页收敛 / 菜单权限迁移 + quick 261110-161/f5g/jci）作为已落地代码载入，缺 UAT 证据不追认。
 - **验证状态**：79 条人工验证跟踪表保持 0 勾选；FLEET-03 容量实测需真机 VDI，本环境只能登记 UAT 待办。
-- **Phase 顺序**：152（P0 契约，必须先行）→ 153 ∥ 154 → 155 → 156 → 157 → 158。
+- **Phase 顺序（实际执行，2026-11-25 完成）**：W1 `152 ∥ 154` → W2 `153 ∥ 157` → W3 155 → W4 156 → W5 158；并行波由独立 worktree + 7 条文件归属协议隔离，全部零冲突合并。
+- **执行结果**：31 REQ 全部 PASS（152:6/6 · 153:5/5 · 154:5/5 · 155:5/5 · 156:4/4 · 157:3/3 · 158:3/3）；闸门全绿（go build ×2 / 各域测试 / tsc / RPA vitest）。
+- **验证待办（不得标 SHIPPED）**：`158-SUMMARY.md` §6 共 9 项（生产 PG 真值验证 ×2、真实 Worker 集群调度触发 ×2、角色授权实测、多实例收敛、e2e 环境、调度前端页）+ `notes/261124-fleet03-uat-capacity.md` UAT-FLEET-01~03（真机 VDI 容量矩阵）+ `155-SUMMARY.md` 遗留 L1~L5（端到端真机链路、带宽非生产预测、默认 fps 裁决、vitest 高压 flake、WS 复用方案）。
+- **收尾修正留痕**：158 曾误判 `vdi TestAuditService_RecordOperation` 为「既有失败」，Lead 经基线 worktree 实证为 **155 修复 AuditLog sqlite 兼容后测试反向固化已修复 bug**，已改写测试（d4147207），vdi 包全绿。
+- **能力亮点（跨 phase 累积）**：4.5s 录制→回放走查零卡点（156）；1 Chrome+N page 每 page ≈46-64MB（154/157 实测）；screencast 泄漏 100 轮 Δ0（155）；调度到点真触发（158）；顺带清偿 4 个跨域 P0（sqlite 审计表 / audit 序列化 / paused 筛选 / response 500→400）。
 
 ---
 

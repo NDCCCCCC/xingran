@@ -1,12 +1,12 @@
 {
   "contract": "1.0.0",
   "flavor": "core",
-  "milestone": "v1.56 — RPA 员工自助自动化（进行中）",
+  "milestone": "v1.56 — RPA 员工自助自动化（code-complete · verification-pending）",
   "phases": [],
   "next": {
-    "command": "/gsd-discuss-phase 152",
-    "label": "Phase 152: CONTRACT P0 契约修复",
-    "reason": "v1.56 roadmap created (152-158, 31 REQ). Phase 152 must land first — 4 must-fail paths (credential panic / status filter 400 / task-name 500 / selector table 500) block any new-feature acceptance."
+    "command": "UAT 清偿（158-SUMMARY §6 的 9 项）或 /gsd-ship 评估",
+    "label": "v1.56 收尾",
+    "reason": "7 Phase 全部执行完毕且闸门全绿；真实环境验收证据（生产 PG / 真机 VDI / Worker 集群）未落盘，不满足 SHIPPED 判定"
   },
-  "updated_at": "2026-11-23T07:36:18.000Z"
+  "updated_at": "2026-11-25T12:40:00.000Z"
 }

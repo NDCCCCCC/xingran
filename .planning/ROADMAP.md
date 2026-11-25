@@ -18,12 +18,12 @@
 
 ### Phases
 
-- [ ] Phase 152: CONTRACT P0 契约修复 — 让已存在的 RPA 功能真的能跑通 (CONTRACT-01~06)
-- [ ] Phase 153: RUNTIME 执行闭环 — Worker 归属 / 会话注入 / 取消可中断 / 人工干预 / 状态机 (RUNTIME-01~05)
-- [ ] Phase 154: ENGINE 执行引擎 — page 池 + 浏览器动作全集 + 选择器阶梯 + 真实浏览器验收 (ENGINE-01~05)
-- [ ] Phase 155: LIVEVIEW 无头可视化与人工接管 — screencast 帧流 + 输入注入 + 三模式 + 叠加层 (LIVEVIEW-01~05)
-- [ ] Phase 156: NOCODE 员工零门槛 — 页面内录制 / 元素拾取 / 自然语言生成 / 三步向导 (NOCODE-01~04)
-- [ ] Phase 157: FLEET 承载与 VDI 编排 — provider 化 / 一 VM 一容器落地 / 容量实测 (FLEET-01~03)
+- [x] Phase 152: CONTRACT P0 契约修复 — 让已存在的 RPA 功能真的能跑通 (CONTRACT-01~06) — **code-complete · verification-pending 2026-11-25**（`152-SUMMARY.md`；6/6 PASS）
+- [x] Phase 153: RUNTIME 执行闭环 — Worker 归属 / 会话注入 / 取消可中断 / 人工干预 / 状态机 (RUNTIME-01~05) — **code-complete · verification-pending 2026-11-25**（`153-SUMMARY.md`；5/5 PASS，状态机 49 状态对全矩阵）
+- [x] Phase 154: ENGINE 执行引擎 — page 池 + 浏览器动作全集 + 选择器阶梯 + 真实浏览器验收 (ENGINE-01~05) — **code-complete · verification-pending 2026-11-25**（`154-SUMMARY.md`；5/5 PASS，1 Chrome+N page RSS 实测 ≈46MB/page，14 动作缺口全补）
+- [x] Phase 155: LIVEVIEW 无头可视化与人工接管 — screencast 帧流 + 输入注入 + 三模式 + 叠加层 (LIVEVIEW-01~05) — **code-complete · verification-pending 2026-11-25**（`155-SUMMARY.md`；5/5 PASS，fps 实测未美化：默认 4.66 / 降档 8.90；泄漏 100 轮 Δ0）
+- [x] Phase 156: NOCODE 员工零门槛 — 页面内录制 / 元素拾取 / 自然语言生成 / 三步向导 (NOCODE-01~04) — **code-complete · verification-pending 2026-11-25**（`156-SUMMARY.md`；4/4 PASS，走查真 Chromium 4.5s 零卡点）
+- [x] Phase 157: FLEET 承载与 VDI 编排 — provider 化 / 一 VM 一容器落地 / 容量实测 (FLEET-01~03) — **code-complete · verification-pending 2026-11-25**（`157-SUMMARY.md`；3/3 PASS，宿主 RSS 409→859MB 亚线性零崩溃，VDI 矩阵登记 UAT-FLEET-01~03）
 - [x] Phase 158: CLEANUP 收尾真相化 — 假数据清零 / 定时调度 / 死代码与泄漏 (CLEANUP-01~03) — **code-complete · verification-pending 2026-11-25**（`158-SUMMARY.md`；未 SHIPPED，真实环境 UAT 待办 9 项）
 
 **依赖拓扑（2026-11-23 并行性实证裁决，见 `notes/261123-v156-phase-parallelism.md`）:**

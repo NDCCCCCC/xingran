@@ -2,15 +2,15 @@
 gsd_state_version: "1.0"
 milestone: v1.56
 milestone_name: RPA 员工自助自动化
-status: planning
-last_updated: "2026-11-23T08:40:00.000Z"
-last_activity: 2026-11-23
+status: code-complete · verification-pending
+last_updated: "2026-11-25T12:40:00.000Z"
+last_activity: 2026-11-25
 progress:
-  total_phases: 0
-  completed_phases: 0
+  total_phases: 7
+  completed_phases: 7
   total_plans: 0
   completed_plans: 0
-  percent: 0
+  percent: 100
 ---
 
 # Project State
@@ -22,7 +22,7 @@ progress:
 
 **Project**: RuoYi-Next 运维管理系统
 **Created**: 2026-04-16
-**Status**: v1.56 RPA 员工自助自动化 — INITIATED / ROADMAP CREATED 2026-11-23（Phase 152-158 / 31 REQ / 100% 映射）。**当前阶段：待执行 Phase 152（CONTRACT P0 契约修复）**
+**Status**: v1.56 RPA 员工自助自动化 — **code-complete · verification-pending 2026-11-25**（7/7 Phase 执行完毕，31 REQ 全部交付，**未 SHIPPED**；真实环境 UAT 待办见 `.planning/phases/158-cleanup/158-SUMMARY.md` §6 共 9 项 + FLEET UAT 3 项 + LIVEVIEW 遗留 5 项）
 **Current Milestone**: **v1.56 RPA 员工自助自动化 (Self-Service RPA for General Staff)**
 - **口径来源**：`.planning/REQUIREMENTS.md`（31 REQ + D1-D20 审计实证）｜`.planning/ROADMAP.md`（Phases 152-158）｜`.planning/notes/261123-rpa-worker-capacity-model.md`（承载模型）。
 - **三条用户方向**：员工可用性（NOCODE + CONTRACT）｜无头浏览器可视化与接管（LIVEVIEW）｜VDI 承载模型（FLEET）。
@@ -33,7 +33,8 @@ progress:
 - **SHIPPED 判定**：见 [`.planning/notes/SHIPPED-DEFINITION.md`](notes/SHIPPED-DEFINITION.md) —— 代码绿 + 关键 UAT 通过 + 对外文档同步三者齐备才允许标 SHIPPED。
 - **验证状态**：[`.planning/notes/261108-human-verification-tracker.md`](notes/261108-human-verification-tracker.md) 79 条保持「已排期·待执行」，**0 勾选**；本环境无生产 PG 写授权、无真机 VDI，FLEET-03 只能登记 UAT 待办。
 
-**Last activity**: 2026-11-23
+**Last activity**: 2026-11-25
+**Prior activity**: 2026-11-25 - v1.56 code-complete：7 Phase（152-158）全部执行完毕，31 REQ 全部交付。波次：W1 152∥154 → W2 153∥157 → W3 155 → W4 156 → W5 158（每波 Lead 合并 + 全量闸门）。闸门终态全绿（go build ×2 / RPA+config+vdi+scheduler 测试 / worker 全包 / tsc / RPA vitest）。**状态口径 = code-complete · verification-pending，不标 SHIPPED**（无生产 PG / 无真机 VDI，UAT 证据未落盘；158-SUMMARY §6 登记 9 项 + FLEET 3 项 + LIVEVIEW 5 项遗留）。收尾修正 1 项：158 误判「vdi 审计测试既有失败」实为 155 修复后测试反向固化已修复 bug，已改写并提交 d4147207
 **Prior activity**: 2026-11-23 - v1.56 INITIATED：RPA 员工自助自动化（Phases 152-158 / 31 REQ）；三条用户方向落点 = NOCODE+CONTRACT（员工可用性）/ LIVEVIEW（无头可视化与接管）/ FLEET（VDI 承载模型）；承载模型结论「一 VM 一容器一 Chromium 多 page」；基于 20 条审计缺陷 D1-D20 的实证立项
 **Prior activity**: 2026-11-09 - v1.55 SHIPPED：W1（145 AUDIT / 146 CRYPTO / 147 CACHE）+ W2（148 DIALECT / 149 SCOPE / 150 侧信道 A）并行 + W3（151 统一 ScopedDB，单独执行）；3 波共 7 个 gsd-planner + 2 个 plan-checker + 7 个 gsd-executor + Lead 集成；全量回归闸门全绿（go build / go test ./... / tsc / lint:ci ALL PASS / 全量 vitest / check-route-registry 713 零漂移）；79 条人工验证跟踪表保持 0 勾选、验证类残余不伪造闭环
 **Prior activity**: 2026-11-09 - v1.55 INITIATED：6 项 LOCKED 残余从根源根治（深度根因报告 + 5 项决策拍板 + 24 REQ 草案）；跳过领域研究；FUTURE-01 随 ① 关闭；79 条人工验证跟踪表保持 0 勾选
@@ -115,10 +116,10 @@ progress:
 
 ## Current Position
 
-Phase: 152 (CONTRACT P0 契约修复) — not started（W1 起跑）
+Phase: 152-158 全部完成（7/7）
 Plan: —
-Status: Roadmap created + 并行性已实证裁决；W1 = 152 ∥ 154，W2 = 153 ∥ 157，W3~W5 串行
-Last activity: 2026-11-23 — Milestone v1.56 initiated + Phase 并行性裁决落地
+Status: v1.56 code-complete · verification-pending；下一步 = UAT 清偿（158-SUMMARY §6）或 /gsd-ship 评估
+Last activity: 2026-11-25 — 7 Phase 交付 + vdi 测试反向固化修正（d4147207）
 
 ## 历史归档（v1.25 及更早，已 SHIPPED / ARCHIVED；以下为非当前状态，仅供追溯）
 
