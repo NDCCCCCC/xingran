@@ -305,7 +305,19 @@ func (s *workerServiceImpl) Progress(ctx context.Context, req *WorkerProgressReq
 				now := time.Now()
 				updates["end_time"] = &now
 				if execution.StartTime != nil {
-					duration := now.Sub(*execution.StartTime).Milliseconds()
+					// 时区一致性（2026-11-25 生产 UAT 修复）：start_time 列是
+					// `timestamp without time zone`，写入的是本地时间；GORM 读回时
+					// 按 UTC 解释 → 与本地 time.Now() 相减会得到 -8h（如 -28799423ms）。
+					// 这里把读回值按本地时区重新解释，与 now 同基准后再求差。
+					startedAt := *execution.StartTime
+					if startedAt.Location() == time.UTC {
+						startedAt = time.Date(startedAt.Year(), startedAt.Month(), startedAt.Day(),
+							startedAt.Hour(), startedAt.Minute(), startedAt.Second(), startedAt.Nanosecond(), time.Local)
+					}
+					duration := now.Sub(startedAt).Milliseconds()
+					if duration < 0 {
+						duration = 0
+					}
 					updates["duration"] = duration
 				}
 			}

@@ -643,6 +643,19 @@ func overrideWithEnv(cfg *Config) {
 	if headless := os.Getenv("HEADLESS"); headless != "" {
 		cfg.Browser.Headless = strings.ToLower(headless) == "true"
 	}
+	// Chromium 可执行路径的 env 回退（2026-11-25 生产 UAT 修复）。
+	// 容器镜像只设 CHROMIUM_PATH / CHROME_BIN（Dockerfile ENV），从不写
+	// config.yaml 的 browser.chrome_path；缺此回退时 cfg.ChromePath 为空，
+	// rod launcher 会走默认行为「自动下载 chrome-linux.zip」——国内不可达，
+	// 表现为任务永久卡在 Progress 00%。按优先级取第一个非空值。
+	if cfg.Browser.ChromePath == "" {
+		for _, key := range []string{"CHROMIUM_PATH", "CHROME_BIN", "CHROME_PATH"} {
+			if v := strings.TrimSpace(os.Getenv(key)); v != "" {
+				cfg.Browser.ChromePath = v
+				break
+			}
+		}
+	}
 	if logLevel := os.Getenv("LOG_LEVEL"); logLevel != "" {
 		cfg.Logging.Level = logLevel
 	}
