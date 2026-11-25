@@ -10,7 +10,7 @@ worker:
   # MAX_CONCURRENCY、deployments/README.md 容量表保持一致，由漂移校验测试锁定）。
   max_concurrency: 8
   loop_concurrency: 3       # 循环内并发数（单个任务内循环的并行执行数，0=串行，已废弃）
-  version: "1.0.0"          # Worker 版本
+  version: "1.56.0"         # Worker 版本（对齐 GSD 里程碑 v1.56）
   task_timeout: 10m         # 任务超时时间
   retry_check_interval: 100ms # 任务消费重试检查间隔
   pause_timeout: 5m         # 暂停操作默认超时（人工介入）
