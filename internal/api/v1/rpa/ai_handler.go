@@ -1,6 +1,7 @@
 package rpa
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -43,7 +44,32 @@ func (h *AIHandler) GenerateScript(c *gin.Context) {
 	}
 
 	result, err := h.aiService.GenerateScript(c.Request.Context(), &req)
-	if handleError(c, err, http.StatusInternalServerError, "脚本生成失败") {
+	if err != nil {
+		// NOCODE-03：三态错误映射 —— 前端据此给出**不同且可操作**的引导，
+		// 而不是笼统一句「生成失败」让用户重试到放弃。
+		//
+		//   1. AI 未启用（ErrAIDisabled）→ 400 + 明确「请改用录制」，
+		//      前端据此直接展示录制入口（这是关键体验路径，不能是死路）。
+		//   2. AI 返回非法动作（ActionValidationError）→ 400 + 逐条可读原因，
+		//      用户知道「哪一步不认识」，可改描述重试。
+		//   3. 其余（网络/超时/解析）→ 500，前端引导重试或改录制。
+		//
+		// 实现注意（踩坑记录）：不能用 response.Error(c, 400, msg) ——
+		// pkg/response.toAppError 的 `case int` 分支把 HTTPStatus 硬编码成 400，
+		// 于是「传 500」实际也返回 400，三态在状态码上不可区分。必须走
+		// *response.AppError 分支才能指定 HTTPStatus。
+		var invalidErr *rpa.ActionValidationError
+		switch {
+		case rpa.IsAIDisabled(err):
+			writeRPAError(c, http.StatusBadRequest,
+				"智能生成当前不可用（系统未开启该功能）。请改用「录制一段操作」的方式创建任务，或联系管理员开启。")
+			return
+		case errors.As(err, &invalidErr):
+			// 非法动作是「AI 给出的内容不可执行」，属于用户可修正的输入问题 → 400
+			writeRPAError(c, http.StatusBadRequest, invalidErr.Error())
+			return
+		}
+		writeRPAError(c, http.StatusInternalServerError, "脚本生成失败: "+err.Error())
 		return
 	}
 

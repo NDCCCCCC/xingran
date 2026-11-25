@@ -1,4 +1,4 @@
-/**
+﻿/**
  * RPA 任务管理页面
  */
 
@@ -15,6 +15,10 @@ import { usePagination } from "@/hooks/usePagination";
 import { handleSuccess as showSuccessMessage } from "@/utils/errorHandler";
 import { getTaskColumns } from "./columns";
 import { TaskEditModal } from "./modals";
+// Phase 156 / NOCODE-04：新增任务走三步向导
+import { TaskWizard } from "../wizard/TaskWizard";
+import type { WizardDraft } from "../wizard/payload";
+import { toTaskPayload } from "../wizard/payload";
 import { post } from "@/lib/api";
 // Phase 71 (W3)：裸 Input/Select → 契约组件。
 // 任务状态为固定枚举（业务禁搜）→ children 改写 options + showSearch={false}。
@@ -99,6 +103,12 @@ const TaskManagement: FC = () => {
   );
 
   const [executeLoading, setExecuteLoading] = useState(false);
+
+  // Phase 156 / NOCODE-04：「新增任务」改为打开三步向导（不再直接弹编辑器）。
+  // 归属协议补登项：tasks/index.tsx:212-223 的「新增任务」按钮改开向导。
+  // 编辑器仍保留（编辑既有任务时使用），只是「新增」走更友好的向导路径。
+  const [wizardOpen, setWizardOpen] = useState(false);
+
 
   const refreshData = useCallback(() => {
     loadTasks();
@@ -209,16 +219,29 @@ const TaskManagement: FC = () => {
             actions={
               <Space>
                 {canAdd && (
-                  <Button
-                    type="primary"
-                    icon={<PlusOutlined />}
-                    onClick={() => {
-                      handleAdd();
-                      setModalVisible(true);
-                    }}
-                  >
-                    新增任务
-                  </Button>
+                  <Space>
+                    {/* NOCODE-04：主入口走三步向导（一般员工路径） */}
+                    <Button
+                      type="primary"
+                      icon={<PlusOutlined />}
+                      data-testid="task-add-wizard"
+                      onClick={() => {
+                        setWizardOpen(true);
+                      }}
+                    >
+                      新增任务
+                    </Button>
+                    {/* 高级入口：直接开编辑器（熟悉动作配置的人用，保留既有能力） */}
+                    <Button
+                      data-testid="task-add-advanced"
+                      onClick={() => {
+                        handleAdd();
+                        setModalVisible(true);
+                      }}
+                    >
+                      高级新建
+                    </Button>
+                  </Space>
                 )}
               </Space>
             }
@@ -296,6 +319,39 @@ const TaskManagement: FC = () => {
           onOk={handleModalOk}
           onCancel={handleModalCancel}
         />
+
+        {/*
+          NOCODE-04：三步向导承载。
+          用 Modal（宽 900）而不是跳页：向导是「新建任务」的上下文内动作，
+          弹窗能保留用户原有的筛选/分页状态，关闭即回到列表，符合
+          Power Automate Desktop 的交互习惯。
+        */}
+        <Modal
+          open={wizardOpen}
+          onCancel={() => setWizardOpen(false)}
+          footer={null}
+          width={900}
+          destroyOnHidden
+          title="新建自动化任务"
+          data-testid="task-wizard-modal"
+        >
+          <TaskWizard
+            onSave={async (draft: WizardDraft) => {
+              await post("/rpa/tasks", toTaskPayload(draft));
+              showSuccessMessage("创建");
+              setWizardOpen(false);
+              refreshData();
+            }}
+            onCancel={() => setWizardOpen(false)}
+            onOpenAIGenerator={() => {
+              // 向导内部已自带 AI 生成器入口；此处仅作为无动作时的兜底提示
+              message.info("请在上方「用中文说」里点下一步，系统会打开智能生成");
+            }}
+            onOpenRecorder={() => {
+              message.info("请在「RPA 实时画面」里开始录制，录完回到这里点下一步");
+            }}
+          />
+        </Modal>
       </Content>
     </Layout>
   );

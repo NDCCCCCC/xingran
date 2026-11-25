@@ -38,6 +38,13 @@ export interface AIScriptEditorProps {
   open: boolean;
   onClose: () => void;
   onConfirm: (actions: Action[]) => void;
+  /**
+   * NOCODE-03：AI 不可用时降级到「录制」。
+   *
+   * 不传时按钮仍会显示，但点击只给出「请从新建向导选择录制」的提示 ——
+   * 保证组件在任何挂载点都有可操作出路（绝不出现点了没反应的死按钮）。
+   */
+  onFallbackToRecord?: () => void;
 }
 
 // CONTRACT-05（D15）：这里原本有一份 mockGeneratedActions 常量 + setTimeout(1500)
@@ -90,10 +97,47 @@ export function mapAIActions(dtos: AIScriptActionDTO[] | undefined): Action[] {
     }));
 }
 
-/** AI 生成失败/超时/空结果三态。 */
-type GenerateErrorKind = "failed" | "timeout" | "empty";
+/** AI 生成失败/超时/空结果/不可用四态。 */
+type GenerateErrorKind = "failed" | "timeout" | "empty" | "unavailable";
 
-export function AIScriptEditor({ open, onClose, onConfirm }: AIScriptEditorProps) {
+/**
+ * isAIDisabledResponse 判定后端是否在报「智能生成不可用」。
+ *
+ * 后端 NOCODE-03 的三态契约（ai_handler.go GenerateScript）：
+ *   - 400 + 含「不可用」→ AI 未启用（应引导录制，不是重试）
+ *   - 400 + 含「第 N 步」→ 非法动作（应改描述重试）
+ *   - 500 → 超时/网络（应稍后重试）
+ *
+ * 这里优先看 HTTP 状态 + message 关键词；两者都拿不到时保守判为非不可用
+ * （宁可让用户重试一次，也不要误把可重试的故障说成「功能没开」）。
+ */
+export function isAIDisabledResponse(error: unknown): boolean {
+  const err = error as
+    | {
+        response?: { status?: number; data?: { message?: string } };
+        status?: number;
+        message?: string;
+      }
+    | undefined;
+  if (!err) return false;
+
+  const status = err.response?.status ?? err.status;
+  const message =
+    err.response?.data?.message ??
+    (typeof err.message === "string" ? err.message : "");
+
+  // 后端约定：AI 未启用返回 400 且文案明确说「不可用」
+  if (status === 400 && /不可用/.test(message)) return true;
+  // 兜底：即使拿不到状态码，明确的「不可用」文案也足以判定
+  return /智能生成当前不可用|AI 脚本生成未启用/.test(message);
+}
+
+export function AIScriptEditor({
+  open,
+  onClose,
+  onConfirm,
+  onFallbackToRecord,
+}: AIScriptEditorProps) {
   const { message } = App.useApp();
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
@@ -155,9 +199,16 @@ export function AIScriptEditor({ open, onClose, onConfirm }: AIScriptEditorProps
       if (aborted) {
         setGenerateError({
           kind: "timeout",
-          text: `AI 生成超时（超过 ${Math.round(AI_GENERATE_TIMEOUT_MS / 1000)} 秒），请稍后重试或改用「录制」方式创建任务。`,
+          text: `AI 生成超时（超过 ${Math.round(AI_GENERATE_TIMEOUT_MS / 1000)} 秒）。可以稍后重试，也可以直接改用「录制一段操作」——录制不依赖智能生成，随时可用。`,
         });
         message.error("AI 生成超时，请重试");
+      } else if (isAIDisabledResponse(error)) {
+        // NOCODE-03 关键路径：AI 不可用**不是死路**，必须当场给出录制入口。
+        setGenerateError({
+          kind: "unavailable",
+          text: "智能生成当前未开启。不用等管理员：直接用「录制一段操作」把你的操作记下来，一样能生成任务。",
+        });
+        message.warning("智能生成未开启，可改用录制");
       } else {
         const detail =
           (error as { message?: string } | undefined)?.message ||
@@ -206,6 +257,35 @@ export function AIScriptEditor({ open, onClose, onConfirm }: AIScriptEditorProps
     setExplanation("");
     onClose();
   }, [form, onClose]);
+
+  /**
+   * handleFallbackToRecord NOCODE-03 降级入口。
+   *
+   * 语义：AI 走不通时，把用户**已经写好的中文描述**带进录制流程（不丢弃用户
+   * 输入），然后关闭本弹窗。这样用户的努力不会白费，也不会被困在「AI 报错 →
+   * 重试 → 再报错」的循环里。
+   */
+  const handleFallbackToRecord = useCallback(() => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    const description = String(form.getFieldValue("description") ?? "").trim();
+    form.resetFields();
+    setGeneratedActions([]);
+    setGenerateError(null);
+    setExplanation("");
+    if (onFallbackToRecord) {
+      onFallbackToRecord();
+      return;
+    }
+    // 无回调时的兜底：明确告知下一步该去哪，而不是静默关闭。
+    message.info(
+      description
+        ? "已记下你的描述。请从「新增任务」向导选择「录制一段操作」，把这段流程录下来。"
+        : "请从「新增任务」向导选择「录制一段操作」来创建任务。"
+    );
+    onClose();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
+  }, [form, onClose, onFallbackToRecord]);
 
   return (
     <Modal
@@ -320,7 +400,9 @@ export function AIScriptEditor({ open, onClose, onConfirm }: AIScriptEditorProps
           </div>
         )}
 
-        {/* CONTRACT-05：失败 / 超时 / 空结果三态的可见提示（可重试） */}
+        {/* NOCODE-03：四态的可见提示。
+            三态（失败/超时/空结果）都给「重试生成」；「不可用」额外给
+            「改用录制」——这是关键体验路径，不能只给一个报错就完事。 */}
         {!loading && generateError && (
           <Alert
             title={
@@ -328,17 +410,34 @@ export function AIScriptEditor({ open, onClose, onConfirm }: AIScriptEditorProps
                 ? "AI 生成超时"
                 : generateError.kind === "empty"
                   ? "AI 未返回可执行动作"
-                  : "AI 生成失败"
+                  : generateError.kind === "unavailable"
+                    ? "智能生成未开启"
+                    : "AI 生成失败"
             }
             description={
               <Space orientation="vertical" style={{ width: "100%" }}>
-                <Text type="danger">{generateError.text}</Text>
-                <Button size="small" onClick={handleGenerate} icon={<ThunderboltOutlined />}>
-                  重试生成
-                </Button>
+                <Text type={generateError.kind === "unavailable" ? undefined : "danger"}>
+                  {generateError.text}
+                </Text>
+                <Space>
+                  {generateError.kind !== "unavailable" && (
+                    <Button size="small" onClick={handleGenerate} icon={<ThunderboltOutlined />}>
+                      重试生成
+                    </Button>
+                  )}
+                  {/* 不可用时把「录制」做成主按钮：这是唯一能继续的路 */}
+                  <Button
+                    size="small"
+                    type={generateError.kind === "unavailable" ? "primary" : "default"}
+                    onClick={handleFallbackToRecord}
+                    data-testid="ai-fallback-record"
+                  >
+                    改用录制
+                  </Button>
+                </Space>
               </Space>
             }
-            type={generateError.kind === "empty" ? "warning" : "error"}
+            type={generateError.kind === "empty" ? "warning" : generateError.kind === "unavailable" ? "info" : "error"}
             showIcon
             style={{ marginTop: 16 }}
             data-testid="ai-generate-error"

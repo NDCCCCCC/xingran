@@ -1227,7 +1227,12 @@ func (d *Database) AutoMigrate() error {
 		if err := d.runAndRecord(255, "rpa_liveview_menu", migrations.Migrate255LiveViewMenu); err != nil {
 			applogger.Errorf("RPA 实时画面菜单播种失败 (非阻断,留待下次启动): %v", err)
 		}
-		// G4 整改（task-3）：system:backup:remove 备份删除独立码 F 型种子。**非阻断**：
+		// 256：Phase 156 / NOCODE-04 —— 新建自动化任务三步向导页面菜单（C 型，
+		// 父=「RPA 管理」）。归属协议第 6 条：wizard 页面只走 sys_menu seed 注册，
+		// 前端不改 componentLoader/DynamicRoutes。不扩权限面（复用 ops:rpa:task:add）。**非阻断**。
+		if err := d.runAndRecord(256, "rpa_nocode_wizard_menu", migrations.Migrate256NocodeWizardMenu); err != nil {
+			applogger.Errorf("新建任务向导菜单播种失败 (非阻断,留待下次启动): %v", err)
+		}
 		// 缺权限行只让普通角色备份删除 403 / 前端删除按钮不显示；父菜单缺失时迁移内部降级返回 nil。
 		if err := d.runAndRecord(246, "backup_remove_permission_f_type_seed", migrations.Migrate246BackupRemovePermissionFTypeSeed); err != nil {
 			applogger.Errorf("备份删除权限种子迁移失败 (非阻断,留待下次启动): %v", err)

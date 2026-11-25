@@ -79,12 +79,33 @@ func successMsg(c *gin.Context, msg string) {
 }
 
 // handleError 处理错误
+//
+// 注意（NOCODE-03 踩坑）：本函数只用于「统一 500」的场景。它内部调用的
+// response.Error(c, statusCode, msg) 传 int 时，pkg/response.toAppError 的
+// `case int` 分支会把 HTTPStatus 硬编码为 400 —— 即传 500 实际返回 400。
+// 需要**精确控制 HTTPStatus**（例如区分「用户可修正的 400」与「系统侧 500」）
+// 时必须用 writeRPAError，不能依赖本函数。
 func handleError(c *gin.Context, err error, statusCode int, msg string) bool {
 	if err != nil {
 		response.Error(c, statusCode, msg+": "+err.Error())
 		return true
 	}
 	return false
+}
+
+// writeRPAError 写一个可精确指定 HTTP 状态的错误响应。
+//
+// 与 handleError 的区别：走 *response.AppError 分支（该分支尊重 HTTPStatus），
+// 避免 `case int` 分支把状态码硬编码成 400 的陷阱。
+//
+// NOCODE-03 的三态引导依赖本函数：AI 不可用/非法动作 → 400，超时 → 500，
+// 前端据此分流「改用录制」与「稍后重试」两条完全不同的引导路径。
+func writeRPAError(c *gin.Context, httpStatus int, message string) {
+	response.Error(c, &response.AppError{
+		Code:       httpStatus,
+		Message:    message,
+		HTTPStatus: httpStatus,
+	})
 }
 
 // setPaginationDefaults 设置分页默认值

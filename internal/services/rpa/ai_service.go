@@ -89,7 +89,9 @@ func NewAIService(cfg *config.Config, db *gorm.DB, cacheProvider base.CacheProvi
 // GenerateScript 从描述生成脚本
 func (s *aiServiceImpl) GenerateScript(ctx context.Context, req *AIScriptGenerateRequest) (*AIScriptGenerateResponse, error) {
 	if !s.config.RPA.AI.Generator.Enabled {
-		return nil, fmt.Errorf("AI 脚本生成未启用")
+		// NOCODE-03：用哨兵错误而非裸 fmt.Errorf —— 前端据 errAIDisabled 精确
+		// 判定「该引导去录制」还是「该重试」，不靠字符串猜。
+		return nil, ErrAIDisabled
 	}
 
 	messages := []Message{
@@ -111,6 +113,12 @@ func (s *aiServiceImpl) GenerateScript(ctx context.Context, req *AIScriptGenerat
 	var result AIScriptGenerateResponse
 	if err := json.Unmarshal([]byte(resp), &result); err != nil {
 		return nil, fmt.Errorf("解析 AI 响应失败: %w", err)
+	}
+
+	// NOCODE-03：动作枚举校验。非法动作在**服务端**拒绝并给出可读原因，
+	// 绝不把非法动作透传给前端（前端过滤只是第二道防线，不是唯一防线）。
+	if _, err := ValidateAIActions(result.Actions); err != nil {
+		return nil, err
 	}
 
 	return &result, nil
