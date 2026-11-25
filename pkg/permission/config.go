@@ -158,6 +158,14 @@ const (
 
 	RpaAiUse PermissionCode = "rpa:ai:use"
 
+	// Phase 158 / CLEANUP-02：RPA 定时调度（sys_rpa_schedules）权限码。
+	// 该表此前零服务零 API（D18），本 phase 补齐 CRUD + 调度触发，故新增 4 码；
+	// 播种见 migration_257（rpa 调度 F 型按钮，双方言幂等）。
+	RpaScheduleList   PermissionCode = "ops:rpa:schedule:list"
+	RpaScheduleAdd    PermissionCode = "ops:rpa:schedule:add"
+	RpaScheduleEdit   PermissionCode = "ops:rpa:schedule:edit"
+	RpaScheduleRemove PermissionCode = "ops:rpa:schedule:remove"
+
 	// 日志管理权限
 	OperLogList   PermissionCode = "monitor:operlog:list"
 	OperLogView   PermissionCode = "monitor:operlog:view"

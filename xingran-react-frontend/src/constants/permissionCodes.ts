@@ -265,6 +265,16 @@ export const PERMISSION_CODES = {
   rpaAi: {
     use: "rpa:ai:use",
   },
+  // ==================== Phase 158 / CLEANUP-02：RPA 定时调度（sys_rpa_schedules） ====================
+  // 后端常量 pkg/permission/config.go RpaSchedule*、sys_menu F 型播种
+  // （migration_257）、路由端点级挂载（internal/api/v1/rpa/schedule_handler.go）
+  // 三方一致。此前该表零服务零 API，故无对应权限码。
+  rpaSchedule: {
+    list: "ops:rpa:schedule:list",
+    add: "ops:rpa:schedule:add",
+    edit: "ops:rpa:schedule:edit",
+    remove: "ops:rpa:schedule:remove",
+  },
   // ==================== 85-03（RBAC-01）批次 B：network 域写码 TS 同批声明 ====================
   // 后端「网络设备管理权限」区块的镜像声明。network 域仅 backup:add/restore/diff、
   // command:execute、discovery:add 有 sys_menu F 型授权来源（其余均进

@@ -216,41 +216,47 @@ func (s *RPAExcelService) ParseExcelForExecution(file *multipart.FileHeader) ([]
 }
 
 // CreateBatchExecutionReport 创建批量执行报告
+//
+// Phase 158 / CLEANUP-01：真实落库 —— 逐项写入 sys_rpa_batch_item_reports。
+// 此前是空壳存根（构造内存 report 后直接丢弃），报告永远查不到真值。
 func (s *RPAExcelService) CreateBatchExecutionReport(
 	ctx context.Context,
 	executionID string,
 	task *rpamodels.Task,
 	dataItems []map[string]interface{},
 ) error {
-	// 初始化报告
-	report := &BatchExecutionReport{
-		ExecutionID: executionID,
-		TaskID:      task.ID,
-		TaskName:    task.TaskName,
-		TotalItems:  len(dataItems),
-		StartTime:   time.Now(),
-		Items:       make([]BatchItemReport, 0, len(dataItems)),
-		Summary:     make(map[string]interface{}),
+	if len(dataItems) == 0 {
+		// 无数据项：不写行（读侧会返回空统计而非假数据）
+		return nil
 	}
 
-	// 为每个数据项创建报告项
+	now := time.Now()
+	rows := make([]rpamodels.BatchItemReport, 0, len(dataItems))
 	for i, item := range dataItems {
-		report.Items = append(report.Items, BatchItemReport{
-			Index:     i,
-			Status:    "pending",
-			InputData: item,
-			StartTime: time.Now(),
+		inputJSON := "{}"
+		if raw, err := json.Marshal(item); err == nil {
+			inputJSON = string(raw)
+		}
+		rows = append(rows, rpamodels.BatchItemReport{
+			ExecutionID: executionID,
+			TaskID:      task.ID,
+			ItemIndex:   i,
+			Status:      rpamodels.BatchItemStatusPending,
+			InputData:   inputJSON,
+			StartTime:   now,
 		})
 	}
 
-	// 保存报告到数据库或缓存
-	// 这里使用缓存存储，key 格式: rpa:batch_report:{execution_id}
-	// 实际存储可以在 Execution 表中增加 batch_report 字段
-
+	if err := s.db.WithContext(ctx).Create(&rows).Error; err != nil {
+		return fmt.Errorf("写入批量执行项报告失败: %w", err)
+	}
 	return nil
 }
 
 // UpdateBatchItemReport 更新批量项报告
+//
+// Phase 158 / CLEANUP-01：真实落库 —— 按 (execution_id, item_index) 更新单项状态。
+// 此前是空壳存根（注释写「实际实现需要读取缓存」）。
 func (s *RPAExcelService) UpdateBatchItemReport(
 	ctx context.Context,
 	executionID string,
@@ -260,26 +266,142 @@ func (s *RPAExcelService) UpdateBatchItemReport(
 	errMsg string,
 	screenshot string,
 ) error {
-	// 更新缓存中的报告
-	// 实际实现需要读取缓存，更新对应项，然后写回
+	var item rpamodels.BatchItemReport
+	err := s.db.WithContext(ctx).
+		Where("execution_id = ? AND item_index = ?", executionID, itemIndex).
+		First(&item).Error
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return fmt.Errorf("批量执行项不存在: execution=%s index=%d", executionID, itemIndex)
+		}
+		return fmt.Errorf("查询批量执行项失败: %w", err)
+	}
 
+	updates := map[string]interface{}{
+		"status": status,
+	}
+	if len(outputData) > 0 {
+		if raw, mErr := json.Marshal(outputData); mErr == nil {
+			updates["output_data"] = string(raw)
+		}
+	}
+	if errMsg != "" {
+		updates["error_message"] = errMsg
+	}
+	if screenshot != "" {
+		updates["screenshot"] = screenshot
+	}
+
+	now := time.Now()
+	updates["end_time"] = &now
+	if !item.StartTime.IsZero() && now.After(item.StartTime) {
+		updates["duration"] = now.Sub(item.StartTime).Milliseconds()
+	}
+
+	if err := s.db.WithContext(ctx).
+		Model(&rpamodels.BatchItemReport{}).
+		Where("id = ?", item.ID).
+		Updates(updates).Error; err != nil {
+		return fmt.Errorf("更新批量执行项失败: %w", err)
+	}
 	return nil
 }
 
 // GetBatchExecutionReport 获取批量执行报告
+//
+// Phase 158 / CLEANUP-01：真实统计 —— 从 sys_rpa_batch_item_reports 聚合。
+// 此前返回硬编码常量（total=100 / success=95 / failed=5），是本 phase 的头号假数据。
+// 无数据时返回空统计（totalItems=0 / 明细空），绝不返回任何常量假值。
 func (s *RPAExcelService) GetBatchExecutionReport(ctx context.Context, executionID string) (*BatchExecutionReport, error) {
-	// 从缓存或数据库获取报告
-	// 这里返回模拟数据
+	report := &BatchExecutionReport{
+		ExecutionID: executionID,
+		Items:       make([]BatchItemReport, 0),
+		Summary:     make(map[string]interface{}),
+	}
 
-	return &BatchExecutionReport{
-		ExecutionID:  executionID,
-		TotalItems:   100,
-		SuccessCount: 95,
-		FailedCount:  5,
-		SkippedCount: 0,
-		Items:        make([]BatchItemReport, 0),
-		Summary:      make(map[string]interface{}),
-	}, nil
+	var rows []rpamodels.BatchItemReport
+	if err := s.db.WithContext(ctx).
+		Where("execution_id = ?", executionID).
+		Order("item_index ASC").
+		Find(&rows).Error; err != nil {
+		return nil, fmt.Errorf("查询批量执行项报告失败: %w", err)
+	}
+
+	report.TotalItems = len(rows)
+	pending := 0
+	var earliest, latest time.Time
+
+	for _, row := range rows {
+		switch row.Status {
+		case rpamodels.BatchItemStatusSuccess:
+			report.SuccessCount++
+		case rpamodels.BatchItemStatusFailed:
+			report.FailedCount++
+		case rpamodels.BatchItemStatusSkipped:
+			report.SkippedCount++
+		default:
+			pending++
+		}
+
+		item := BatchItemReport{
+			Index:     row.ItemIndex,
+			Status:    row.Status,
+			Error:     row.ErrorMessage,
+			Screenshot: row.Screenshot,
+			StartTime: row.StartTime,
+			Duration:  time.Duration(row.Duration) * time.Millisecond,
+		}
+		if row.EndTime != nil {
+			item.EndTime = *row.EndTime
+		}
+		if row.InputData != "" {
+			var input map[string]interface{}
+			if jErr := json.Unmarshal([]byte(row.InputData), &input); jErr == nil {
+				item.InputData = input
+			}
+		}
+		if row.OutputData != "" {
+			var output map[string]interface{}
+			if jErr := json.Unmarshal([]byte(row.OutputData), &output); jErr == nil {
+				item.OutputData = output
+			}
+		}
+		report.Items = append(report.Items, item)
+
+		if earliest.IsZero() || row.StartTime.Before(earliest) {
+			earliest = row.StartTime
+		}
+		if row.EndTime != nil && (latest.IsZero() || row.EndTime.After(latest)) {
+			latest = *row.EndTime
+		}
+	}
+
+	// 执行记录的任务名（可空 —— 执行记录可能已被清理）
+	var execRow rpamodels.Execution
+	if err := s.db.WithContext(ctx).
+		Where("id = ?", executionID).
+		First(&execRow).Error; err == nil {
+		report.TaskID = execRow.TaskID
+		report.TaskName = execRow.TaskName
+	}
+
+	if !earliest.IsZero() {
+		report.StartTime = earliest
+	}
+	if !latest.IsZero() {
+		report.EndTime = latest
+		report.Duration = latest.Sub(earliest)
+	}
+
+	report.Summary = map[string]interface{}{
+		"total":   report.TotalItems,
+		"success": report.SuccessCount,
+		"failed":  report.FailedCount,
+		"skipped": report.SkippedCount,
+		"pending": pending,
+	}
+
+	return report, nil
 }
 
 // CreateHumanInterventionEvent 创建人工干预事件

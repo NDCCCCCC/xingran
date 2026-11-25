@@ -24,7 +24,7 @@
 - [ ] Phase 155: LIVEVIEW 无头可视化与人工接管 — screencast 帧流 + 输入注入 + 三模式 + 叠加层 (LIVEVIEW-01~05)
 - [ ] Phase 156: NOCODE 员工零门槛 — 页面内录制 / 元素拾取 / 自然语言生成 / 三步向导 (NOCODE-01~04)
 - [ ] Phase 157: FLEET 承载与 VDI 编排 — provider 化 / 一 VM 一容器落地 / 容量实测 (FLEET-01~03)
-- [ ] Phase 158: CLEANUP 收尾真相化 — 假数据清零 / 定时调度 / 死代码与泄漏 (CLEANUP-01~03)
+- [x] Phase 158: CLEANUP 收尾真相化 — 假数据清零 / 定时调度 / 死代码与泄漏 (CLEANUP-01~03) — **code-complete · verification-pending 2026-11-25**（`158-SUMMARY.md`；未 SHIPPED，真实环境 UAT 待办 9 项）
 
 **依赖拓扑（2026-11-23 并行性实证裁决，见 `notes/261123-v156-phase-parallelism.md`）:**
 

@@ -158,6 +158,9 @@ type ExecuteTaskRequest struct {
 	WorkerID     string                 `json:"workerId,omitempty"`
 	Priority     int                    `json:"priority"`
 	CredentialID string                 `json:"credentialId,omitempty"` // 凭证ID（用于自动登录）
+	// TriggerType 触发类型（Phase 158 / CLEANUP-02）：manual（默认，手动/API 触发）
+	// 或 schedule（定时调度触发）。为空时按 manual 处理 —— 存量调用方零改动。
+	TriggerType string `json:"triggerType,omitempty"`
 }
 
 // WorkerListParams Worker列表查询参数

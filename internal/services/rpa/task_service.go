@@ -246,12 +246,20 @@ func (s *taskServiceImpl) Execute(ctx context.Context, req *ExecuteTaskRequest, 
 	}
 
 	// 创建执行记录
+	// Phase 158 / CLEANUP-02：trigger_type 由请求决定（manual / schedule）。
+	// 调度触发与手动触发共用本入口（同一份状态机、同一条 Redis Stream 通道），
+	// 差别只在 trigger_type 与 triggered_by 两个审计字段。
+	triggerType := req.TriggerType
+	if triggerType == "" {
+		triggerType = "manual"
+	}
+
 	execution := &rpamodels.Execution{
 		TaskID:      req.TaskID,
 		TaskName:    task.TaskName,
 		Status:      string(rpamodels.RPAExecutionStatusPending),
 		TriggeredBy: userID,
-		TriggerType: "manual",
+		TriggerType: triggerType,
 	}
 
 	if err := s.db.WithContext(ctx).Create(execution).Error; err != nil {
@@ -259,7 +267,7 @@ func (s *taskServiceImpl) Execute(ctx context.Context, req *ExecuteTaskRequest, 
 	}
 
 	// 将任务发送到 Redis Stream
-	if err := s.publishTaskToRedis(ctx, execution.ID, task, actions, req.InputParams, userID, req.CredentialID); err != nil {
+	if err := s.publishTaskToRedis(ctx, execution.ID, task, actions, req.InputParams, userID, req.CredentialID, triggerType); err != nil {
 		// 发布失败，删除执行记录
 		s.db.WithContext(ctx).Delete(execution)
 		return nil, fmt.Errorf("发布任务到Redis失败: %w", err)
@@ -277,6 +285,7 @@ func (s *taskServiceImpl) publishTaskToRedis(
 	inputParams map[string]interface{},
 	userID string,
 	credentialID string,
+	triggerType string,
 ) error {
 	// 从脚本中提取目标URL
 	targetURL := extractURLFromScript(actions)
@@ -288,6 +297,9 @@ func (s *taskServiceImpl) publishTaskToRedis(
 	}
 
 	// 构建任务消息
+	if triggerType == "" {
+		triggerType = "manual"
+	}
 	message := TaskMessage{
 		ExecutionID:  executionID,
 		TaskID:       task.ID,
@@ -298,7 +310,7 @@ func (s *taskServiceImpl) publishTaskToRedis(
 		MaxRetry:     task.RetryCount,
 		Variables:    inputParams,
 		TriggeredBy:  userID,
-		TriggerType:  "manual",
+		TriggerType:  triggerType,
 		CreatedAt:    time.Now(),
 		CredentialID: credentialID,
 	}

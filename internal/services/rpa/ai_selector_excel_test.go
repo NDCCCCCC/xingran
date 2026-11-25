@@ -551,6 +551,10 @@ func newInterventionTestDB(t *testing.T) *gorm.DB {
 			processed_at DATETIME, status TEXT DEFAULT 'pending'
 		)
 	`).Error)
+	// Phase 158 / CLEANUP-01：批量执行项报告表（真实 AutoMigrate，不手写 DDL ——
+	// 手写表与 model tag 漂移后，生产会 no such table，见 AGENTS.md 测试约定）。
+	require.NoError(t, db.AutoMigrate(&rpamodels.BatchItemReport{}),
+		"真实 AutoMigrate 必须能建出 sys_rpa_batch_item_reports")
 	return db
 }
 

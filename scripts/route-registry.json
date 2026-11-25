@@ -3,10 +3,10 @@
   "sourceOfTruth": "internal/api/** route registration source (rescan), not tmp_routes.json",
   "writeHandlerBasis": "WRITE_HANDLER regex on handler name (same as tmp_scan_final.cjs)",
   "totals": {
-    "mounts": 261,
-    "routes": 746,
-    "writeRoutes": 335,
-    "deferredWriteRoutes": 148
+    "mounts": 262,
+    "routes": 753,
+    "writeRoutes": 338,
+    "deferredWriteRoutes": 151
   },
   "routes": [
     {
@@ -6529,7 +6529,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 159
+      "line": 169
     },
     {
       "method": "POST",
@@ -6544,7 +6544,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 161
+      "line": 171
     },
     {
       "method": "POST",
@@ -6559,7 +6559,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 156
+      "line": 166
     },
     {
       "method": "POST",
@@ -6574,7 +6574,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 152
+      "line": 162
     },
     {
       "method": "POST",
@@ -6589,7 +6589,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 153
+      "line": 163
     },
     {
       "method": "POST",
@@ -6604,7 +6604,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 168
+      "line": 178
     },
     {
       "method": "POST",
@@ -6619,7 +6619,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 166
+      "line": 176
     },
     {
       "method": "POST",
@@ -6634,7 +6634,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 165
+      "line": 175
     },
     {
       "method": "POST",
@@ -6649,7 +6649,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 164
+      "line": 174
     },
     {
       "method": "POST",
@@ -6664,7 +6664,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 167
+      "line": 177
     },
     {
       "method": "POST",
@@ -6679,7 +6679,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 160
+      "line": 170
     },
     {
       "method": "POST",
@@ -6694,7 +6694,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 175
+      "line": 185
     },
     {
       "method": "POST",
@@ -6709,7 +6709,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 176
+      "line": 186
     },
     {
       "method": "POST",
@@ -6724,7 +6724,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 178
+      "line": 188
     },
     {
       "method": "POST",
@@ -6739,7 +6739,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 177
+      "line": 187
     },
     {
       "method": "POST",
@@ -6754,7 +6754,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 174
+      "line": 184
     },
     {
       "method": "POST",
@@ -6769,7 +6769,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 182
+      "line": 192
     },
     {
       "method": "POST",
@@ -6784,7 +6784,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 181
+      "line": 191
     },
     {
       "method": "POST",
@@ -6799,7 +6799,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 133
+      "line": 143
     },
     {
       "method": "GET",
@@ -6814,7 +6814,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 139
+      "line": 149
     },
     {
       "method": "POST",
@@ -6829,7 +6829,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 134
+      "line": 144
     },
     {
       "method": "GET",
@@ -6844,7 +6844,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 136
+      "line": 146
     },
     {
       "method": "GET",
@@ -6859,7 +6859,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 140
+      "line": 150
     },
     {
       "method": "POST",
@@ -6874,7 +6874,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 141
+      "line": 151
     },
     {
       "method": "POST",
@@ -7039,7 +7039,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 135
+      "line": 145
     },
     {
       "method": "POST",
@@ -7054,7 +7054,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 130
+      "line": 140
     },
     {
       "method": "POST",
@@ -7069,7 +7069,112 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 132
+      "line": 142
+    },
+    {
+      "method": "POST",
+      "path": "/rpa/schedules",
+      "mountGroup": "r",
+      "setup": "SetupScheduleRouter",
+      "isWrite": true,
+      "handler": "Create",
+      "permKind": "RequireStrictPermissions",
+      "permCodes": [
+        "ops:rpa:schedule:add"
+      ],
+      "registeredDeadTable": false,
+      "file": "internal/api/v1/rpa/schedule_handler.go",
+      "line": 253
+    },
+    {
+      "method": "POST",
+      "path": "/rpa/schedules/:id",
+      "mountGroup": "r",
+      "setup": "SetupScheduleRouter",
+      "isWrite": false,
+      "handler": "GetByID",
+      "permKind": "RequirePermissions",
+      "permCodes": [
+        "ops:rpa:schedule:list"
+      ],
+      "registeredDeadTable": false,
+      "file": "internal/api/v1/rpa/schedule_handler.go",
+      "line": 252
+    },
+    {
+      "method": "POST",
+      "path": "/rpa/schedules/:id/delete",
+      "mountGroup": "r",
+      "setup": "SetupScheduleRouter",
+      "isWrite": true,
+      "handler": "Delete",
+      "permKind": "RequireStrictPermissions",
+      "permCodes": [
+        "ops:rpa:schedule:remove"
+      ],
+      "registeredDeadTable": false,
+      "file": "internal/api/v1/rpa/schedule_handler.go",
+      "line": 255
+    },
+    {
+      "method": "POST",
+      "path": "/rpa/schedules/:id/status",
+      "mountGroup": "r",
+      "setup": "SetupScheduleRouter",
+      "isWrite": false,
+      "handler": "SetStatus",
+      "permKind": "RequireStrictPermissions",
+      "permCodes": [
+        "ops:rpa:schedule:edit"
+      ],
+      "registeredDeadTable": false,
+      "file": "internal/api/v1/rpa/schedule_handler.go",
+      "line": 257
+    },
+    {
+      "method": "POST",
+      "path": "/rpa/schedules/:id/trigger",
+      "mountGroup": "r",
+      "setup": "SetupScheduleRouter",
+      "isWrite": false,
+      "handler": "Trigger",
+      "permKind": "RequireStrictPermissions",
+      "permCodes": [
+        "ops:rpa:schedule:edit"
+      ],
+      "registeredDeadTable": false,
+      "file": "internal/api/v1/rpa/schedule_handler.go",
+      "line": 256
+    },
+    {
+      "method": "POST",
+      "path": "/rpa/schedules/:id/update",
+      "mountGroup": "r",
+      "setup": "SetupScheduleRouter",
+      "isWrite": true,
+      "handler": "Update",
+      "permKind": "RequireStrictPermissions",
+      "permCodes": [
+        "ops:rpa:schedule:edit"
+      ],
+      "registeredDeadTable": false,
+      "file": "internal/api/v1/rpa/schedule_handler.go",
+      "line": 254
+    },
+    {
+      "method": "POST",
+      "path": "/rpa/schedules/list",
+      "mountGroup": "r",
+      "setup": "SetupScheduleRouter",
+      "isWrite": false,
+      "handler": "List",
+      "permKind": "RequirePermissions",
+      "permCodes": [
+        "ops:rpa:schedule:list"
+      ],
+      "registeredDeadTable": false,
+      "file": "internal/api/v1/rpa/schedule_handler.go",
+      "line": 251
     },
     {
       "method": "POST",
@@ -7084,7 +7189,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 94
+      "line": 104
     },
     {
       "method": "POST",
@@ -7099,7 +7204,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 96
+      "line": 106
     },
     {
       "method": "POST",
@@ -7114,7 +7219,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 98
+      "line": 108
     },
     {
       "method": "POST",
@@ -7129,7 +7234,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 99
+      "line": 109
     },
     {
       "method": "POST",
@@ -7144,7 +7249,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 103
+      "line": 113
     },
     {
       "method": "POST",
@@ -7159,7 +7264,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 97
+      "line": 107
     },
     {
       "method": "POST",
@@ -7174,7 +7279,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 93
+      "line": 103
     },
     {
       "method": "POST",
@@ -7189,7 +7294,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 102
+      "line": 112
     },
     {
       "method": "POST",
@@ -7217,7 +7322,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 120
+      "line": 130
     },
     {
       "method": "POST",
@@ -7232,7 +7337,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 119
+      "line": 129
     },
     {
       "method": "GET",
@@ -7247,7 +7352,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 124
+      "line": 134
     },
     {
       "method": "POST",
@@ -7262,7 +7367,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 125
+      "line": 135
     },
     {
       "method": "POST",
@@ -7277,7 +7382,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 110
+      "line": 120
     },
     {
       "method": "POST",
@@ -7344,7 +7449,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 121
+      "line": 131
     },
     {
       "method": "POST",
@@ -7359,7 +7464,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 112
+      "line": 122
     },
     {
       "method": "POST",
@@ -11778,6 +11883,21 @@
         "path": "/rpa/executions/:id/liveview/stop",
         "method": "POST",
         "handler": "Stop"
+      },
+      {
+        "path": "/rpa/schedules",
+        "method": "POST",
+        "handler": "Create"
+      },
+      {
+        "path": "/rpa/schedules/:id/delete",
+        "method": "POST",
+        "handler": "Delete"
+      },
+      {
+        "path": "/rpa/schedules/:id/update",
+        "method": "POST",
+        "handler": "Update"
       },
       {
         "path": "/rpa/tasks",

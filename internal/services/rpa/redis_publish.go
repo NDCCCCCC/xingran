@@ -66,6 +66,18 @@ func publishRedisChannel(ctx context.Context, c cache.Cache, channel string, pay
 	return nil
 }
 
+// PublishScaleCommand 发布扩缩容指令到 Redis 频道（Phase 158 / CLEANUP-01）。
+//
+// 复用 core.Cache 的底层 Redis 客户端（与取消/人工干预同款断言路径），
+// 彻底消除 WorkerHandler「每实例 redis.NewClient」的连接泄漏。
+//
+// 调用方（api/v1/rpa/worker_handler.go）不再持有独立 *redis.Client，
+// 统一走 h.core.Cache —— cache 未注入或不支持 Redis 操作时返回可读错误，
+// 由调用方决定是否降级。
+func PublishScaleCommand(ctx context.Context, c cache.Cache, channel string, payload interface{}) error {
+	return publishRedisChannel(ctx, c, channel, payload)
+}
+
 // PublishExecutionCancel 发布取消指令（RUNTIME-03）。
 // payload 携带谁、何时、原因 —— worker 侧仅按 executionID 取消，字段用于日志留痕。
 func PublishExecutionCancel(ctx context.Context, c cache.Cache, executionID, operator, reason string) error {

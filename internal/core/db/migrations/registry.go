@@ -87,6 +87,10 @@ var ActiveMigrations = []struct {
 	// v1.57：端口写审计名称快照列 + 历史回填（审计页 UUID → 名称二期）。
 	// 按维护约定同步登记。
 	{254, "port_write_audit_name_snapshot"},
+	// Phase 158 / CLEANUP-01~02：RPA 批量执行项报告表（sys_rpa_batch_item_reports，
+	// 取代 100/95/5 假常量）+ sys_rpa_schedules 补建 + 调度 4 权限码 F 型播种。
+	// 按维护约定同步登记（PG + sqlite 两分支都已调用）。
+	{257, "rpa_batch_report_and_schedule_perm"},
 }
 
 // ReconcileResult 对账结果：registry 与库内 sys_schema_migrations 记录的差异。

@@ -58,6 +58,11 @@ func SetupPublicWorkerRouter(r *gin.RouterGroup, core *core.Core) {
 // flow 组已下线（2026-11-11）：7 端点为执行引擎内部能力直接暴露（条件评估/
 // 数据映射/错误处理），前端零调用、不应公开暴露；内部消费方走 service 层直调，
 // 不经 HTTP。原 SetupFlowRouter 与其注册一并移除。
+//
+// Phase 158 / CLEANUP-03：flow 组的服务端实现（flow_handler.go /
+// data_mapper.go / error_handling.go / flow_control.go）经 grep 取证确认
+// 零非测试调用方后整体删除 —— 它们是「接口齐全但无人调用」的死代码，
+// 与本注释描述的「已下线」状态一致（此前只下线了路由，实现仍留在仓库）。
 func SetupRPARouter(r *gin.RouterGroup, core *core.Core) {
 	// Phase 103 CONV-03 (D-103-20): 第 6 参数注入 base.CacheProvider
 	// CONTRACT-01（D1）: 第 5 参 passwordCipher 必须注入 core.SM4Cipher。
@@ -86,6 +91,11 @@ func SetupRPARouter(r *gin.RouterGroup, core *core.Core) {
 	// Phase 155 / LIVEVIEW-01~05：实时画面端点组（在 /executions 前缀下追加
 	// /:id/liveview/* 子组；尾追加不改既有执行路由行，归属协议第 6 条）。
 	SetupLiveViewRouter(r.Group("/executions"), services, core)
+
+	// Phase 158 / CLEANUP-02：定时调度端点组（尾追加，不改既有行 —— ROADMAP
+	// 「文件面漏项补登」要求本 phase 补上此前漏登的 Schedule CRUD 路由注册）。
+	// sys_rpa_schedules 此前零服务零 API（D18），本组补齐 CRUD + 触发 + 启停。
+	SetupScheduleRouter(r.Group("/schedules"), services, core)
 }
 
 // SetupTaskRouter 设置任务路由（读端点 ANY-of ops:rpa:task:list；写端点 strict 单码）

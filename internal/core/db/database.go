@@ -900,7 +900,19 @@ func (d *Database) AutoMigrate() error {
 		// default:300/5/0 为常量默认值),无需经过 sanitizeSQLiteModelDefaults 净化。
 		// sys_rpa_schedules/variables/templates 未注册:services/api 无任何运行期
 		// 查询引用,不在本症链路,避免无谓漂移。
+		// ↑ Phase 158 / CLEANUP-02 更新：sys_rpa_schedules 已有运行期查询引用
+		//   （services/rpa/schedule_service.go CRUD + 调度触发），故在此注册；
+		//   sys_rpa_variables/templates 仍无引用，维持不注册。
 		migrateList = append(migrateList, &rpamodels.Task{})
+		// Phase 158 / CLEANUP-01~02：sys_rpa_batch_item_reports（批量执行项报告真值表，
+		// 读侧据此真统计取代 100/95/5 假常量）+ sys_rpa_schedules（定时调度）。
+		// 两模型 tag 均无 PG-only DDL 片段（jsonb 为合法 type-name、default 为常量），
+		// 无需经过 sanitizeSQLiteModelDefaults 净化。PG 分支不注册的原因同上（零漂移）：
+		// PG 新部署由 scripts/dbprovision 建表，存量库由 migration_257 补建。
+		migrateList = append(migrateList,
+			&rpamodels.BatchItemReport{},
+			&rpamodels.Schedule{},
+		)
 		// CONTRACT-04（D4）: 选择器学习两表（sys_rpa_selector_success /
 		// sys_rpa_selector_failure）。模型定义在服务层（services/rpa/selector_learner.go
 		// 的 SelectorSuccessRecord / SelectorFailureRecord），已补 TableName。
@@ -1233,6 +1245,12 @@ func (d *Database) AutoMigrate() error {
 		if err := d.runAndRecord(256, "rpa_nocode_wizard_menu", migrations.Migrate256NocodeWizardMenu); err != nil {
 			applogger.Errorf("新建任务向导菜单播种失败 (非阻断,留待下次启动): %v", err)
 		}
+		// 257：Phase 158 / CLEANUP-01~02 —— 批量执行项报告表（sys_rpa_batch_item_reports）
+		// + sys_rpa_schedules 补建 + 调度 4 个权限码 F 型播种。**非阻断**：
+		// 建表/播种失败只影响批量报告真统计与调度按钮可见性，不影响既有链路。
+		if err := d.runAndRecord(257, "rpa_batch_report_and_schedule_perm", migrations.Migrate257RPABatchReportAndSchedulePerm); err != nil {
+			applogger.Errorf("RPA 批量报告表与调度权限种子迁移失败 (非阻断,留待下次启动): %v", err)
+		}
 		// 缺权限行只让普通角色备份删除 403 / 前端删除按钮不显示；父菜单缺失时迁移内部降级返回 nil。
 		if err := d.runAndRecord(246, "backup_remove_permission_f_type_seed", migrations.Migrate246BackupRemovePermissionFTypeSeed); err != nil {
 			applogger.Errorf("备份删除权限种子迁移失败 (非阻断,留待下次启动): %v", err)
@@ -1419,6 +1437,14 @@ func (d *Database) AutoMigrate() error {
 		// sqlite 分支: 255 Phase 155 / LIVEVIEW-04 RPA 实时画面菜单（双方言迁移）。**非阻断**。
 		if err := d.runAndRecord(255, "rpa_liveview_menu", migrations.Migrate255LiveViewMenu); err != nil {
 			applogger.Errorf("RPA 实时画面菜单播种失败 (非阻断,留待下次启动): %v", err)
+		}
+		// sqlite 分支: 256 Phase 156 / NOCODE-04 新建任务向导菜单（双方言迁移）。**非阻断**。
+		if err := d.runAndRecord(256, "rpa_nocode_wizard_menu", migrations.Migrate256NocodeWizardMenu); err != nil {
+			applogger.Errorf("新建任务向导菜单播种失败 (非阻断,留待下次启动): %v", err)
+		}
+		// sqlite 分支: 257 Phase 158 / CLEANUP-01~02 批量报告表 + 调度表补建 + 调度权限码播种。**非阻断**。
+		if err := d.runAndRecord(257, "rpa_batch_report_and_schedule_perm", migrations.Migrate257RPABatchReportAndSchedulePerm); err != nil {
+			applogger.Errorf("RPA 批量报告表与调度权限种子迁移失败 (非阻断,留待下次启动): %v", err)
 		}
 		// sqlite 分支: 杂项 RBAC F 型种子（task-4，双方言迁移）。**非阻断**。
 		if err := d.runAndRecord(247, "misc_rbac_f_type_seed", migrations.Migrate247MiscRbacFTypeSeed); err != nil {

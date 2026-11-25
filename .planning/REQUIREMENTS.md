@@ -152,9 +152,9 @@
 | FLEET-01 | Phase 157 | Pending |
 | FLEET-02 | Phase 157 | Pending |
 | FLEET-03 | Phase 157 | Pending |
-| CLEANUP-01 | Phase 158 | Pending |
-| CLEANUP-02 | Phase 158 | Pending |
-| CLEANUP-03 | Phase 158 | Pending |
+| CLEANUP-01 | Phase 158 | code-complete · verification-pending（2026-11-25，证据 `.planning/phases/158-cleanup/158-SUMMARY.md`） |
+| CLEANUP-02 | Phase 158 | code-complete · verification-pending（2026-11-25，本机真跑到点触发，证据 `.planning/phases/158-cleanup/158-SUMMARY.md`） |
+| CLEANUP-03 | Phase 158 | code-complete · verification-pending（2026-11-25，删除 2885 行 + 文档真相化，证据 `.planning/phases/158-cleanup/158-SUMMARY.md`） |
 
 **Coverage:**
 - v1 requirements: 31 total

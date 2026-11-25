@@ -610,6 +610,27 @@ func (c *Core) initSchedulerAndTasks() error {
 		// 设置全局数据库访问器，供定时任务使用（必须在同步周期性工单任务之前）
 		scheduler.SetDB(c)
 
+		// Phase 158 / CLEANUP-02：RPA 定时调度接线（sys_rpa_schedules 闭环）。
+		//
+		// 此前该表「零服务零 API」（D18）：模型与表都在，却没有任何 CRUD 入口，
+		// 也没有任何调度注册 —— 写了调度也永远不会到点触发。本处把两端接起来：
+		//   - 服务侧：ScheduleService（CRUD + 到期计算 + 到点触发）
+		//   - 调度侧：每个启用的调度挂一条 cron job（invoke_target=rpa_schedule:{id}）
+		// 到点后由 rpa_schedule handler 调 ScheduleService.TriggerNow —— 与手动触发
+		// 共用 TaskService.Execute 同一执行入口（trigger_type=schedule）。
+		//
+		// 放在调度器初始化处而非 initRPAServices：RPA API 路由是无条件注册的，
+		// 若调度注册被 RPA.Enabled 门控就会出现「能建调度但永不触发」的空档。
+		rpaCredentialSvc := rpa.NewCredentialService(c.GetDB(), c.SM4Cipher, c.Cache)
+		rpaTaskSvc := rpa.NewTaskService(c.GetDB(), c.Cache, rpaCredentialSvc)
+		rpaScheduleSvc := rpa.NewScheduleService(
+			c.GetDB(),
+			rpaTaskSvc,
+			scheduler.NewRPAScheduleJobSyncer(c.Scheduler, c.GetDB()),
+		)
+		scheduler.RegisterRPAScheduleTasks(c.Scheduler, c.GetDB(), rpaScheduleSvc)
+		applogger.Infof("RPA 定时调度注册完成")
+
 		// 同步周期性工单模板到调度器
 		if err := scheduler.SyncPeriodicWorkOrderJobs(c.Scheduler); err != nil {
 			applogger.Warnf("同步周期性工单任务失败: %v", err)

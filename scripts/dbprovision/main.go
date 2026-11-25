@@ -97,6 +97,10 @@ func extraModels() []interface{} {
 		&rpamodels.RPACredential{},
 		&rpamodels.RPASession{},
 		&rpamodels.Notification{},
+		// Phase 158 / CLEANUP-01：批量执行项报告表（报告读侧据此真统计，
+		// 取代此前的硬编码 100/95/5 假常量）。不注册则新部署缺表，
+		// 批量报告端点读侧直接 "no such table"。
+		&rpamodels.BatchItemReport{},
 		// CONTRACT-04（D4）: 选择器学习两表。模型定义在服务层
 		// （services/rpa/selector_learner.go 的 SelectorSuccessRecord /
 		// SelectorFailureRecord，已补 TableName 指向 sys_rpa_selector_success /

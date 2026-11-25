@@ -122,8 +122,8 @@ func newTestCtxWorker(method, path string, body interface{}) (*gin.Context, *htt
 
 // setupWorkerHandler creates a handler wired to a mock service and minimal core.
 // core.OperLogService is nil and core.DB is empty so operlog.Record early-returns.
-// redis client is intentionally nil — the handler reaches Redis only via Scale*
-// paths which our tests don't exercise.
+// Phase 158 / CLEANUP-01：handler 不再持有独立 redis client（改走 core.Cache），
+// 故此处无需再准备 Redis；扩缩容配置读写用例改用真 core（见 cleanup158Core）。
 func setupWorkerHandler(mock *mockWorkerService) *WorkerHandler {
 	h := NewWorkerHandler(mock, &core.Core{
 		CoreInfra:    &core.CoreInfra{DB: &db.Database{}},
@@ -421,9 +421,13 @@ func TestWorkerHandler_ScaleAll_InvalidDirection(t *testing.T) {
 
 // ==================== AutoScaleConfig ====================
 
+// Phase 158 / CLEANUP-01：自动扩缩容配置已改为真持久化（sys_config），
+// 因此这两个用例改走「真实 sqlite 库 + 真实 AutoMigrate」的 core ——
+// 空壳 core（&db.Database{}）没有 DB，读配置会明确报「数据库未初始化」。
+
 func TestWorkerHandler_GetAutoScaleConfig_Success(t *testing.T) {
 	mock := &mockWorkerService{}
-	h := setupWorkerHandler(mock)
+	h := NewWorkerHandler(mock, cleanup158Core(t))
 	c, w := newTestCtxWorker("GET", "/autoscale/config", nil)
 	h.GetAutoScaleConfig(c)
 	assert.Equal(t, http.StatusOK, w.Code)
@@ -441,7 +445,7 @@ func TestWorkerHandler_GetAutoScaleConfig_Success(t *testing.T) {
 
 func TestWorkerHandler_UpdateAutoScaleConfig_Success(t *testing.T) {
 	mock := &mockWorkerService{}
-	h := setupWorkerHandler(mock)
+	h := NewWorkerHandler(mock, cleanup158Core(t))
 	c, w := newTestCtxWorker("POST", "/autoscale/config", AutoScaleConfig{
 		Enabled:            true,
 		ScaleUpThreshold:   20,
