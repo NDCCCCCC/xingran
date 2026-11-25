@@ -238,7 +238,7 @@ PASS
 | 4 | 调度触发任务的**端到端执行结果**（本次本机只验到「生成 `trigger_type=schedule` 的执行记录并下发 Redis Stream」，未验 Worker 侧消费与终态） | 验证类 | 同上 |
 | 5 | `ops:rpa:schedule:*` 四码的**角色授权实测**（migration 257 播种后，非超管持码角色能否正常 CRUD 调度） | 验证类 | 需真实角色/菜单授权环境 |
 | 6 | 调度触发在**多实例**下的重复触发收敛（现有调度引擎无跨实例互斥，参考 `db_backup_tasks.go` 既例） | 能力边界 | 已登记，非本 phase 阻断项 |
-| 7 | 既有基线失败 `internal/services/vdi` `TestAuditService_RecordOperation` | 既有 | 非本 phase 引入；由 vdi 域 owner 处置 |
+| 7 | ~~既有基线失败 `internal/services/vdi` `TestAuditService_RecordOperation`~~ **已于收尾修正（2026-11-25 Lead）** | 已闭环 | 经基线 worktree 实证：该失败**并非既有**，而是 Phase 155 修复 `AuditLog` 的 sqlite 兼容（serializer:json + BeforeCreate UUID）后，本测试仍在断言旧的「sqlite 恒报错」行为（反向固化已修复 bug）。测试已改为断言成功落库，`go test ./internal/services/vdi/` 全绿 |
 | 8 | 既有基线失败 `tests/e2e` `TestE2EAllEndpointsLogged`（exit 127，bash 路径不可用） | 环境 | 由 e2e 脚本 owner 处置 |
 | 9 | 前端 RPA **调度管理页面**（列表/新建/启停 UI） | 未实现 | 本 phase 只交付后端闭环 + 权限码；前端页面未立项（前端零 router 改动归属协议） |
 
