@@ -256,8 +256,14 @@ function round2(n: number): number {
 
 /**
  * 动作类型中文标签（与 ../constants.tsx 的 ACTION_TYPE_TEXT_MAP 同语义，
- * 额外补 screenshot/scroll/hover/press/download/iframe 等 RPA 脚本动作，
+ * 额外补 screenshot/scroll/hover/download/iframe 等 RPA 脚本动作，
  * 因为实时画面里的 actionType 来自脚本步骤而非表单枚举）。
+ *
+ * REC-03：这是**运行时标签表**（liveview 上报的 actionType 可能来自历史脚本），
+ * 与共享枚举 RPA_ACTION_TYPES 同源但允许额外的历史兼容键：
+ *   - `keyboard`：Go 侧同源动作（组合键/快捷键）。
+ *   - `press`：历史前端枚举遗留的漂移键（Go 侧不存在），保留仅为让**旧数据**
+ *     仍能显示中文，不作为新动作来源。
  */
 export const ACTION_TYPE_LABELS: Record<string, string> = {
   navigate: "导航",
@@ -272,7 +278,8 @@ export const ACTION_TYPE_LABELS: Record<string, string> = {
   screenshot: "截图",
   scroll: "滚动",
   hover: "悬停",
-  press: "按键",
+  keyboard: "按键",
+  press: "按键", // 历史兼容键：Go 侧无此动作，仅用于旧数据显示
   download: "下载",
   iframe: "切换 iframe",
   pause: "暂停待人工",

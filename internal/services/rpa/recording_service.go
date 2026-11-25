@@ -1,0 +1,749 @@
+package rpa
+
+// ============================================================================
+// Phase W6 / REC-01：录制与拾取会话的后端中枢。
+//
+// 架构裁定（详见 .planning/phases/w6-rec-and-schedules/W6-PLAN.md §2）：
+//
+//	下行指令  后端 --Redis PubSub recording:session:{id}--> Worker
+//	上行产出  Worker --HTTP POST /rpa/workers/recording/*--> 后端
+//	画面帧    Worker --HTTP POST /rpa/workers/liveview/frame--> 后端
+//	          --NoticeHub WS rpa_liveview_frame--> 前端（**复用 155 帧通道**）
+//
+// 为什么帧复用 liveview 而会话独立：
+//   - 帧的语义（Worker 浏览器画面 + viewport 坐标系 + 可丢广播 + ACK 背压）
+//     与 155 liveview **完全相同**。另立一套必然产生第二套坐标系约定 ——
+//     这是最典型的双源漂移温床，且 155 已经把最硬的两个问题解决了
+//     （队列满丢帧不 close 连接；帧 ACK 即背压）。
+//   - 但录制会话**不是一次执行**：没有 execution 行、不进执行状态机、
+//     不写执行审计。故会话生命周期另立频道与状态机。
+//
+// 状态机（后端侧）：
+//
+//	created --start--> starting --(Worker 报 recording)--> recording
+//	   |                     |                                  |
+//	   |                     +-------------- stop --------------+
+//	   |                                                    --> stopped（终态）
+//	   +-- 闲置超时 / 前端离开 --> expired（终态，清理 Worker 侧页面）
+//
+// 终态语义：stopped 保留产出（可查），expired 直接丢弃（没有产出可留）。
+// ============================================================================
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"sort"
+	"sync"
+	"time"
+
+	"github.com/xingran-next/xingran-go-backend/internal/websocket"
+	"github.com/xingran-next/xingran-go-backend/pkg/cache"
+	"gorm.io/gorm"
+)
+
+// ============================================================================
+// 后端侧镜像类型（与 rpa-worker internal/types/recording.go 同构）
+//
+// 后端是独立 module，不能 import rpa-worker，故在此声明镜像。
+// 镜像的同源性由 internal/api/v1/rpa/recording_protocol_test.go 锁定
+// （直接读 worker 源文件抽取字段名做双向比对，缺一即红）。
+// ============================================================================
+
+// RecordingSessionState 录制会话状态（后端侧）。
+type RecordingSessionState string
+
+const (
+	// RecordingSessionCreated 已创建（已下发 start 指令，等待 Worker 就绪）。
+	RecordingSessionCreated RecordingSessionState = "created"
+	// RecordingSessionStarting Worker 正在准备（开页面、注入录制器）。
+	RecordingSessionStarting RecordingSessionState = "starting"
+	// RecordingSessionRecording 正在录制。
+	RecordingSessionRecording RecordingSessionState = "recording"
+	// RecordingSessionStopped 已停止，产出可用（终态）。
+	RecordingSessionStopped RecordingSessionState = "stopped"
+	// RecordingSessionFailed 出错（终态）。
+	RecordingSessionFailed RecordingSessionState = "failed"
+	// RecordingSessionExpired 闲置超时回收（终态，产出丢弃）。
+	RecordingSessionExpired RecordingSessionState = "expired"
+	// RecordingSessionAborted 被强制中止（终态）。
+	RecordingSessionAborted RecordingSessionState = "aborted"
+)
+
+// IsTerminalRecordingState 是否终态（终态不再接受状态变更）。
+func IsTerminalRecordingState(s RecordingSessionState) bool {
+	switch s {
+	case RecordingSessionStopped, RecordingSessionFailed, RecordingSessionExpired,
+		RecordingSessionAborted:
+		return true
+	}
+	return false
+}
+
+// RecordingActionName 中文名（前端可见文案，零技术术语）。
+func RecordingActionName(s RecordingSessionState) string {
+	switch s {
+	case RecordingSessionCreated:
+		return "正在准备"
+	case RecordingSessionStarting:
+		return "正在准备"
+	case RecordingSessionRecording:
+		return "正在录制"
+	case RecordingSessionStopped:
+		return "已完成"
+	case RecordingSessionFailed:
+		return "出错了"
+	case RecordingSessionExpired:
+		return "已结束"
+	case RecordingSessionAborted:
+		return "已中止"
+	}
+	return "未知状态"
+}
+
+// RecordingTier 一级选择器候选（7 级阶梯的其中一级）。
+type RecordingTier struct {
+	Tier     int    `json:"tier"`
+	Name     string `json:"name"`
+	Selector string `json:"selector"`
+	OK       bool   `json:"ok"`
+	Score    int    `json:"score"`
+}
+
+// RecordingPickResult 拾取结果（7 级阶梯）。
+type RecordingPickResult struct {
+	SessionID        string          `json:"sessionId"`
+	Found            bool            `json:"found"`
+	Tag              string          `json:"tag,omitempty"`
+	Type             string          `json:"type,omitempty"`
+	Text             string          `json:"text,omitempty"`
+	Tiers            []RecordingTier `json:"tiers,omitempty"`
+	Recommended      string          `json:"recommended,omitempty"`
+	RecommendedTier  int             `json:"recommendedTier,omitempty"`
+	RecommendedScore int             `json:"recommendedScore,omitempty"`
+	Frame            string          `json:"frame,omitempty"`
+	Message          string          `json:"message,omitempty"`
+}
+
+// RecordingResultData 录制产出（后端权威持有）。
+type RecordingResultData struct {
+	// Actions 动作序列（与 worker types.Action 同构：type/selector/params/...）。
+	Actions []map[string]interface{} `json:"actions"`
+	// Steps 每个动作的中文描述（与 Actions 等长）。
+	Steps []string `json:"steps"`
+	// StartURL 录制起始地址。
+	StartURL string `json:"startUrl,omitempty"`
+	// EventCount 原始事件数（诊断用）。
+	EventCount int `json:"eventCount"`
+}
+
+// RecordingStatusUpdate Worker → 后端的状态上报体。
+type RecordingStatusUpdate struct {
+	SessionID  string `json:"sessionId"`
+	WorkerID   string `json:"workerId,omitempty"`
+	Status     string `json:"status"`
+	EventCount int    `json:"eventCount"`
+	Message    string `json:"message,omitempty"`
+	Timestamp  int64  `json:"timestamp,omitempty"`
+}
+
+// RecordingPickUpdate Worker → 后端的拾取结果上报体。
+type RecordingPickUpdate struct {
+	SessionID        string `json:"sessionId"`
+	WorkerID         string `json:"workerId,omitempty"`
+	Found            bool   `json:"found"`
+	Tag              string `json:"tag,omitempty"`
+	Type             string `json:"type,omitempty"`
+	Text             string `json:"text,omitempty"`
+	Tiers            []RecordingTier `json:"tiers,omitempty"`
+	Recommended      string `json:"recommended,omitempty"`
+	RecommendedTier  int    `json:"recommendedTier,omitempty"`
+	RecommendedScore int    `json:"recommendedScore,omitempty"`
+	Frame            string `json:"frame,omitempty"`
+	Message          string `json:"message,omitempty"`
+	Timestamp        int64  `json:"timestamp,omitempty"`
+}
+
+// RecordingResultUpdate Worker → 后端的最终产出上报体。
+type RecordingResultUpdate struct {
+	SessionID  string                   `json:"sessionId"`
+	WorkerID   string                   `json:"workerId,omitempty"`
+	Actions    []map[string]interface{} `json:"actions"`
+	Steps      []string                 `json:"steps"`
+	StartURL   string                   `json:"startUrl,omitempty"`
+	EventCount int                      `json:"eventCount"`
+	Timestamp  int64                    `json:"timestamp,omitempty"`
+}
+
+// ============================================================================
+// 会话表
+// ============================================================================
+
+// RecordingSession 单个录制会话。
+type RecordingSession struct {
+	ID       string                 `json:"id"`
+	TaskID   string                 `json:"taskId,omitempty"`
+	WorkerID string                 `json:"workerId,omitempty"`
+	// OperatorID / OperatorName 操作者（审计与归属）。
+	OperatorID   string `json:"operatorId,omitempty"`
+	OperatorName string `json:"operatorName,omitempty"`
+	// TargetURL 起始地址（可空）。
+	TargetURL string `json:"targetUrl,omitempty"`
+
+	State RecordingSessionState `json:"state"`
+	// Message 状态附带的可读说明（如出错原因）。
+	Message string `json:"message,omitempty"`
+	// EventCount 已采集事件数。
+	EventCount int `json:"eventCount"`
+
+	// Result 录制产出（stop 后可用）。
+	Result *RecordingResultData `json:"result,omitempty"`
+	// LastPick 最近一次拾取结果（前端浮层消费）。
+	LastPick *RecordingPickResult `json:"lastPick,omitempty"`
+
+	CreatedAt time.Time `json:"createdAt"`
+	UpdatedAt time.Time `json:"updatedAt"`
+	// lastSeen 最近一次活动（闲置超时判定）。
+	lastSeen time.Time
+}
+
+// RecordingHub 后端侧录制会话中枢（单例，挂在 ServiceGroup）。
+type RecordingHub struct {
+	cache     cache.Cache
+	noticeHub *websocket.NoticeHub
+	log       interface{ Info(string, ...interface{}) }
+	// db 任务脚本落库用（产出直接写回关联任务的 script 列）。
+	db *gorm.DB
+	// taskSvc 任务服务（写回脚本走既有 Update 路径，保持字段语义一致）。
+	taskSvc TaskService
+
+	mu       sync.Mutex
+	sessions map[string]*RecordingSession
+	closed   bool
+
+	ctx         context.Context
+	cancel      context.CancelFunc
+	janitorDone chan struct{}
+}
+
+// Redis 键（后端侧会话态暂存，跨进程重启不丢）。
+const (
+	// recordingSessionKeyFmt 单会话的 Redis 键。
+	recordingSessionKeyFmt = "rpa:recording:session:%s"
+	// recordingSessionTTL 会话在 Redis 的存活时长（超过即视为过期）。
+	recordingSessionTTL = 2 * time.Hour
+)
+
+// RecordingHubOption 装配选项。
+type RecordingHubOption struct {
+	Cache     cache.Cache
+	NoticeHub *websocket.NoticeHub
+	Log       interface{ Info(string, ...interface{}) }
+	// DB 任务脚本落库用（可选：nil 时不落库）。
+	DB *gorm.DB
+	// TaskService 任务服务（可选：nil 时不落库）。
+	TaskService TaskService
+}
+
+// NewRecordingHub 构造录制中枢并启动唯一 janitor。
+func NewRecordingHub(opt RecordingHubOption) *RecordingHub {
+	ctx, cancel := context.WithCancel(context.Background())
+	h := &RecordingHub{
+		cache:      opt.Cache,
+		noticeHub:  opt.NoticeHub,
+		log:        opt.Log,
+		db:         opt.DB,
+		taskSvc:    opt.TaskService,
+		sessions:   make(map[string]*RecordingSession),
+		ctx:        ctx,
+		cancel:     cancel,
+		janitorDone: make(chan struct{}),
+	}
+	go h.janitor()
+	return h
+}
+
+// MaxSessions 单 Worker 并发录制会话上限（后端侧只做展示与前置校验，
+// 真正的裁决在 Worker 侧 —— 与 155 的 max_streams 分工一致）。
+func (h *RecordingHub) MaxSessions() int {
+	if h == nil {
+		return 2
+	}
+	// 与 worker 侧默认值保持一致（worker.recording.max_sessions 默认 2）。
+	return 2
+}
+
+// IdleTimeout 后端侧会话闲置超时（默认 5 分钟，与 worker 侧同值）。
+func (h *RecordingHub) IdleTimeout() time.Duration {
+	return 5 * time.Minute
+}
+
+// StartSession 创建并启动一个录制会话：登记会话 → 下发 start 指令给 Worker。
+//
+// 参数：
+//   - taskID：关联任务（可选，用于产出直接写回该任务脚本）
+//   - workerID：目标 Worker（空 = 由 Worker 自行拒收非本机指令）
+//   - targetURL：起始页面地址（可空）
+func (h *RecordingHub) StartSession(ctx context.Context, sessionID, taskID, workerID, operatorID, operatorName, targetURL string) (*RecordingSession, error) {
+	if h == nil {
+		return nil, fmt.Errorf("录制服务未初始化")
+	}
+	if sessionID == "" {
+		return nil, fmt.Errorf("录制会话 ID 不能为空")
+	}
+
+	now := time.Now()
+	s := &RecordingSession{
+		ID:           sessionID,
+		TaskID:       taskID,
+		WorkerID:     workerID,
+		OperatorID:   operatorID,
+		OperatorName: operatorName,
+		TargetURL:    targetURL,
+		State:        RecordingSessionCreated,
+		CreatedAt:    now,
+		UpdatedAt:    now,
+		lastSeen:     now,
+	}
+
+	h.mu.Lock()
+	if _, exists := h.sessions[sessionID]; exists {
+		h.mu.Unlock()
+		return nil, fmt.Errorf("录制会话已在进行中")
+	}
+	h.sessions[sessionID] = s
+	h.mu.Unlock()
+
+	h.persist(ctx, s)
+
+	// 下发 start 指令（尽力而为：publish 失败不回滚会话登记，
+	// 由 janitor 在闲置超时后清理 —— 与 155 的 watch publish 同款裁定）。
+	cmd := map[string]interface{}{
+		"action":    "start",
+		"sessionId": sessionID,
+		"workerId":  workerID,
+		"operator":  operatorName,
+		"targetUrl": targetURL,
+		"taskId":    taskID,
+		"timestamp": now.UnixMilli(),
+	}
+	if err := h.publish(ctx, recordingSessionChannel(sessionID), cmd); err != nil {
+		h.logf("录制开始指令下发失败 (session=%s): %v", sessionID, err)
+		s.State = RecordingSessionFailed
+		s.Message = "无法通知执行机开始录制，请稍后重试"
+		h.mu.Lock()
+		s.UpdatedAt = time.Now()
+		h.mu.Unlock()
+		h.persist(ctx, s)
+		return s, fmt.Errorf("开始录制失败：%w", err)
+	}
+
+	s.State = RecordingSessionStarting
+	h.mu.Lock()
+	s.UpdatedAt = time.Now()
+	h.mu.Unlock()
+	h.persist(ctx, s)
+
+	h.logf("录制会话已创建 (session=%s, worker=%s)", sessionID, workerID)
+	return s, nil
+}
+
+// StopSession 停止录制：下发 stop 指令给 Worker。
+//
+// 产出由 Worker 通过 HTTP 上行（ReportResult），本方法只负责下发指令。
+func (h *RecordingHub) StopSession(ctx context.Context, sessionID, operatorName string) error {
+	if h == nil {
+		return fmt.Errorf("录制服务未初始化")
+	}
+	s, ok := h.get(sessionID)
+	if !ok {
+		return fmt.Errorf("录制会话不存在或已结束")
+	}
+	if IsTerminalRecordingState(s.State) {
+		// 终态：幂等返回（不报错，让前端能安全重复点「停止」）。
+		return nil
+	}
+
+	cmd := map[string]interface{}{
+		"action":    "stop",
+		"sessionId": sessionID,
+		"operator":  operatorName,
+		"timestamp": time.Now().UnixMilli(),
+	}
+	if err := h.publish(ctx, recordingSessionChannel(sessionID), cmd); err != nil {
+		return fmt.Errorf("停止录制失败：%w", err)
+	}
+	return nil
+}
+
+// PickElement 请求拾取元素：下发 pick 指令给 Worker。
+//
+// 结果由 Worker 通过 HTTP 上行（ReportPick），前端轮询 GetSession 取 lastPick。
+func (h *RecordingHub) PickElement(ctx context.Context, sessionID string, x, y float64) error {
+	if h == nil {
+		return fmt.Errorf("录制服务未初始化")
+	}
+	s, ok := h.get(sessionID)
+	if !ok {
+		return fmt.Errorf("录制会话不存在或已结束")
+	}
+	if IsTerminalRecordingState(s.State) {
+		return fmt.Errorf("录制已结束，无法拾取元素")
+	}
+
+	cmd := map[string]interface{}{
+		"action":    "pick",
+		"sessionId": sessionID,
+		"pickX":     x,
+		"pickY":     y,
+		"timestamp": time.Now().UnixMilli(),
+	}
+	if err := h.publish(ctx, recordingSessionChannel(sessionID), cmd); err != nil {
+		return fmt.Errorf("拾取元素失败：%w", err)
+	}
+	return nil
+}
+
+// Keepalive 刷新会话闲置计时（前端心跳）。
+func (h *RecordingHub) Keepalive(ctx context.Context, sessionID string) error {
+	if h == nil {
+		return fmt.Errorf("录制服务未初始化")
+	}
+	s, ok := h.get(sessionID)
+	if !ok {
+		return fmt.Errorf("录制会话不存在或已结束")
+	}
+	h.mu.Lock()
+	s.lastSeen = time.Now()
+	s.UpdatedAt = s.lastSeen
+	h.mu.Unlock()
+
+	cmd := map[string]interface{}{
+		"action":    "keepalive",
+		"sessionId": sessionID,
+		"timestamp": time.Now().UnixMilli(),
+	}
+	// keepalive 下发失败不阻断（Worker 侧也有自己的兜底清理）。
+	if err := h.publish(ctx, recordingSessionChannel(sessionID), cmd); err != nil {
+		h.logf("录制心跳下发失败 (session=%s): %v", sessionID, err)
+	}
+	return nil
+}
+
+// AbortSession 强制中止会话（前端离开 / 出错）。
+func (h *RecordingHub) AbortSession(ctx context.Context, sessionID, reason string) {
+	if h == nil {
+		return
+	}
+	s, ok := h.get(sessionID)
+	if !ok {
+		return
+	}
+	if IsTerminalRecordingState(s.State) {
+		return
+	}
+	cmd := map[string]interface{}{
+		"action":    "abort",
+		"sessionId": sessionID,
+		"reason":    reason,
+		"timestamp": time.Now().UnixMilli(),
+	}
+	if err := h.publish(ctx, recordingSessionChannel(sessionID), cmd); err != nil {
+		h.logf("录制中止指令下发失败 (session=%s): %v", sessionID, err)
+	}
+	h.mu.Lock()
+	s.State = RecordingSessionExpired
+	s.Message = reason
+	s.UpdatedAt = time.Now()
+	h.mu.Unlock()
+	h.persist(ctx, s)
+}
+
+// ReportStatus 接收 Worker 的状态上报。
+func (h *RecordingHub) ReportStatus(ctx context.Context, up *RecordingStatusUpdate) error {
+	if h == nil {
+		return fmt.Errorf("录制服务未初始化")
+	}
+	if up == nil || up.SessionID == "" {
+		return fmt.Errorf("状态上报缺少 sessionId")
+	}
+	s, ok := h.get(up.SessionID)
+	if !ok {
+		return fmt.Errorf("录制会话不存在或已结束")
+	}
+	h.mu.Lock()
+	if IsTerminalRecordingState(s.State) {
+		h.mu.Unlock()
+		return nil // 终态不再变更（Worker 迟到的上报）
+	}
+	switch up.Status {
+	case string(RecordingSessionRecording):
+		s.State = RecordingSessionRecording
+	case string(RecordingSessionStarting):
+		s.State = RecordingSessionStarting
+	case string(RecordingSessionStopped):
+		s.State = RecordingSessionStopped
+	case string(RecordingSessionFailed):
+		s.State = RecordingSessionFailed
+		s.Message = up.Message
+	case string(RecordingSessionAborted):
+		s.State = RecordingSessionExpired
+	}
+	if up.EventCount > 0 {
+		s.EventCount = up.EventCount
+	}
+	if up.Message != "" && s.Message == "" {
+		s.Message = up.Message
+	}
+	s.UpdatedAt = time.Now()
+	s.lastSeen = s.UpdatedAt
+	h.mu.Unlock()
+	h.persist(ctx, s)
+	return nil
+}
+
+// ReportPick 接收 Worker 的拾取结果。
+func (h *RecordingHub) ReportPick(ctx context.Context, up *RecordingPickUpdate) error {
+	if h == nil {
+		return fmt.Errorf("录制服务未初始化")
+	}
+	if up == nil || up.SessionID == "" {
+		return fmt.Errorf("拾取上报缺少 sessionId")
+	}
+	s, ok := h.get(up.SessionID)
+	if !ok {
+		return fmt.Errorf("录制会话不存在或已结束")
+	}
+	pick := &RecordingPickResult{
+		SessionID:        up.SessionID,
+		Found:            up.Found,
+		Tag:              up.Tag,
+		Type:             up.Type,
+		Text:             up.Text,
+		Tiers:            up.Tiers,
+		Recommended:      up.Recommended,
+		RecommendedTier:  up.RecommendedTier,
+		RecommendedScore: up.RecommendedScore,
+		Frame:            up.Frame,
+		Message:          up.Message,
+	}
+	h.mu.Lock()
+	s.LastPick = pick
+	s.UpdatedAt = time.Now()
+	s.lastSeen = s.UpdatedAt
+	h.mu.Unlock()
+	h.persist(ctx, s)
+	return nil
+}
+
+// ReportResult 接收 Worker 的最终产出（**权威结果**）。
+func (h *RecordingHub) ReportResult(ctx context.Context, up *RecordingResultUpdate) error {
+	if h == nil {
+		return fmt.Errorf("录制服务未初始化")
+	}
+	if up == nil || up.SessionID == "" {
+		return fmt.Errorf("产出上报缺少 sessionId")
+	}
+	s, ok := h.get(up.SessionID)
+	if !ok {
+		return fmt.Errorf("录制会话不存在或已结束")
+	}
+	h.mu.Lock()
+	s.Result = &RecordingResultData{
+		Actions:    up.Actions,
+		Steps:      up.Steps,
+		StartURL:   up.StartURL,
+		EventCount: up.EventCount,
+	}
+	s.State = RecordingSessionStopped
+	s.EventCount = up.EventCount
+	s.UpdatedAt = time.Now()
+	s.lastSeen = s.UpdatedAt
+	taskID := s.TaskID
+	h.mu.Unlock()
+	h.persist(ctx, s)
+	h.logf("录制产出已接收 (session=%s, actions=%d)", up.SessionID, len(up.Actions))
+
+	// 产出直接写回关联任务的脚本（REC-01 验收要求：
+	// 「停止 → 产出 actions JSON 存为该 task 的脚本」）。
+	// 落库失败**不回滚**产出（产出已在会话里，前端仍能取到并填进向导）。
+	if taskID != "" {
+		if err := h.saveActionsToTask(ctx, taskID, up.Actions); err != nil {
+			h.logf("录制产出写回任务脚本失败 (task=%s): %v", taskID, err)
+		}
+	}
+	return nil
+}
+
+// saveActionsToTask 把录制产出写为任务的脚本。
+//
+// 走 TaskService.Update（既有更新路径），保证字段语义与其它更新入口一致。
+func (h *RecordingHub) saveActionsToTask(ctx context.Context, taskID string, actions []map[string]interface{}) error {
+	if h == nil {
+		return fmt.Errorf("录制服务未初始化")
+	}
+	if taskID == "" {
+		return fmt.Errorf("任务 ID 为空")
+	}
+	if len(actions) == 0 {
+		return fmt.Errorf("录制产出为空，未写入任务")
+	}
+	if h.taskSvc == nil {
+		return fmt.Errorf("任务服务未注入")
+	}
+	// []map[string]interface{} → []interface{}（UpdateTaskRequest.Script 的形状）。
+	script := make([]interface{}, 0, len(actions))
+	for _, a := range actions {
+		script = append(script, a)
+	}
+	return h.taskSvc.Update(ctx, &UpdateTaskRequest{
+		ID:     taskID,
+		Script: script,
+	}, "")
+}
+
+// GetSession 取会话快照。
+func (h *RecordingHub) GetSession(sessionID string) (*RecordingSession, bool) {
+	return h.get(sessionID)
+}
+
+// get 取会话（内部加锁）。
+func (h *RecordingHub) get(sessionID string) (*RecordingSession, bool) {
+	if h == nil {
+		return nil, false
+	}
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	s, ok := h.sessions[sessionID]
+	if !ok {
+		return nil, false
+	}
+	// 返回副本（避免调用方在锁外改字段）。
+	cp := *s
+	return &cp, true
+}
+
+// ListSessions 列出会话（按创建时间倒序）。
+func (h *RecordingHub) ListSessions() []*RecordingSession {
+	if h == nil {
+		return nil
+	}
+	h.mu.Lock()
+	out := make([]*RecordingSession, 0, len(h.sessions))
+	for _, s := range h.sessions {
+		cp := *s
+		out = append(out, &cp)
+	}
+	h.mu.Unlock()
+	sort.Slice(out, func(i, j int) bool {
+		return out[i].CreatedAt.After(out[j].CreatedAt)
+	})
+	return out
+}
+
+// janitor 唯一内务 goroutine：回收闲置超时的会话。
+func (h *RecordingHub) janitor() {
+	defer close(h.janitorDone)
+	ticker := time.NewTicker(30 * time.Second)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-h.ctx.Done():
+			return
+		case <-ticker.C:
+			h.sweep()
+		}
+	}
+}
+
+// sweep 一轮回收：闲置超时 → 下发 abort + 标记 expired + 删会话。
+func (h *RecordingHub) sweep() {
+	h.mu.Lock()
+	now := time.Now()
+	expired := make([]string, 0)
+	for id, s := range h.sessions {
+		if IsTerminalRecordingState(s.State) {
+			// 终态会话保留一段时间（供前端查产出），超时后清理。
+			if now.Sub(s.UpdatedAt) > h.IdleTimeout() {
+				expired = append(expired, id)
+			}
+			continue
+		}
+		if now.Sub(s.lastSeen) > h.IdleTimeout() {
+			expired = append(expired, id)
+		}
+	}
+	h.mu.Unlock()
+
+	for _, id := range expired {
+		h.AbortSession(context.Background(), id, "长时间无操作，已自动结束")
+		h.mu.Lock()
+		delete(h.sessions, id)
+		h.mu.Unlock()
+	}
+}
+
+// Close 关闭中枢（中止全部会话，退出 janitor）。
+func (h *RecordingHub) Close() {
+	if h == nil {
+		return
+	}
+	h.mu.Lock()
+	if h.closed {
+		h.mu.Unlock()
+		return
+	}
+	h.closed = true
+	ids := make([]string, 0, len(h.sessions))
+	for id := range h.sessions {
+		ids = append(ids, id)
+	}
+	h.mu.Unlock()
+
+	for _, id := range ids {
+		h.AbortSession(context.Background(), id, "系统关闭")
+	}
+	h.cancel()
+	select {
+	case <-h.janitorDone:
+	case <-time.After(2 * time.Second):
+	}
+}
+
+// persist 把会话态写入 Redis（跨进程重启不丢；缓存不可用时静默跳过）。
+func (h *RecordingHub) persist(ctx context.Context, s *RecordingSession) {
+	if h == nil || h.cache == nil || s == nil {
+		return
+	}
+	data, err := json.Marshal(s)
+	if err != nil {
+		return
+	}
+	if err := h.cache.Set(ctx, fmt.Sprintf(recordingSessionKeyFmt, s.ID), string(data), recordingSessionTTL); err != nil {
+		h.logf("录制会话持久化失败 (session=%s): %v", s.ID, err)
+	}
+}
+
+// publish 下发一条录制指令到 Redis（尽力而为）。
+func (h *RecordingHub) publish(ctx context.Context, channel string, payload interface{}) error {
+	if h == nil {
+		return fmt.Errorf("录制服务未初始化")
+	}
+	if h.cache == nil {
+		return fmt.Errorf("cache 未注入，无法下发录制指令")
+	}
+	return publishRedisChannel(ctx, h.cache, channel, payload)
+}
+
+// logf 便捷日志。
+func (h *RecordingHub) logf(format string, args ...interface{}) {
+	if h == nil || h.log == nil {
+		return
+	}
+	h.log.Info(fmt.Sprintf(format, args...))
+}
+
+// recordingSessionChannel 录制会话的下行频道名（与 worker 端同名）。
+func recordingSessionChannel(sessionID string) string {
+	return "recording:session:" + sessionID
+}

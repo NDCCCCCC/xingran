@@ -46,6 +46,13 @@ func SetupPublicWorkerRouter(r *gin.RouterGroup, core *core.Core) {
 	liveHandler := NewLiveViewHandler(services.LiveViewService, services.ExecutionService).WithCore(core)
 	r.POST("/workers/liveview/frame", middleware.WorkerAuth(tokenSvc, required), liveHandler.IngestWorkerFrame)
 	r.POST("/workers/liveview/event", middleware.WorkerAuth(tokenSvc, required), liveHandler.IngestWorkerAudit)
+
+	// Phase W6 / REC-01：录制会话的 Worker 上行端点（状态 / 产出 / 拾取结果）。
+	// 处置与 liveview 上行完全一致（WorkerAuth 而非用户权限码）。
+	recordingHandler := NewRecordingHandler(services.RecordingService)
+	r.POST("/workers/recording/status", middleware.WorkerAuth(tokenSvc, required), recordingHandler.IngestWorkerStatus)
+	r.POST("/workers/recording/result", middleware.WorkerAuth(tokenSvc, required), recordingHandler.IngestWorkerResult)
+	r.POST("/workers/recording/pick", middleware.WorkerAuth(tokenSvc, required), recordingHandler.IngestWorkerPick)
 }
 
 // SetupRPARouter 设置 RPA 路由（统一入口）
@@ -96,6 +103,10 @@ func SetupRPARouter(r *gin.RouterGroup, core *core.Core) {
 	// 「文件面漏项补登」要求本 phase 补上此前漏登的 Schedule CRUD 路由注册）。
 	// sys_rpa_schedules 此前零服务零 API（D18），本组补齐 CRUD + 触发 + 启停。
 	SetupScheduleRouter(r.Group("/schedules"), services, core)
+
+	// Phase W6 / REC-01：录制与拾取会话端点组（尾追加，不改既有行 —— 归属协议第 1 条）。
+	// 画面帧复用 155 liveview 帧通道；本组只承载会话生命周期与产出查询。
+	SetupRecordingRouter(r.Group("/recordings"), services, core)
 }
 
 // SetupTaskRouter 设置任务路由（读端点 ANY-of ops:rpa:task:list；写端点 strict 单码）

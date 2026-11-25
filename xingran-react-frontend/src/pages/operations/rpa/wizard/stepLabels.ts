@@ -13,7 +13,7 @@
  *     枚举，不新增动作（协议第 1 条：156 不得作为第三写方）。
  */
 
-import type { Action } from "@/types/rpa";
+import type { Action, ActionType } from "@/types/rpa";
 import { ACTION_TYPE_TEXT_MAP } from "../constants";
 
 /**
@@ -21,9 +21,13 @@ import { ACTION_TYPE_TEXT_MAP } from "../constants";
  *
  * 与 ACTION_TYPE_TEXT_MAP 的差异是刻意为之：这里追求「读起来像人说的话」，
  * 例如 click → 「点击」而不是「点击元素」，fill → 「填入」而不是「填写表单」。
- * 未覆盖的动作回落到 ACTION_TYPE_TEXT_MAP（保证 154 新增动作时不会显示英文）。
+ *
+ * REC-03：类型从 `Record<string, string>` 收紧为 `Record<ActionType, string>`，
+ * 键集被**编译期**强制等于共享枚举（types/rpa.ts 的 RPA_ACTION_TYPES，26 个）。
+ * 少一个键 → tsc 报错；多一个键（历史上有 Go 侧不存在的 press）→ 同样报错。
+ * 这从根上消灭了「前端动词表」与「worker 动作全集」的双源漂移。
  */
-const HUMAN_VERBS: Record<string, string> = {
+export const HUMAN_VERBS: Record<ActionType, string> = {
   navigate: "打开网页",
   click: "点击",
   fill: "填入",
@@ -81,13 +85,11 @@ export function describeAction(action: Action): string {
 
   const value = action.params?.value;
   const label = extractHumanLabel(action);
-  // 用 string 做 switch：前端 ActionType（types/rpa.ts）是 13 个值的子集，
-  // 而 rpa-worker 的动作全集是 26 个（Phase 154）。归属协议第 1 条禁止 156
-  // 作为第三写方改共享枚举，因此这里按字符串分派 —— 既能让 154 新增的动作
-  // 立刻获得中文描述（HUMAN_VERBS 已覆盖全集），又不越界改共享类型。
-  const type = action.type as string;
-
-  switch (type) {
+  // REC-03：对共享枚举做**穷尽 switch** —— 直接 switch (action.type)，
+  // default 分支用 never 断言兜底。将来共享枚举（types/rpa.ts 的
+  // RPA_ACTION_TYPES）新增动作而这里漏了 case 时，action.type 不再是 never，
+  // 编译期直接报错 —— 不再依赖「字符串分派 + 运行时回落」这种会静默漏网的做法。
+  switch (action.type) {
     case "navigate":
       // 只显示站点名，不显示完整 URL（URL 对员工是噪声）
       return "打开网页";
@@ -127,8 +129,28 @@ export function describeAction(action: Action): string {
       return "滚动页面";
     case "hover":
       return label ? `鼠标移到「${label}」` : "鼠标悬停";
-    default:
+    case "drag":
+      // 拖拽动作：有 label 时描述为「拖动到「label」」，无 label 时用动词表兜底
+      return label ? `拖动到「${label}」` : verb;
+    // 以下动作没有独立的句式，统一回落到动词表（等待类已在 SIMPLE_ACTIONS
+    // 提前返回；evaluate/script/loop/condition/autologin 本身就是动词本身）。
+    case "wait":
+    case "waitFor":
+    case "screenshot":
+    case "close":
+    case "pause":
+    case "evaluate":
+    case "script":
+    case "loop":
+    case "condition":
+    case "autologin":
       return verb;
+    default: {
+      // 穷尽性断言：共享枚举新增动作而上面漏写 case 时，此处类型不是 never，
+      // 赋值即编译报错（漏网动作无法再静默落到「执行操作」）。
+      const _exhaustive: never = action.type;
+      return _exhaustive;
+    }
   }
 }
 

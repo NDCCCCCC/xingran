@@ -1,4 +1,4 @@
-﻿/**
+/**
  * RPA 任务管理页面
  */
 
@@ -19,7 +19,10 @@ import { TaskEditModal } from "./modals";
 import { TaskWizard } from "../wizard/TaskWizard";
 import type { WizardDraft } from "../wizard/payload";
 import { toTaskPayload } from "../wizard/payload";
+import type { Action } from "@/types/rpa";
 import { post } from "@/lib/api";
+// Phase W6 / REC-01：录制面板（录制/拾取会话的前端入口）
+import { RecordingPanel } from "../recording/RecordingPanel";
 // Phase 71 (W3)：裸 Input/Select → 契约组件。
 // 任务状态为固定枚举（业务禁搜）→ children 改写 options + showSearch={false}。
 // CONTRACT-02：任务页筛选必须筛「任务态」——与后端 TaskListParams.Status
@@ -108,6 +111,11 @@ const TaskManagement: FC = () => {
   // 归属协议补登项：tasks/index.tsx:212-223 的「新增任务」按钮改开向导。
   // 编辑器仍保留（编辑既有任务时使用），只是「新增」走更友好的向导路径。
   const [wizardOpen, setWizardOpen] = useState(false);
+
+  // Phase W6 / REC-01：录制面板开关（向导第 1 步「录一段操作」的真按钮）。
+  const [recordingOpen, setRecordingOpen] = useState(false);
+  // 录制产物回填给向导（第 2 步步骤列表的直接来源）。
+  const [recordedActions, setRecordedActions] = useState<Action[]>([]);
 
 
   const refreshData = useCallback(() => {
@@ -336,6 +344,8 @@ const TaskManagement: FC = () => {
           data-testid="task-wizard-modal"
         >
           <TaskWizard
+            key={recordedActions.length > 0 ? "with-recording" : "fresh"}
+            initialActions={recordedActions.length > 0 ? recordedActions : undefined}
             onSave={async (draft: WizardDraft) => {
               await post("/rpa/tasks", toTaskPayload(draft));
               showSuccessMessage("创建");
@@ -347,9 +357,40 @@ const TaskManagement: FC = () => {
               // 向导内部已自带 AI 生成器入口；此处仅作为无动作时的兜底提示
               message.info("请在上方「用中文说」里点下一步，系统会打开智能生成");
             }}
-            onOpenRecorder={() => {
-              message.info("请在「RPA 实时画面」里开始录制，录完回到这里点下一步");
+            // Phase W6 / REC-01：「录制」从指引文案改为真按钮 → 打开录制面板。
+            // 录制完成（Worker 产出 actions 经后端落库）→ 直接填进第 2 步步骤列表。
+            onOpenRecorder={() => setRecordingOpen(true)}
+          />
+        </Modal>
+
+        {/*
+          Phase W6 / REC-01：录制面板承载。
+          独立 Modal（宽 1080）：录制画面需要更大的可视区域；关闭面板即中止会话
+          （面板卸载时 abort，后端闲置超时兜底回收执行机资源）。
+        */}
+        <Modal
+          open={recordingOpen}
+          onCancel={() => setRecordingOpen(false)}
+          footer={null}
+          width={1080}
+          destroyOnHidden
+          title="录制一段操作"
+          data-testid="recording-panel-modal"
+        >
+          <RecordingPanel
+            taskId={undefined}
+            targetUrl={undefined}
+            onFinish={(actions) => {
+              // REC-01 验收路径：停止 → actions 直接填进第 2 步步骤列表。
+              // 实现方式：暂存录制产物 → 关录制面板 → 重开向导（key 变化触发
+              // TaskWizard 重挂载，initialActions 通道把动作带回第 1 步预览，
+              // 员工点「下一步」即在步骤列表里核对）。
+              setRecordedActions(actions);
+              setRecordingOpen(false);
+              message.success(`录制完成，共整理出 ${actions.length} 个步骤`);
+              setWizardOpen(true);
             }}
+            onCancel={() => setRecordingOpen(false)}
           />
         </Modal>
       </Content>

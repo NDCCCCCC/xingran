@@ -28,7 +28,42 @@ type Config struct {
 	// 归属协议第 1 条：154 拥有 browser 侧的页并发 schema（max_pages→max_concurrency
 	// 合并已完成）；155 只新增 screencast 相关键，**不动**任何既有判定。
 	LiveView LiveViewConfig `mapstructure:"liveview"`
+
+	// Recording Phase W6 / REC-01：录制会话参数（顶层节 worker.recording）。
+	// 归属协议第 4 条：录制类型与配置**均放独立文件/独立节**，不进 types.go
+	// 与既有 worker 配置节，避免与 154/155 同文件冲突。
+	Recording RecordingConfig `mapstructure:"recording"`
 }
+
+// RecordingConfig Phase W6 / REC-01：录制与拾取会话的运行参数。
+//
+// 单位与语义：
+//   - MaxSessions：单 Worker 同时进行的录制会话数上限（默认 2）。
+//     与 155 的 max_streams 同款「并发推流上限」配置风格 —— **裁决在 Worker 侧**
+//     （真正的名额在 Worker 裁决，后端只展示上限与可读错误文案）。
+//     注意：每个录制会话占用一个 browser page 名额，故 MaxSessions 实际受
+//     worker.max_concurrency 约束（配置加载期给出可读告警，不静默取小值）。
+//   - IdleTimeout：无任何指令（含 keepalive）超过该时限即回收会话
+//     （默认 5 分钟）。这是**孤儿 page 的兜底**：后端崩溃 / Redis 断连时
+//     会话会悬挂，Worker 侧必须自己把 page 还回去。
+type RecordingConfig struct {
+	// Enabled 是否允许录制（默认开启）。
+	Enabled bool `mapstructure:"enabled"`
+	// MaxSessions 并发录制会话上限（默认 2）。
+	MaxSessions int `mapstructure:"max_sessions"`
+	// IdleTimeout 会话闲置回收时限（默认 5 分钟）。
+	IdleTimeout time.Duration `mapstructure:"idle_timeout"`
+	// EnabledSet 内部标记（不从 yaml 读）：显式配置了 recording.enabled 时为 true。
+	EnabledSet bool `mapstructure:"-"`
+}
+
+// Phase W6 / REC-01 默认值。
+const (
+	// DefaultRecordingMaxSessions 单 Worker 默认并发录制会话上限。
+	DefaultRecordingMaxSessions = 2
+	// DefaultRecordingIdleTimeout 默认会话闲置回收时限。
+	DefaultRecordingIdleTimeout = 5 * time.Minute
+)
 
 // WorkerConfig Worker 配置
 type WorkerConfig struct {
@@ -243,6 +278,9 @@ func Load(path string) (*Config, error) {
 	// 因此这里必须先修正 EnabledSet 与 Enabled，否则显式 false 会被默认值覆盖。
 	applyLiveViewDefaults(v, &cfg.LiveView)
 
+	// Phase W6 / REC-01：录制会话默认值（口径同 liveview）。
+	applyRecordingDefaults(v, &cfg.Recording)
+
 	// Phase 154 / ENGINE-04：未定义变量策略校验（非法值在加载期即失败，
 	// 而不是到执行期才静默走错分支）。
 	if err := validateUndefinedVariablePolicy(&cfg); err != nil {
@@ -420,6 +458,41 @@ func setDefaults(cfg *Config) {
 
 	// Phase 155 / LIVEVIEW：纯结构体路径的兜底默认（v==nil → 默认开启）。
 	applyLiveViewDefaults(nil, &cfg.LiveView)
+
+	// Phase W6 / REC-01：录制配置兜底默认（v==nil → 默认开启）。
+	applyRecordingDefaults(nil, &cfg.Recording)
+}
+
+// applyRecordingDefaults Phase W6 / REC-01：填录制会话默认值。
+//
+// 口径与 applyLiveViewDefaults 同款：「未配置」与「显式 false」的区分。
+// 录制是本里程碑交付项，默认开启；显式写 enabled: false 才关闭。
+func applyRecordingDefaults(v *viper.Viper, rc *RecordingConfig) {
+	if rc == nil {
+		return
+	}
+	switch {
+	case v == nil:
+		// 纯结构体路径（单测直接构造 Config）：默认开启。
+		rc.Enabled = true
+	case v.IsSet("recording.enabled"), v.IsSet("worker.recording.enabled"):
+		// 显式给出 → 以 yaml 为准（含 false）。必须先重置 Enabled，
+		// 否则 setDefaults 的 v==nil 兜底路径会把显式 false 覆盖掉。
+		rc.EnabledSet = true
+		if v.GetBool("recording.enabled") || v.GetBool("worker.recording.enabled") {
+			rc.Enabled = true
+		} else {
+			rc.Enabled = false
+		}
+	default:
+		rc.Enabled = true
+	}
+	if rc.MaxSessions <= 0 {
+		rc.MaxSessions = DefaultRecordingMaxSessions
+	}
+	if rc.IdleTimeout <= 0 {
+		rc.IdleTimeout = DefaultRecordingIdleTimeout
+	}
 }
 
 // applyLiveViewDefaults Phase 155 / LIVEVIEW：填 screencast 默认值。

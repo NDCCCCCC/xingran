@@ -3,6 +3,7 @@
  */
 
 import { Tag } from "antd";
+import { RPA_ACTION_TYPES, type ActionType } from "@/types/rpa";
 
 // ==================== 触发器类型 ====================
 export const TRIGGER_TYPE_OPTIONS = [
@@ -170,27 +171,51 @@ export function renderWorkerStatusTag(status: string) {
 }
 
 // ==================== 脚本动作类型 ====================
-export const ACTION_TYPE_OPTIONS = [
-  { label: "导航", value: "navigate" },
-  { label: "点击", value: "click" },
-  { label: "输入", value: "fill" },
-  { label: "等待", value: "wait" },
-  { label: "选择", value: "select" },
-  { label: "上传", value: "upload" },
-  { label: "提取", value: "extract" },
-  { label: "断言", value: "assert" },
-  { label: "脚本", value: "script" },
-];
 
-// 脚本动作文本映射
-export const ACTION_TYPE_TEXT_MAP: Record<string, string> = {
+/**
+ * 脚本动作文本映射（REC-03：类型改为 Record<ActionType, string>）
+ *
+ * 编译期强制覆盖共享枚举 RPA_ACTION_TYPES 的全部 26 个动作 —— 少一个就直接
+ * tsc 报错。中文名不得含 ASCII 字母（面向普通员工，错误信息不暴露英文）。
+ */
+export const ACTION_TYPE_TEXT_MAP: Record<ActionType, string> = {
   navigate: "导航",
   click: "点击",
   fill: "输入",
-  wait: "等待",
   select: "选择",
-  upload: "上传",
+  wait: "等待",
+  screenshot: "截图",
   extract: "提取",
+  scroll: "滚动",
+  upload: "上传",
+  download: "下载",
+  evaluate: "执行页面脚本",
+  waitFor: "等待元素出现",
+  close: "关闭页面",
+  loop: "循环执行",
+  pause: "暂停待人工",
+  condition: "条件判断",
+  autologin: "自动登录",
   assert: "断言",
+  hover: "悬停",
+  doubleClick: "双击",
+  rightClick: "右键点击",
+  drag: "拖拽",
+  keyboard: "按键",
+  switchTab: "切换页签",
+  iframe: "切换内嵌页面",
   script: "自定义脚本",
 };
+
+/**
+ * 脚本动作类型下拉选项（REC-03：从共享枚举派生）
+ *
+ * 历史上这里是手写的 9 项，而 worker 能执行 26 种动作 —— 下拉里根本选不到
+ * extract 之外的大多数动作，属于典型的双源漂移。现在直接遍历 RPA_ACTION_TYPES
+ * 生成，下拉项永远与共享枚举同源。
+ */
+export const ACTION_TYPE_OPTIONS: Array<{ label: string; value: ActionType }> =
+  RPA_ACTION_TYPES.map((type) => ({
+    label: ACTION_TYPE_TEXT_MAP[type],
+    value: type,
+  }));

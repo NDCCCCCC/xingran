@@ -1251,6 +1251,12 @@ func (d *Database) AutoMigrate() error {
 		if err := d.runAndRecord(257, "rpa_batch_report_and_schedule_perm", migrations.Migrate257RPABatchReportAndSchedulePerm); err != nil {
 			applogger.Errorf("RPA 批量报告表与调度权限种子迁移失败 (非阻断,留待下次启动): %v", err)
 		}
+		// 258：Phase 158 / REC-02 —— RPA 定时调度页面菜单（C 型，父=「RPA 管理」，order=18）。
+		// 归属协议第 6 条：schedules 页面只走 sys_menu seed 注册，前端不改
+		// componentLoader/DynamicRoutes。不扩权限面（调度 4 权限码由 257 播种）。**非阻断**。
+		if err := d.runAndRecord(258, "rpa_schedule_menu", migrations.Migrate258RpaScheduleMenu); err != nil {
+			applogger.Errorf("RPA 定时调度菜单播种失败 (非阻断,留待下次启动): %v", err)
+		}
 		// 缺权限行只让普通角色备份删除 403 / 前端删除按钮不显示；父菜单缺失时迁移内部降级返回 nil。
 		if err := d.runAndRecord(246, "backup_remove_permission_f_type_seed", migrations.Migrate246BackupRemovePermissionFTypeSeed); err != nil {
 			applogger.Errorf("备份删除权限种子迁移失败 (非阻断,留待下次启动): %v", err)
@@ -1445,6 +1451,10 @@ func (d *Database) AutoMigrate() error {
 		// sqlite 分支: 257 Phase 158 / CLEANUP-01~02 批量报告表 + 调度表补建 + 调度权限码播种。**非阻断**。
 		if err := d.runAndRecord(257, "rpa_batch_report_and_schedule_perm", migrations.Migrate257RPABatchReportAndSchedulePerm); err != nil {
 			applogger.Errorf("RPA 批量报告表与调度权限种子迁移失败 (非阻断,留待下次启动): %v", err)
+		}
+		// sqlite 分支: 258 Phase 158 / REC-02 RPA 定时调度页面菜单（双方言迁移）。**非阻断**。
+		if err := d.runAndRecord(258, "rpa_schedule_menu", migrations.Migrate258RpaScheduleMenu); err != nil {
+			applogger.Errorf("RPA 定时调度菜单播种失败 (非阻断,留待下次启动): %v", err)
 		}
 		// sqlite 分支: 杂项 RBAC F 型种子（task-4，双方言迁移）。**非阻断**。
 		if err := d.runAndRecord(247, "misc_rbac_f_type_seed", migrations.Migrate247MiscRbacFTypeSeed); err != nil {

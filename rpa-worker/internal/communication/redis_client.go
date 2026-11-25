@@ -161,3 +161,21 @@ func (r *RedisClient) SubscribeLiveView(ctx context.Context) (*redis.PubSub, err
 	r.logger.Info("subscribed to liveview channel", logger.String("pattern", types.LiveViewPattern))
 	return pubsub, nil
 }
+
+// SubscribeRecording Phase W6 / REC-01：订阅录制会话下行指令
+// （start/stop/pick/keepalive/abort）。
+//
+// 与 SubscribeLiveView 同族：模式订阅一次覆盖所有会话，频道名
+// recording:session:{sessionId}，调用方从 Channel 反解 sessionID。
+//
+// 注意：录制会话的**画面帧**不在此通道上 —— 帧复用 liveview 帧通道
+// （execution:liveview:{sessionId}），坐标系与可丢广播语义共用一套。
+func (r *RedisClient) SubscribeRecording(ctx context.Context) (*redis.PubSub, error) {
+	pubsub := r.client.PSubscribe(ctx, types.RecordingSessionPattern)
+	if _, err := pubsub.Receive(ctx); err != nil {
+		pubsub.Close()
+		return nil, fmt.Errorf("subscribe recording failed: %w", err)
+	}
+	r.logger.Info("subscribed to recording channel", logger.String("pattern", types.RecordingSessionPattern))
+	return pubsub, nil
+}

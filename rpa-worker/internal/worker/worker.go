@@ -19,6 +19,7 @@ import (
 	"github.com/xingran-next/rpa-worker/internal/executor"
 	"github.com/xingran-next/rpa-worker/internal/liveview"
 	"github.com/xingran-next/rpa-worker/internal/logger"
+	"github.com/xingran-next/rpa-worker/internal/recording"
 	"github.com/xingran-next/rpa-worker/internal/types"
 )
 
@@ -50,6 +51,9 @@ type Worker struct {
 	// liveView Phase 155 / LIVEVIEW-01~05：实时画面会话表（单 Worker 一个，
 	// 内含唯一 janitor goroutine；随 Worker 关闭而关闭）。
 	liveView *liveview.Hub
+	// recordingHub Phase W6 / REC-01：录制与拾取会话表（单 Worker 一个，
+	// 内含唯一 janitor goroutine 兜底回收闲置会话的页面）。
+	recordingHub *recording.Hub
 	state    WorkerState
 	stateMutex       sync.RWMutex
 	currentTasks     int
@@ -195,6 +199,17 @@ func (w *Worker) initComponents() error {
 			logger.Duration("idle_timeout", w.config.LiveView.IdleTimeout))
 	}
 
+	// Phase W6 / REC-01：录制与拾取会话表。上下行与 liveview 分离：
+	//   - 画面帧复用 liveview 帧通道（坐标系与可丢广播共用一套）
+	//   - 会话生命周期走 recording:session:* 独立频道
+	// 上行经 APIClient（HTTP + X-Worker-Token），与 liveview 同款处置。
+	w.recordingHub = recording.NewHub(&w.config.Recording, w.apiClient, w.logger)
+	if w.config.Recording.Enabled {
+		w.logger.Info("recording hub initialized",
+			logger.Int("max_sessions", w.recordingHub.MaxSessions()),
+			logger.Duration("idle_timeout", w.recordingHub.IdleTimeout()))
+	}
+
 	// 初始化任务拆分器（混合模式）
 	if w.config.Worker.HybridMode.Enabled {
 		w.taskSplitter = executor.NewTaskSplitter(
@@ -241,6 +256,14 @@ func (w *Worker) Start() error {
 	// Phase 155 / LIVEVIEW：实时画面下行指令监听（watch/stop/input/takeover/...）
 	w.wg.Add(1)
 	go w.liveViewCommandListener()
+
+	// Phase W6 / REC-01：录制会话下行指令监听（start/stop/pick/keepalive/abort）
+	w.wg.Add(1)
+	go w.recordingCommandListener()
+
+	// Phase W6 / REC-01：录制状态周期上报（让前端显示「正在录制」）
+	w.wg.Add(1)
+	go w.recordingPollLoop()
 
 	if w.config.Monitor.HealthEnabled {
 		w.wg.Add(1)
@@ -820,6 +843,10 @@ func (w *Worker) cleanup() error {
 	// 再由 browserManager.Close 回收 page 与 Chrome（154 生命周期语义不破）。
 	if w.liveView != nil {
 		w.liveView.Close()
+	}
+	// Phase W6 / REC-01：中止全部录制会话（释放它们持有的页面）。
+	if w.recordingHub != nil {
+		w.recordingHub.Close()
 	}
 	if err := w.browserManager.Close(); err != nil {
 		errs = append(errs, err)

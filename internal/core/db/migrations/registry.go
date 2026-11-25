@@ -91,6 +91,11 @@ var ActiveMigrations = []struct {
 	// 取代 100/95/5 假常量）+ sys_rpa_schedules 补建 + 调度 4 权限码 F 型播种。
 	// 按维护约定同步登记（PG + sqlite 两分支都已调用）。
 	{257, "rpa_batch_report_and_schedule_perm"},
+	// Phase 158 / REC-02：RPA 定时调度页面菜单（C 型，父=「RPA 管理」，order=18）。
+	// 归属协议第 6 条：schedules 页面只走 sys_menu seed 注册，前端不改
+	// componentLoader/DynamicRoutes。不扩权限面（调度 4 权限码由 257 播种）。
+	// 按维护约定同步登记（PG + sqlite 两分支都已调用）。
+	{258, "rpa_schedule_menu"},
 }
 
 // ReconcileResult 对账结果：registry 与库内 sys_schema_migrations 记录的差异。

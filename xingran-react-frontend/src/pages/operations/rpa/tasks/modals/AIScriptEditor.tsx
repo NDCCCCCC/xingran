@@ -89,7 +89,10 @@ export function mapAIActions(dtos: AIScriptActionDTO[] | undefined): Action[] {
     .map((d, index) => ({
       id: `ai_action_${index + 1}`,
       type: d.type as ActionType,
-      description: (d.attributes?.description as string) || ACTION_TYPE_TEXT_MAP[d.type as string] || d.type,
+      description:
+        (d.attributes?.description as string) ||
+        ACTION_TYPE_TEXT_MAP[d.type as ActionType] ||
+        d.type,
       selector: { type: "css", value: d.selector || "" },
       params: { value: d.value ?? "" },
       timeout: d.timeout ?? 30000,
