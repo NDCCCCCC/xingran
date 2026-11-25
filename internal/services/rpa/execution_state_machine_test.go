@@ -22,6 +22,10 @@ var allStatuses = []rpamodels.RPAExecutionStatus{
 var expectedLegal = map[[2]rpamodels.RPAExecutionStatus]bool{
 	{rpamodels.RPAExecutionStatusPending, rpamodels.RPAExecutionStatusRunning}:   true,
 	{rpamodels.RPAExecutionStatusPending, rpamodels.RPAExecutionStatusCancelled}: true,
+	// 2026-11-25 生产 UAT：任务可能未上报 running 就失败（首步动作即报错 /
+	// worker 启动阶段失败），pending→failed/timeout 必须合法，否则 DB 永停 pending。
+	{rpamodels.RPAExecutionStatusPending, rpamodels.RPAExecutionStatusFailed}:    true,
+	{rpamodels.RPAExecutionStatusPending, rpamodels.RPAExecutionStatusTimeout}:   true,
 	{rpamodels.RPAExecutionStatusRunning, rpamodels.RPAExecutionStatusSuccess}:   true,
 	{rpamodels.RPAExecutionStatusRunning, rpamodels.RPAExecutionStatusFailed}:    true,
 	{rpamodels.RPAExecutionStatusRunning, rpamodels.RPAExecutionStatusCancelled}: true,

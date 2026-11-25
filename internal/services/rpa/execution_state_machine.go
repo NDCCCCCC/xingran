@@ -27,6 +27,12 @@ var executionTransitions = map[rpamodels.RPAExecutionStatus][]rpamodels.RPAExecu
 	rpamodels.RPAExecutionStatusPending: {
 		rpamodels.RPAExecutionStatusRunning,
 		rpamodels.RPAExecutionStatusCancelled,
+		// 2026-11-25 生产 UAT 修复：任务可能在「尚未上报 running」时就失败——
+		// 典型是第一步动作就报错（导航超时/元素找不到），或 worker 侧启动阶段
+		// 失败直接上报 failed/timeout。原表只允许 pending→running/cancelled，
+		// 导致这类执行被状态机拒绝、DB 永远停在 pending（实测复现 4 条）。
+		rpamodels.RPAExecutionStatusFailed,
+		rpamodels.RPAExecutionStatusTimeout,
 	},
 	rpamodels.RPAExecutionStatusRunning: {
 		rpamodels.RPAExecutionStatusSuccess,
