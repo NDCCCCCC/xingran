@@ -82,6 +82,21 @@ docker run -d --name rpa-worker --restart unless-stopped \
 | 10 | FLEET-01~03 真机 VDI 容量矩阵 | 用户暂缓 VDI |
 | 11 | LIVEVIEW L1 端到端真机链路 | 可测：worker 已订阅 liveview 通道 |
 
+## 4.5 LIVEVIEW L1 端到端真机验证（2026-11-25，部分通过）
+
+**通过项**（真机证据）：
+- 实时画面页对非超管可见，HUD/叠加层/接管按钮/copilot 下拉/未接管遮罩全部渲染
+- 可观看执行列表真实数据（含新触发执行）
+- 前端-后端-worker 的 watch 指令全链路（worker 日志实证收到）
+- 僵尸执行（3 月堆积）正确拒绝「执行不在本 Worker 运行」
+- copilot gate 状态机工作（gate waiting 日志）
+- **调度连续 50 次真实执行 success**（平均 476ms/最长 1411ms，baidu 导航）
+
+**新遗留 L6（重要）**：页面导航期间 Page.startScreencast 启动超时（context deadline exceeded）——任务执行中页面频繁跳转时 CDP target 不稳定，screencast 难以抓到稳定入口。155 本机静态 fixture 测试 fps 正常，此为真实动态页面场景的边缘 case。修复方向：startScreencast 前等待 page load 稳定 + 启动重试。
+
+**新观察 L7**：11 步任务「页面导航与滚动测试」多轮卡在第 1 步（1 步任务全部 success），需排查 11 步脚本首动作兼容性。
+
+
 ## 5. 关键约束备忘
 
 - **39 是 systemd 系统级服务**，只允许 `systemctl restart ruoyi-backend`；不要创建用户级服务。
