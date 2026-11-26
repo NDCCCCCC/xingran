@@ -31,6 +31,8 @@ import {
 } from "@ant-design/icons";
 import type { Execution, ExecutionLog } from "@/types/rpa";
 import { renderExecutionStatusTag } from "../constants";
+// W7 / UI-FIX-01：路由常量（唯一事实来源，见 ../routes.ts 头注释）
+import { rpaLiveUrl } from "../routes";
 import { post } from "@/lib/api";
 import { getAuthHeaders } from "@/utils/authHelpers";
 
@@ -329,21 +331,15 @@ export function ExecutionDetailModal({ open, execution, onClose }: ExecutionDeta
         // 「虚拟机」目录（path=vdi, menu_catalog_seed.sql:213），中间层 RPA 管理 path=rpa
         // （:193），本页 path=live ⇒ RouteGenerator.resolvePath 逐级拼接得 vdi/rpa/live。
         // 页面从 location.search 读 ?executionId= 直接定位到该执行。
-        // 这里刻意只做「同源整页跳转」：本 phase 只允许改本 footer，不新增 import；
-        // 且项目用 BrowserRouter + basename，任务说明里的 `#/...` hash 形式在本站无效。
+        // W7 / UI-FIX-01：裸字符串已收敛到 `../routes` 的 RPA_ROUTES（唯一事实来源）。
+        // 这里刻意只做「同源整页跳转」：只允许改本 footer，不新增页面副作用。
         <Button
           key="live"
           type="primary"
           onClick={() => {
             if (!execution?.id) return;
-            const base =
-              import.meta.env.BASE_URL && import.meta.env.BASE_URL !== "/"
-                ? import.meta.env.BASE_URL.replace(/\/$/, "")
-                : "";
             onClose();
-            window.location.assign(
-              `${base}/vdi/rpa/live?executionId=${encodeURIComponent(execution.id)}`
-            );
+            window.location.assign(rpaLiveUrl(execution.id));
           }}
           disabled={!execution?.id}
         >

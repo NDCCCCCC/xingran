@@ -179,16 +179,23 @@ func TestLiveView05_InputNonTakeoverer(t *testing.T) {
 	require.NoError(t, err)
 
 	// 无接管者 → 拒绝。
-	err = hub.Input(t.Context(), execID, "alice", &rpa.LiveViewInputCommand{Kind: "mouse_move", X: 1, Y: 1})
+	err = hub.Input(t.Context(), execID, userID, "alice", &rpa.LiveViewInputCommand{Kind: "mouse_move", X: 1, Y: 1})
 	require.Error(t, err)
 	var forbidden *rpa.LiveViewForbiddenError
 	require.True(t, errors.As(err, &forbidden), "无接管者时应返回 *LiveViewForbiddenError")
 
 	// 有接管者但不是本人 → 拒绝。
 	require.NoError(t, hub.Takeover(t.Context(), execID, userID, "alice", false))
-	err = hub.Input(t.Context(), execID, "bob", &rpa.LiveViewInputCommand{Kind: "mouse_move", X: 1, Y: 1})
+	err = hub.Input(t.Context(), execID, "bob-id", "bob", &rpa.LiveViewInputCommand{Kind: "mouse_move", X: 1, Y: 1})
 	require.Error(t, err)
 	require.True(t, errors.As(err, &forbidden))
+
+	// 接管者本人（同 userID）→ 通过鉴权（W7 / UI-FIX-02：以 userID 为权威判据）。
+	// 注意：这里只断言**不是 403**。publish 需要有 cache 才能下发，本用例的
+	// core 未注入 Redis，故最终错误是「cache 未注入」——那属于下发失败而非鉴权失败。
+	ownErr := hub.Input(t.Context(), execID, userID, "alice",
+		&rpa.LiveViewInputCommand{Kind: "mouse_move", X: 1, Y: 1})
+	require.False(t, errors.As(ownErr, &forbidden), "接管者本人不得被判非接管者")
 }
 
 // TestLiveView03_InvalidModeRejected 非法模式被拒（不静默降级）。

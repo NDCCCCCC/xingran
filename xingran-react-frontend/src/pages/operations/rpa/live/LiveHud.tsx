@@ -18,6 +18,7 @@ import {
   type FrameStats,
 } from "./liveFrameParser";
 import type { LiveContext, LiveMode } from "./types";
+import { controllerDisplayName, isTakenOver } from "./controller";
 
 const { Text } = Typography;
 
@@ -38,7 +39,11 @@ export interface LiveHudProps {
 }
 
 export function LiveHud({ context, mode, onModeChange, stats, hasFrame = false }: LiveHudProps) {
-  const takeoverBy = context?.takeoverBy ?? "";
+  // W7 / UI-FIX-02：角标是否「已接管」以 isTakenOver 为准（任意一份接管者
+  // 信息非空即真），展示名走 controllerDisplayName 兜底，避免出现
+  // 「已接管 · 」这种半截文案（后端 takeoverBy 空但 takeoverById 非空的场景）。
+  const takeoverBy = controllerDisplayName(context?.takeoverBy, context?.takeoverById);
+  const takenOver = isTakenOver(context?.takeoverBy, context?.takeoverById);
   const variables = context?.variables;
 
   // 变量最多 8 条，余量合并成「更多」气泡（脱敏值原样展示，不做任何还原猜测）
@@ -65,7 +70,7 @@ export function LiveHud({ context, mode, onModeChange, stats, hasFrame = false }
     >
       {/* ============ 顶部：角标 + 步骤/动作 + 模式 ============ */}
       <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8 }}>
-        {takeoverBy ? (
+        {takenOver ? (
           <span
             data-testid="live-hud-badge"
             style={{

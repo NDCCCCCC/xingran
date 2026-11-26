@@ -124,6 +124,11 @@ func (j *JWTManager) GenerateTokenPair(userID, username, nickname string, roles 
 		claims := &crypto.Claims{
 			UserID:   accessClaims.UserID,
 			Username: accessClaims.Username,
+			// W7 / UI-FIX-02：nickname 必须一起进 token。历史上这里漏传，
+			// 导致 SM2 分支的 token 没有 nickname → middleware 的
+			// c.Set("nickname", claims.Nickname) 恒为空 → 实时画面接管判定
+			// 口径与前端不一致（详见 pkg/crypto/sm2_jwt.go 的 Claims 注释）。
+			Nickname: accessClaims.Nickname,
 			Roles:    accessClaims.Roles,
 			Issuer:   accessClaims.Issuer,
 			Subject:  accessClaims.Subject,

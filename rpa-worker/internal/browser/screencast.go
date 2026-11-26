@@ -234,6 +234,15 @@ type Screencast struct {
 //   - `stop`：停止函数（幂等）。只调 `Page.stopScreencast`，**不关 page、不关 browser**。
 //
 // page 必须来自 `Page.RawPage()`（当前活动页签）。传 nil 时返回可读错误与已关闭的 channel。
+//
+// W7 / UI-FIX-03 防御层（方案 B）：无论调用方传入的 page 带不带 deadline，这里都
+// 用**干净 ctx** 替换后再发 CDP 调用。历史生产日志：
+//
+//	Page.startScreencast 失败: context deadline exceeded
+//	Page.startScreencast 失败: context canceled
+//
+// 根因是 page 在池里闲置超过创建期 Timeout（已在上游删掉那个全局 Timeout），
+// 但 screencast 是「唯一在 page 闲置后才可能被触发」的操作，多一层防御成本极低。
 func StartScreencast(page *rod.Page, opts ScreencastOptions) (
 	frames <-chan *ScreencastFrame, stats *ScreencastStats, stop func(), err error,
 ) {
@@ -251,11 +260,18 @@ func StartScreencast(page *rod.Page, opts ScreencastOptions) (
 	ctx, cancel := context.WithCancel(context.Background())
 	bgPage := page.Context(ctx)
 
+	// W7 / UI-FIX-03 防御层：CDP 直调（Call）必须用**不带 deadline** 的句柄。
+	// rod 的 Page.Context(ctx) 是纯替换（不继承旧 ctx 的 deadline），所以这里
+	// 用 context.Background() 得到的 cleanPage 保证「无论上游传什么 ctx，
+	// startScreencast / screencastFrameAck / stopScreencast 都不会因历史 deadline
+	// 立即失败」。事件订阅仍用 bgPage（带可取消 ctx，供 Stop 优雅退出）。
+	cleanPage := page.Context(context.Background())
+
 	ch := make(chan *ScreencastFrame, opts.ChannelCapacity)
 	st := NewScreencastStats(time.Now())
 
 	s := &Screencast{
-		page:       page,
+		page:       cleanPage,
 		opts:       opts,
 		logger:     opts.Logger,
 		stats:      st,
@@ -270,7 +286,7 @@ func StartScreencast(page *rod.Page, opts ScreencastOptions) (
 	// 主动把页面标记为 active，避免「startScreencast 成功但 0 帧」的假成功。
 	if err := (proto.PageSetWebLifecycleState{
 		State: proto.PageSetWebLifecycleStateStateActive,
-	}).Call(page); err != nil && opts.Logger != nil {
+	}).Call(cleanPage); err != nil && opts.Logger != nil {
 		opts.Logger.Debug("Page.setWebLifecycleState(active) 失败（继续，可能仍能发帧）", logger.Err(err))
 	}
 
@@ -291,7 +307,7 @@ func StartScreencast(page *rod.Page, opts ScreencastOptions) (
 		MaxWidth:      &maxW,
 		MaxHeight:     &maxH,
 		EveryNthFrame: &nth,
-	}).Call(page); err != nil {
+	}).Call(cleanPage); err != nil {
 		cancel()
 		close(ch)
 		return make(chan *ScreencastFrame), nil, func() {}, fmt.Errorf("Page.startScreencast 失败: %w", err)

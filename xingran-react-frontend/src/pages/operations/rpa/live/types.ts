@@ -66,7 +66,16 @@ export interface LiveContext {
   actionDesc?: string;
   status?: string;
   mode?: LiveMode;
+  /**
+   * 接管者**展示名**（nickname/username），仅用于 HUD 文案。
+   *
+   * ⚠ W7 / UI-FIX-02：不要用它判定「我是不是接管者」。展示名会随用户改昵称、
+   * 随 token 分支（SM2/HS256）取值口径不同而漂移 —— 生产上正是它导致
+   * 「已接管但遮罩不消失」。控制权判据只用 `takeoverById`（用户 ID）。
+   */
   takeoverBy?: string;
+  /** 接管者用户 ID（控制权权威判据） */
+  takeoverById?: string;
   takeoverAt?: number;
   lastLog?: string;
   variables?: Record<string, string>;
@@ -98,6 +107,8 @@ export interface LiveWatchState {
   maxStreams?: number;
   streaming?: number;
   takeoverBy?: string;
+  /** 接管者用户 ID（前端据此判 isController） */
+  takeoverById?: string;
 }
 
 /** 页面顶部「可观看执行」条目（status 放宽为 string：后端含 paused） */

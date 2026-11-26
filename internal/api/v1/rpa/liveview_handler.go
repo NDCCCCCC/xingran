@@ -224,7 +224,8 @@ func (h *LiveViewHandler) Release(c *gin.Context) {
 	if req.Reason == "" {
 		req.Reason = "前端释放接管"
 	}
-	if err := h.hub.Release(c.Request.Context(), executionID, operatorName(c), req.Reason); err != nil {
+	// W7 / UI-FIX-02：释放以 userID 为权威判据，展示名只用于错误文案。
+	if err := h.hub.Release(c.Request.Context(), executionID, currentUserID(c), operatorName(c), req.Reason); err != nil {
 		response.Error(c, http.StatusBadRequest, err.Error())
 		return
 	}
@@ -327,7 +328,8 @@ func (h *LiveViewHandler) Input(c *gin.Context) {
 	if !bindAndValidate(c, &req) {
 		return
 	}
-	if err := h.hub.Input(c.Request.Context(), executionID, operatorName(c), &req); err != nil {
+	// W7 / UI-FIX-02：输入以 userID 为权威判据（与接管/释放同一口径）。
+	if err := h.hub.Input(c.Request.Context(), executionID, currentUserID(c), operatorName(c), &req); err != nil {
 		var forbidden *svcrpa.LiveViewForbiddenError
 		if errors.As(err, &forbidden) {
 			response.Error(c, http.StatusForbidden, forbidden.Error())

@@ -48,6 +48,7 @@ import {
 } from "./liveApi";
 import { LiveCanvas } from "./LiveCanvas";
 import { LiveHud } from "./LiveHud";
+import { resolveIsController } from "./controller";
 
 const { Text } = Typography;
 
@@ -84,9 +85,14 @@ export default function RpaLiveViewPage() {
   const gate = useActionPermission();
   const readonlyGate = gate.decide(PERMISSION_CODES.rpaExecution.list);
 
-  // 自己的展示名：后端 takeover 记录的是 nickname/username（liveview_handler.go
-  // operatorName），HUD 的 takeoverBy 与之后 input 的 403 校验都以它为准。
+  // 自己的身份（W7 / UI-FIX-02）
+  //
+  // 控制权判据必须用 **user.id**，不能只比展示名（nickname/username）：
+  // 生产实证 —— 后端 SM2 token 曾不含 nickname，operatorName 回落 username，
+  // 而前端这里取 user.nickname；两边不一致时「接管成功但遮罩不消失」。
+  // 展示名只用于兜底提示（后端 userID 缺失的历史会话）。
   const myName = useAuthStore((s) => s.user?.nickname || s.user?.username || "");
+  const myUserId = useAuthStore((s) => s.user?.id ?? "");
 
   // ---------- 可观看执行列表 ----------
   const [executions, setExecutions] = useState<LiveExecutionSummary[]>([]);
@@ -188,10 +194,11 @@ export default function RpaLiveViewPage() {
         setWatching(true);
         const watchedMode = res.data?.mode;
         if (watchedMode) setMode(watchedMode);
-        if (res.data?.takeoverBy) {
+        if (res.data?.takeoverBy || res.data?.takeoverById) {
           setContext((prev) => ({
             ...(prev ?? { executionId: curId, step: 0, totalSteps: 0 }),
             takeoverBy: res.data?.takeoverBy,
+            takeoverById: res.data?.takeoverById,
           }));
         }
       })
@@ -412,11 +419,15 @@ export default function RpaLiveViewPage() {
 
   // ==================== 派生状态 ====================
   const takeoverBy = context?.takeoverBy ?? "";
+  const takeoverById = context?.takeoverById ?? "";
 
-  // 是否「我是接管者」：后端 input 校验 taker == operatorName（即 nickname/username）
+  // 是否「我是接管者」（W7 / UI-FIX-02）。
+  // 判据收敛到 controller.ts 的纯函数（可单测），页面内不再散落一份字符串比较：
+  //   主判据 —— userID 相等（后端 takeover/input/release 全部以此为准）；
+  //   兜底   —— 历史会话没有 takeoverById 时才回落展示名比对（兼容旧快照）。
   const isController = useMemo(
-    () => Boolean(myName) && takeoverBy !== "" && takeoverBy === myName,
-    [myName, takeoverBy]
+    () => resolveIsController({ myUserId, myName, takeoverById, takeoverBy }),
+    [myName, myUserId, takeoverBy, takeoverById]
   );
 
   // 「继续（放行）」仅当执行 paused 且自己是接管者

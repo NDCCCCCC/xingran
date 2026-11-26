@@ -23,6 +23,10 @@ import { TaskWizard } from "./TaskWizard";
 import type { WizardDraft } from "./payload";
 import { toTaskPayload } from "./payload";
 import { AIScriptEditor } from "../tasks/modals/AIScriptEditor";
+// W7 / UI-FIX-01：路由常量唯一事实来源。历史上这里三处写死
+// `/operations/rpa/tasks` —— 该路径不存在任何路由（RPA 菜单由 sys_menu seed
+// 播种，真实路由是 /vdi/rpa），写错会让 SPA 落到 catch-all → dashboard。
+import { RPA_ROUTES } from "../routes";
 
 const { Content } = Layout;
 const { Title, Text } = Typography;
@@ -59,7 +63,7 @@ export default function TaskWizardPage() {
       } else {
         message.success("任务已保存");
       }
-      navigate("/operations/rpa/tasks");
+      navigate(RPA_ROUTES.taskList);
     },
     [message, navigate]
   );
@@ -86,7 +90,7 @@ export default function TaskWizardPage() {
             </div>
             <Button
               icon={<ArrowLeftOutlined />}
-              onClick={() => navigate("/operations/rpa/tasks")}
+              onClick={() => navigate(RPA_ROUTES.taskList)}
             >
               返回任务列表
             </Button>
@@ -97,7 +101,7 @@ export default function TaskWizardPage() {
           <TaskWizard
             key={`${pendingActions?.length ?? 0}-${pendingActions?.[0]?.id ?? "init"}`}
             onSave={handleSave}
-            onCancel={() => navigate("/operations/rpa/tasks")}
+            onCancel={() => navigate(RPA_ROUTES.taskList)}
             onOpenAIGenerator={() => setAiOpen(true)}
             onOpenRecorder={() => {
               // 录制入口：当前通过任务编辑器的「一键转录制」与 live 画面提供；

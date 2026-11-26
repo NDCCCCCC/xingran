@@ -134,6 +134,8 @@ export function parseLiveContext(raw: Record<string, unknown>): LiveContext {
     status: toStr(raw.status) || undefined,
     mode,
     takeoverBy: toStr(raw.takeoverBy) || undefined,
+    // W7 / UI-FIX-02：控制权权威判据（用户 ID）。空串归一为 undefined。
+    takeoverById: toStr(raw.takeoverById) || undefined,
     takeoverAt: toNumber(raw.takeoverAt) || undefined,
     lastLog: toStr(raw.lastLog) || undefined,
     variables,

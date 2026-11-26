@@ -124,6 +124,16 @@ type LiveViewContextSnapshot struct {
 	Status       string            `json:"status"`
 	Mode         LiveViewMode      `json:"mode"`
 	TakeoverBy   string            `json:"takeoverBy,omitempty"`
+	// TakeoverByID 接管者用户 ID（W7 / UI-FIX-02）
+	//
+	// takeoverBy 是展示名（nickname/username），会随用户改昵称、随 SM2/HS256
+	// 分支取值口径不同而漂移 —— 用字符串当控制权判据曾让「已接管但遮罩不消失」
+	// 在生产复现。真正的控制权判据是 userID：前端拿自己的 user.id 比对即可，
+	// 不依赖任何展示名。takeoverBy 仅用于 HUD 展示。
+	//
+	// omitempty 是安全的：前端每次收到 context 都**整体替换**（不是合并），
+	// 释放后字段缺失即清空，不会残留上一次的接管者。
+	TakeoverByID string            `json:"takeoverById,omitempty"`
 	TakeoverAtMS int64             `json:"takeoverAt,omitempty"`
 	LastLog      string            `json:"lastLog,omitempty"`
 	Variables    map[string]string `json:"variables,omitempty"`
@@ -190,6 +200,8 @@ type LiveViewWatchState struct {
 	MaxStreams  int          `json:"maxStreams"`
 	Streaming   int          `json:"streaming"`
 	TakeoverBy  string       `json:"takeoverBy,omitempty"`
+	// TakeoverByID 接管者用户 ID（前端据此判 isController，见 LiveViewContextSnapshot）
+	TakeoverByID string `json:"takeoverById,omitempty"`
 }
 
 // LiveViewStateResponse state 端点响应（叠加层 + 统计）。
@@ -237,7 +249,9 @@ type liveViewSession struct {
 	taskName    string
 	mode        LiveViewMode
 	takeoverBy  string
-	takeoverAt  time.Time
+	// takeoverByID 接管者用户 ID（控制权权威判据，W7 / UI-FIX-02）
+	takeoverByID string
+	takeoverAt   time.Time
 	watchers    map[string]*watcher
 	context     *LiveViewContextSnapshot
 	lastFrameAt int64
@@ -336,11 +350,12 @@ func (h *LiveViewHub) Watch(ctx context.Context, executionID, userID, userName s
 		}
 	}
 	state := &LiveViewWatchState{
-		ExecutionID: executionID,
-		Mode:        s.mode,
-		MaxStreams:  h.maxStreams(),
-		Streaming:   len(s.watchers),
-		TakeoverBy:  s.takeoverBy,
+		ExecutionID:  executionID,
+		Mode:         s.mode,
+		MaxStreams:   h.maxStreams(),
+		Streaming:    len(s.watchers),
+		TakeoverBy:   s.takeoverBy,
+		TakeoverByID: s.takeoverByID,
 	}
 	h.mu.Unlock()
 
@@ -449,6 +464,10 @@ func (h *LiveViewHub) DropWatcher(executionID, userID, reason string) bool {
 //
 // force=false 且已被他人占用 → 返回可读冲突错误（handler 转 409），
 // 前端二次确认后带 force=true 重试（LIVEVIEW-05「抢占需显式确认」）。
+//
+// W7 / UI-FIX-02：控制权以 **userID** 为权威（takeoverByID），userName 只做展示。
+// 历史实现只比 userName 字符串，而 userName 来源（SM2 token 无 nickname）与前端
+// 取值口径（user.nickname）不一致时会「接管成功但遮罩不消失」。
 func (h *LiveViewHub) Takeover(ctx context.Context, executionID, userID, userName string, force bool) error {
 	if h == nil || !h.enabled() {
 		return fmt.Errorf("实时画面未启用")
@@ -459,15 +478,23 @@ func (h *LiveViewHub) Takeover(ctx context.Context, executionID, userID, userNam
 		h.mu.Unlock()
 		return fmt.Errorf("该执行当前无观看会话，请先打开实时画面")
 	}
-	if s.takeoverBy != "" && s.takeoverBy != userName && !force {
+	// 冲突判定：优先比 userID（权威）；仅当旧会话没有 userID（历史数据）时回落比展示名。
+	if s.takeoverByID != "" && s.takeoverByID != userID && !force {
+		cur := s.takeoverBy
+		h.mu.Unlock()
+		return &LiveViewConflictError{By: cur}
+	}
+	if s.takeoverByID == "" && s.takeoverBy != "" && s.takeoverBy != userName && !force {
 		cur := s.takeoverBy
 		h.mu.Unlock()
 		return &LiveViewConflictError{By: cur}
 	}
 	s.takeoverBy = userName
+	s.takeoverByID = userID
 	s.takeoverAt = time.Now()
 	if s.context != nil {
 		s.context.TakeoverBy = userName
+		s.context.TakeoverByID = userID
 		s.context.TakeoverAtMS = s.takeoverAt.UnixMilli()
 	}
 	h.mu.Unlock()
@@ -487,7 +514,10 @@ func (h *LiveViewHub) Takeover(ctx context.Context, executionID, userID, userNam
 }
 
 // Release 释放接管。
-func (h *LiveViewHub) Release(ctx context.Context, executionID, userName, reason string) error {
+//
+// W7 / UI-FIX-02：签名改为以 userID 权威比对（userName 只用于错误文案）。
+// 历史上 handler 传的是 operatorName(c)（展示名），释放失败会误伤其他用户。
+func (h *LiveViewHub) Release(ctx context.Context, executionID, userID, userName, reason string) error {
 	if h == nil || !h.enabled() {
 		return fmt.Errorf("实时画面未启用")
 	}
@@ -498,18 +528,26 @@ func (h *LiveViewHub) Release(ctx context.Context, executionID, userName, reason
 		return fmt.Errorf("该执行当前无观看会话")
 	}
 	cur := s.takeoverBy
-	if cur == "" {
+	curID := s.takeoverByID
+	if cur == "" && curID == "" {
 		h.mu.Unlock()
 		return nil // 幂等
 	}
-	if userName != "" && userName != cur {
+	// 权威判据是 userID；userID 为空（历史数据/内部调用）时才回落展示名。
+	if userID != "" && curID != "" && userID != curID {
+		h.mu.Unlock()
+		return fmt.Errorf("释放失败：当前接管者是 %s", cur)
+	}
+	if curID == "" && userName != "" && userName != cur {
 		h.mu.Unlock()
 		return fmt.Errorf("释放失败：当前接管者是 %s", cur)
 	}
 	s.takeoverBy = ""
+	s.takeoverByID = ""
 	s.takeoverAt = time.Time{}
 	if s.context != nil {
 		s.context.TakeoverBy = ""
+		s.context.TakeoverByID = ""
 		s.context.TakeoverAtMS = 0
 	}
 	h.mu.Unlock()
@@ -549,7 +587,10 @@ func (e *LiveViewConflictError) Error() string {
 }
 
 // Input 注入输入（只有接管者可注入）。
-func (h *LiveViewHub) Input(ctx context.Context, executionID, userName string, cmd *LiveViewInputCommand) error {
+//
+// W7 / UI-FIX-02：签名改为 (userID, userName)。判据以 userID 为权威 —— 与
+// Takeover 同一口径，避免「我是接管者但输入被 403」的字符串漂移问题。
+func (h *LiveViewHub) Input(ctx context.Context, executionID, userID, userName string, cmd *LiveViewInputCommand) error {
 	if h == nil || !h.enabled() {
 		return fmt.Errorf("实时画面未启用")
 	}
@@ -563,8 +604,14 @@ func (h *LiveViewHub) Input(ctx context.Context, executionID, userName string, c
 		return fmt.Errorf("该执行当前无观看会话，请先打开实时画面")
 	}
 	taker := s.takeoverBy
+	takerID := s.takeoverByID
 	h.mu.Unlock()
-	if taker == "" || taker != userName {
+	// 权威：userID 对 userID；历史会话没有 userID 时才回落展示名比对。
+	if takerID != "" {
+		if userID == "" || takerID != userID {
+			return &LiveViewForbiddenError{Reason: "只有当前接管者可以注入输入"}
+		}
+	} else if taker == "" || taker != userName {
 		return &LiveViewForbiddenError{Reason: "只有当前接管者可以注入输入"}
 	}
 
@@ -715,7 +762,18 @@ func (h *LiveViewHub) IngestFrame(ctx context.Context, up *LiveViewUpstreamFrame
 		ctxSnap := *up.Context
 		ctxSnap.Mode = s.mode
 		ctxSnap.TakeoverBy = s.takeoverBy
+		ctxSnap.TakeoverByID = s.takeoverByID
 		s.context = &ctxSnap
+	}
+	// W7 / UI-FIX-02：帧里带的 context 必须是**后端权威值**，不能直接转发
+	// up.Context —— Worker 的 takeoverBy 只是它收到的 operator 展示名，没有
+	// userID；历史 bug 就是「帧里的 context」与「state 端点」不同步，前端
+	// 遮罩判定反复抖动。这里在锁内拷一份快照，出锁后不再碰 s.context
+	// （否则与 Takeover/Release 并发写构成数据竞争）。
+	var ctxForFrame *LiveViewContextSnapshot
+	if s.context != nil {
+		snap := *s.context
+		ctxForFrame = &snap
 	}
 	h.mu.Unlock()
 
@@ -726,7 +784,7 @@ func (h *LiveViewHub) IngestFrame(ctx context.Context, up *LiveViewUpstreamFrame
 	// 帧体按协议 §1/§6 走 liveview 专用可丢广播。
 	payload, err := json.Marshal(map[string]interface{}{
 		"frame":   up.Frame,
-		"context": up.Context,
+		"context": ctxForFrame,
 	})
 	if err != nil {
 		h.logf("liveview frame marshal failed: %v", err)
@@ -760,6 +818,7 @@ func (h *LiveViewHub) IngestContext(ctx context.Context, execID string, snap *Li
 	kn := *snap
 	kn.Mode = s.mode
 	kn.TakeoverBy = s.takeoverBy
+	kn.TakeoverByID = s.takeoverByID
 	s.context = &kn
 	uids := make([]string, 0, len(s.watchers))
 	for uid := range s.watchers {

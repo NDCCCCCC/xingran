@@ -190,9 +190,21 @@ func ParsePublicKeyFromHex(hexKey string) (*sm2.PublicKey, error) {
 }
 
 // Claims JWT声明结构体
+//
+// W7 / UI-FIX-02：补 Nickname。
+//
+// 缺陷实证（2026-11-26，生产 10.62.10.39 + 真实浏览器）：SM2 分支签出的 access
+// token payload 只有 user_id / username / roles —— **没有 nickname**。而
+// pkg/middleware/auth.go 的 setUserContext 把 `claims.Nickname` 写进 gin context，
+// 于是 liveview_handler.go 的 operatorName(c) 恒回落 username。前端
+// `myName = user.nickname || user.username`（登录响应里有真实中文昵称），接管判定
+// `takeoverBy === myName` 因此恒不成立（除非昵称恰好等于账号名）→ 遮罩不消失。
+//
+// HS256 分支的 CustomClaims 一直有这个字段，两个分支不一致才是根因。
 type Claims struct {
 	UserID   string   `json:"user_id"`
 	Username string   `json:"username"`
+	Nickname string   `json:"nickname,omitempty"`
 	Roles    []string `json:"roles"`
 	Issuer   string   `json:"iss"`
 	Subject  string   `json:"sub"`

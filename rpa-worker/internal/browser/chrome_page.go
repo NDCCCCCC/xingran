@@ -94,11 +94,37 @@ func newChromePageOn(ctx context.Context, b *rod.Browser, cfg *config.BrowserCon
 		log.Warn("设置视口大小失败", logger.Err(err))
 	}
 
-	defaultTimeout := cfg.Timeout
-	if cfg.NavigationTimeout > defaultTimeout {
-		defaultTimeout = cfg.NavigationTimeout
-	}
-	page = page.Timeout(defaultTimeout)
+	// ⚠ W7 / UI-FIX-03：**绝不要**在这里给 page 设一次性全局 Timeout。
+	//
+	// 历史上这里是：
+	//     defaultTimeout := max(cfg.Timeout, cfg.NavigationTimeout)
+	//     page = page.Timeout(defaultTimeout)
+	//
+	// rod 的 Page.Timeout(d) 语义（rod@v0.116.2 context.go:71）：
+	//     ctx, cancel := context.WithTimeout(p.ctx, d)   // ← 从此刻起一次性倒计时
+	//     return p.Context(context.WithValue(ctx, timeoutContextKey{}, ...))
+	//
+	// 这个 deadline **在 page 创建时开始计时且永不重置**。而 Manager 会把这个
+	// page 放进池里跨多次执行复用 → 闲置超过 max(Timeout, NavigationTimeout)
+	// （本项目生产配置 60s）之后，page 的 ctx 早已过期，之后任何 CDP 调用
+	// （proto.XXX.Call(page)）都立即返回 context deadline exceeded。
+	//
+	// 生产实证（10.62.10.34 rpa-worker，2026-11-25）：
+	//   liveview watch failed: Page.startScreencast 失败: context deadline exceeded
+	//   liveview watch failed: Page.startScreencast 失败: context canceled
+	//   以及 task execution cancelled: context deadline exceeded（step 1/11）
+	// 时间线：worker 08:40:31 启动，08:51 才有第一个 watch → 池内 page 闲置 11 分钟。
+	//
+	// 为什么 155 的单元测试测不出来：那些用例的 page 是**刚创建就用**，ctx 还没过期，
+	// 所以 fps 正常。这是「测试同构性」缺口，见 W7-SUMMARY 的教训段。
+	//
+	// 现在的口径（方案 A+B，见 SUMMARY 取舍）：
+	//   A. 创建时不设全局 Timeout —— page 的 ctx 就是 browser 的 context.Background()，
+	//      永远不会自行过期；每个操作的超时由调用点用 `.Timeout(d)` 链式限定
+	//      （本文件里所有 Element/Input/Navigate 调用点都已这么写）。
+	//   B. StartScreencast 另外做一层防御：无论传入 page 的 ctx 带不带 deadline，
+	//      CDP 直调一律用 context.Background() 派生的干净句柄（见 screencast.go 的
+	//      cleanPage）。
 
 	cp := &ChromePage{
 		browser:  b,
@@ -378,8 +404,11 @@ func (p *ChromePage) WaitFor(selector string, timeout time.Duration) error {
 }
 
 // Screenshot 截图
+//
+// W7 / UI-FIX-03：补齐链式超时（删掉创建期的全局 Timeout 后，所有操作必须
+// 自己限定超时，否则一次卡死的截图会挂住整个执行）。
 func (p *ChromePage) Screenshot() ([]byte, error) {
-	data, err := p.cur().Screenshot(true, nil)
+	data, err := p.cur().Timeout(p.config.Timeout).Screenshot(true, nil)
 	if err != nil {
 		return nil, fmt.Errorf("截图失败: %w", err)
 	}
@@ -395,10 +424,10 @@ func (p *ChromePage) Screenshot() ([]byte, error) {
 func (p *ChromePage) Evaluate(script string) (interface{}, error) {
 	p.logger.Debug("执行JavaScript")
 
-	result, err := p.cur().Eval(script)
+	result, err := p.cur().Timeout(p.config.Timeout).Eval(script)
 	if err != nil {
 		wrapped := fmt.Sprintf(`() => { return (%s); }`, strings.TrimSpace(script))
-		result2, err2 := p.cur().Eval(wrapped)
+		result2, err2 := p.cur().Timeout(p.config.Timeout).Eval(wrapped)
 		if err2 != nil {
 			return nil, fmt.Errorf("执行脚本失败: %w", err)
 		}
@@ -476,7 +505,7 @@ func (p *ChromePage) ScrollUp(pixels int) error { return p.scrollBy(0, -pixels) 
 
 func (p *ChromePage) scrollBy(x, y int) error {
 	script := fmt.Sprintf("window.scrollBy(%d, %d)", x, y)
-	if _, err := p.cur().Eval(script); err != nil {
+	if _, err := p.cur().Timeout(p.config.Timeout).Eval(script); err != nil {
 		return fmt.Errorf("滚动失败: %w", err)
 	}
 	return nil
@@ -615,7 +644,7 @@ func (p *ChromePage) dragByJS(from, to *rod.Element) error {
 	}`
 	// rod 只把 *proto.RuntimeRemoteObject 当远程对象传参；*rod.Element
 	// 会被序列化成普通 JSON，导致 src.dispatchEvent 不存在。必须传 Object。
-	res, err := p.cur().Eval(script, from.Object, to.Object)
+	res, err := p.cur().Timeout(p.config.Timeout).Eval(script, from.Object, to.Object)
 	if err != nil {
 		return err
 	}
@@ -633,7 +662,7 @@ func (p *ChromePage) PressKeys(keys string) error {
 	if err != nil {
 		return err
 	}
-	ka := p.cur().KeyActions()
+	ka := p.cur().Timeout(p.config.Timeout).KeyActions()
 	for _, k := range tokens {
 		ka.Press(k)
 	}
@@ -761,7 +790,12 @@ func (p *ChromePage) EnterFrame(selector string) error {
 	if err != nil {
 		return fmt.Errorf("进入 iframe 失败: %w", err)
 	}
-	p.frame = frame.Timeout(p.config.Timeout)
+	// W7 / UI-FIX-03：同上，**不**在 frame 句柄上挂一次性全局 Timeout。
+	// 之前这里是 `frame.Timeout(p.config.Timeout)`，而 frame 会一直挂在
+	// p.frame 上供后续动作使用 —— 一旦任务在 iframe 内停留超过 Timeout，
+	// 之后所有 iframe 内动作都会复现同一个 context deadline exceeded。
+	// 现在所有 iframe 内动作都走 p.cur().Timeout(...) 链式限定。
+	p.frame = frame
 	return nil
 }
 
@@ -894,7 +928,9 @@ func (p *ChromePage) CloseCurrentTab() error {
 	}); err != nil {
 		p.logger.Warn("设置新页视口失败", logger.Err(err))
 	}
-	p.page = fresh.Timeout(p.config.Timeout)
+	// W7 / UI-FIX-03：新建的兜底页同样**不设**创建期全局 Timeout（理由见
+	// newChromePageOn 的长注释）—— 否则重建出来的 page 又会变成「闲置即死」。
+	p.page = fresh
 	p.mainPage = p.page
 	p.frame = nil
 	return nil
