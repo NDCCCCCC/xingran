@@ -50,7 +50,11 @@ logs/
 *.log
 
 # Go 构建缓存
-build/
+# ⚠ 只忽略**仓库根**的 build/，不要写成裸 `build/`：裸规则会连
+# scripts/build/ 一起罩住，导致 scripts/build/bump-version.mjs 无法入库
+# （而 xingran-react-frontend/package.json 的 postbuild 依赖它，干净 checkout
+#  上 npm run build 会直接 Cannot find module）。见 2026-11-26 收尾记录。
+/build/
 *.a
 *.o
 
@@ -172,3 +176,6 @@ check_vdi_menu_fix.sh
 out/
 verify-adcred-linux
 tmp_swag/
+
+# 本地自动递增版本号（scripts/build/bump-version.mjs 维护）
+/VERSION
