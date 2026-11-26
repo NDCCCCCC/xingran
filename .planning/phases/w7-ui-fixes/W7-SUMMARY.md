@@ -1,7 +1,7 @@
 ---
 phase: W7（v1.56 里程碑内 UI 修复波次）
 created: 2026-11-26
-status: code-complete · real-device UAT partially deferred
+status: code-committed（b72f71ce + bf458a59）· 部署已交接（见 §7.2）
 前置: 4ab44b20（LIVEVIEW L1 真机验证）+ 用户真实浏览器反馈
 ---
 
@@ -460,6 +460,66 @@ admin          | 超级管理员 | 0
 ⇒ 因此**缺陷 1 / 2 的真机复核状态 = 待部署**（证据为真实浏览器复现 + 页面级集成测），
 缺陷 3 的真机证据由独立真 Chromium 用例提供（不依赖生产部署）。
 
+### 7.2 交接给另一会话的部署清单（2026-11-26 12:40 登记）
+
+用户决定：**W7 代码先入库，等另一会话（站点品牌 branding）工作完成后由其实施部署**。
+本节把「部署只需要执行的命令 + 验收步骤 + 回滚点」固化，避免接手方重新考古。
+
+**已完成（本会话，无需重做）**
+- 两个提交：`b72f71ce`（代码，24 文件）+ `bf458a59`（SUMMARY 计数校正）
+- W7 的 24 个文件已全部干净入库（`git diff --name-only -- <这24个文件>` 为空）
+- **worker 二进制已预置到生产机，但未启用**：
+  `10.62.10.34:/opt/rpa-worker-new/rpa-worker-linux-w7-ready`（14,094,520 B，
+  md5 `2e8e0d016a4edda3a84eca90292b630e`，由 `b72f71ce` 的 HEAD 交叉编译而来）
+- 当前生产仍是 **W6**：`rpa-worker-linux-final` md5 `6511209ff99c0bccb88d5b2a0be333c9`
+  （与 `…final.bak-pre-w7` / `…w6bak` 一致），容器 `rpa-worker` Up healthy
+- 生产后端 `10.62.10.39:/app/szh/ruoyi-backend-embedded-linux` 仍是 v1.56.4 旧二进制
+
+**接手方待执行（工作树干净后）**
+
+1. **worker（10.62.10.34）—— 只改缺陷 3，可独立上线**
+   ```bash
+   cd /opt/rpa-worker-new
+   cp -f rpa-worker-linux-final rpa-worker-linux-pre-w7-$(date +%H%M)   # 二次备份
+   mv -f rpa-worker-linux-w7-ready rpa-worker-linux-final
+   docker restart rpa-worker
+   docker logs --since 1m rpa-worker | grep -E "liveview hub|worker started"
+   ```
+   回滚：把 `rpa-worker-linux-pre-w7-*` 换回 `rpa-worker-linux-final` 再 `docker restart`；
+   或直接 `docker stop rpa-worker && docker rename rpa-worker-prev-w7 rpa-worker && docker start rpa-worker`。
+   ⚠ 注意：`rpa-worker-prev-w7` 是 W6 容器副本，**不要 `docker rm` 它**。
+
+2. **后端（10.62.10.39）—— 覆盖缺陷 1、2**
+   ```bash
+   # 本地（Windows，需先确保工作树已干净、branding 已合并）
+   scripts\build-linux.bat                 # 产出 out/xingran-backend-embedded-linux
+   scp out/xingran-backend-embedded-linux root@10.62.10.39:/tmp/
+   # 远端
+   install -m 755 /tmp/xingran-backend-embedded-linux /app/szh/ruoyi-backend-embedded-linux
+   chown ninedrunk:ninedrunk /app/szh/ruoyi-backend-embedded-linux
+   systemctl restart ruoyi-backend     # 或 kill $(pgrep -f ruoyi-backend-embedded-linux$) 由 systemd 拉起
+   curl -s http://127.0.0.1:9000/health  # 版本号应递增
+   ```
+   回滚点：`/app/szh/ruoyi-backend-embedded-linux.bak-pre-w7`（v1.56.4，本会话已建）
+
+3. **部署后必须跑的验收（用户视角，不认接口 200）** —— 按
+   [261125-ui-uat-checklist.md](../../notes/261125-ui-uat-checklist.md)：
+   - 缺陷 1 → 清单 §2：进 `/vdi/rpa/wizard` 点「返回任务列表」，**地址栏必须是 `/vdi/rpa`**，
+     落地页是任务列表（表头/面包屑），**不是 dashboard**
+   - 缺陷 2 → 清单 §3：用 **nickname ≠ username 的普通账号**（如 `chenchao-076` / 陈超1）
+     进入 `/vdi/rpa/live?executionId=<运行中执行>`，点「接管」→ 确认：
+     遮罩消失 + 角标「已接管 · <名>」+ 按钮变「释放接管」+ 画布上点击后远端有反应
+     （Network 里 `POST .../liveview/input` 全 2xx）
+   - 缺陷 3 → 清单 §4：开流后 **fps>0 且画面有内容**；离开 90s 再回来仍出帧；
+     worker 日志无 `Page.startScreencast 失败` / `context deadline exceeded`
+   - 反例守护：把 `auth-storage` 的 `user.nickname` 改掉再刷新，接管后遮罩**仍应消失**
+     （这是 W7 修复的核心判据，修前此步必然 mask=1）
+
+4. **可选的 worker 侧自动复核**（无需阅读日志，直接跑事故复现用例）
+   ```bash
+   cd rpa-worker && go test -count=1 -run TestUI03 ./internal/browser/ -v
+   ```
+
 ---
 
 ## 8. 教训（写进流程，不只是写在文档里）
@@ -484,7 +544,7 @@ admin          | 超级管理员 | 0
 
 | # | 项 | 状态 | 说明 |
 |---|---|---|---|
-| L1 | 缺陷 1/2 真机复核 | **待部署** | 后端需在「无并行会话改动」的干净工作树上重建后部署（或 CI 出包），再按 `261125-ui-uat-checklist.md` §2/§3 走一遍 |
+| L1 | 缺陷 1/2 真机复核 | **待部署（已交接）** | 代码已入库（`b72f71ce`）；worker 二进制已预置 `rpa-worker-linux-w7-ready` 但未启用。由品牌会话收尾后按 §7.2 清单部署，再走 `261125-ui-uat-checklist.md` §2/§3 |
 | L2 | `internal/services/system` 编译红 | 他人资产 | `branding_service_test.go` 缺 `GetStats`；需该会话补齐，与本轮无关 |
 | L3 | `TestRecorder_RealChromium_LoginFillSubmit` flaky | 已知 | 并发跑时偶发；单跑稳定 PASS。若后续 CI 稳定复现，需给该用例加串行/重试 |
 | L4 | 生产默认 screencast 档位（nth=2 → 4.66fps） | 155 遗留 | 本次未改默认值（运维口径），建议 `nth=1 + q40 + 854×480`（8.86fps / 0.259Mbps） |
