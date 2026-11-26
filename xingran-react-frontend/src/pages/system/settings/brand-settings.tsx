@@ -13,11 +13,12 @@ import { useEffect, useState, type FC } from "react";
 import { App, Button, Card, Form, Space, Upload, Alert } from "antd";
 import { UploadOutlined } from "@ant-design/icons";
 import { AppInput, AppTextArea } from "@/components/ui";
+import { useActionPermission } from "@/components/shared";
+import { PERMISSION_CODES } from "@/constants/permissionCodes";
 import { xingranBrand } from "@/design-system/tokens/colors";
 import { brandingApi, type BrandingConfig } from "@/lib/brandingApi";
 import { queryKeys } from "@/lib/queryKeys";
 import { useBrandStore } from "@/store/brandStore";
-import { useMenuStore } from "@/store/menuStore";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 const FORM_ITEMS: Array<{
@@ -47,8 +48,11 @@ const BrandSettings: FC = () => {
   const [form] = Form.useForm();
   const queryClient = useQueryClient();
   const refreshBrand = useBrandStore((s) => s.refresh);
-  const permissions = useMenuStore((s) => s.permissions);
-  const canEdit = permissions.includes("system:config:edit");
+  // RBAC 三态门控（PERM-02）：禁止用 permissions.length / includes 裸判——
+  // 权限集未就绪（加载中/接口失败）时会被误判成"无权限"，超管也会看到假提示。
+  const permGate = useActionPermission();
+  const permEdit = permGate.decide(PERMISSION_CODES.systemConfig.edit);
+  const canEdit = permEdit.visible && !permEdit.disabled;
   const [uploading, setUploading] = useState(false);
 
   // 管理端读取（与公开端点分离：公开端点有 5 分钟缓存，管理页要看最新值）
@@ -107,8 +111,14 @@ const BrandSettings: FC = () => {
 
   return (
     <Space orientation="vertical" size={16} style={{ width: "100%" }}>
-      {!canEdit && (
-        <Alert type="info" showIcon title="当前账号无 system:config:edit 权限，仅可查看品牌配置" />
+      {/* 三态提示：未就绪（加载中/接口失败）给可读原因，而非误报"无权限" */}
+      {permEdit.hint && <Alert type="info" showIcon title={permEdit.hint} />}
+      {!permEdit.hint && !canEdit && (
+        <Alert
+          type="warning"
+          showIcon
+          title={`当前账号无 ${PERMISSION_CODES.systemConfig.edit} 权限，仅可查看品牌配置`}
+        />
       )}
 
       <Card title="站点 Logo" size="small">

@@ -1262,6 +1262,12 @@ func (d *Database) AutoMigrate() error {
 		if err := d.runAndRecord(259, "brand_config_seed", migrations.Migrate259BrandConfigSeed); err != nil {
 			applogger.Errorf("站点品牌配置种子迁移失败 (非阻断,留待下次启动): %v", err)
 		}
+		// 260：system:config 四个动作细码 F 型播种（孤儿码转正）。
+		// 缺行会让前端权限集不含 view/add/edit/remove → 参数配置与站点品牌按钮恒禁用。
+		// F 行由 grantActionPermissionToParentHolders 授给持 system:config 的角色。**非阻断**。
+		if err := d.runAndRecord(260, "config_action_permission_f_type_seed", migrations.Migrate260ConfigActionPermissionFTypeSeed); err != nil {
+			applogger.Errorf("system:config 动作权限种子迁移失败 (非阻断,留待下次启动): %v", err)
+		}
 		// 缺权限行只让普通角色备份删除 403 / 前端删除按钮不显示；父菜单缺失时迁移内部降级返回 nil。
 		if err := d.runAndRecord(246, "backup_remove_permission_f_type_seed", migrations.Migrate246BackupRemovePermissionFTypeSeed); err != nil {
 			applogger.Errorf("备份删除权限种子迁移失败 (非阻断,留待下次启动): %v", err)

@@ -64,6 +64,18 @@ export const PERMISSION_CODES = {
     edit: "system:post:edit",
     remove: "system:post:remove",
   },
+  // 参数配置五码：后端 pkg/permission/config.go Config* 常量镜像（b 类零豁免）。
+  // 此前 view/add/edit/remove 四码只有后端常量、sys_menu 无 F 行承载，导致
+  // 「前端权限集永远取不到该码 → 站点品牌/参数配置按钮恒禁用（超管也提示无权限）」；
+  // migration_260 补齐 F 型按钮并精准授给持 system:config 的角色，本条同步清偿
+  // permission-drift-exemptions.json 里的 4 条 C 类豁免 + 1 条 D 类豁免。
+  systemConfig: {
+    list: "system:config:list",
+    view: "system:config:view",
+    add: "system:config:add",
+    edit: "system:config:edit",
+    remove: "system:config:remove",
+  },
   // ==================== 85-03（RBAC-01）批次 A：ops 域写码 TS 同批声明 ====================
   // 后端 pkg/permission/config.go「运维管理权限（ops）」区块的镜像声明（b 类零豁免）。
   // 其中 import/export 16 码为本批新增（此前 Excel 导入导出搭 ANY-of 组级车），

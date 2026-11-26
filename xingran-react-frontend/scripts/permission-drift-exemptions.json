@@ -392,31 +392,6 @@
       "grandfathered": true
     },
     {
-      "code": "system:config:add",
-      "reason": "存量漂移[C类]｜缺失：TS声明(permissionCodes.ts) / sys_menu.perms｜需后续 phase 补 X：补 TS 声明 + 菜单 F 型播种｜清偿窗口：v1.55 / 2026-11-30 前（后端 RBAC 补常量 + 前端补 TS）｜到期复核：窗口到期后 5 个工作日内复跑 check-permission-codes.mjs，未清偿则升级为阻塞项",
-      "grandfathered": true
-    },
-    {
-      "code": "system:config:edit",
-      "reason": "存量漂移[C类]｜缺失：TS声明(permissionCodes.ts) / sys_menu.perms｜需后续 phase 补 X：补 TS 声明 + 菜单 F 型播种｜清偿窗口：v1.55 / 2026-11-30 前（后端 RBAC 补常量 + 前端补 TS）｜到期复核：窗口到期后 5 个工作日内复跑 check-permission-codes.mjs，未清偿则升级为阻塞项",
-      "grandfathered": true
-    },
-    {
-      "code": "system:config:list",
-      "reason": "存量漂移[D类]｜缺失：TS声明(permissionCodes.ts)｜需后续 phase 补 X：补 TS 声明(src/constants/permissionCodes.ts)｜清偿窗口：v1.55 / 2026-11-30 前（后端 RBAC 补常量 + 前端补 TS）｜到期复核：窗口到期后 5 个工作日内复跑 check-permission-codes.mjs，未清偿则升级为阻塞项",
-      "grandfathered": true
-    },
-    {
-      "code": "system:config:remove",
-      "reason": "存量漂移[C类]｜缺失：TS声明(permissionCodes.ts) / sys_menu.perms｜需后续 phase 补 X：补 TS 声明 + 菜单 F 型播种｜清偿窗口：v1.55 / 2026-11-30 前（后端 RBAC 补常量 + 前端补 TS）｜到期复核：窗口到期后 5 个工作日内复跑 check-permission-codes.mjs，未清偿则升级为阻塞项",
-      "grandfathered": true
-    },
-    {
-      "code": "system:config:view",
-      "reason": "存量漂移[C类]｜缺失：TS声明(permissionCodes.ts) / sys_menu.perms｜需后续 phase 补 X：补 TS 声明 + 菜单 F 型播种｜清偿窗口：v1.55 / 2026-11-30 前（后端 RBAC 补常量 + 前端补 TS）｜到期复核：窗口到期后 5 个工作日内复跑 check-permission-codes.mjs，未清偿则升级为阻塞项",
-      "grandfathered": true
-    },
-    {
       "code": "system:dict:add",
       "reason": "存量漂移[D类]｜缺失：TS声明(permissionCodes.ts)｜需后续 phase 补 X：补 TS 声明(src/constants/permissionCodes.ts)｜清偿窗口：v1.55 / 2026-11-30 前（后端 RBAC 补常量 + 前端补 TS）｜到期复核：窗口到期后 5 个工作日内复跑 check-permission-codes.mjs，未清偿则升级为阻塞项",
       "grandfathered": true
