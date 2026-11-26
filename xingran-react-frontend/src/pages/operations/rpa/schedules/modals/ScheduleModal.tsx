@@ -8,7 +8,19 @@
  */
 
 import { useCallback, useLayoutEffect, useMemo, useState } from "react";
-import { App, Collapse, Form, InputNumber, Modal, Radio, Row, Col, Space, Switch, Typography } from "antd";
+import {
+  App,
+  Collapse,
+  Form,
+  InputNumber,
+  Modal,
+  Radio,
+  Row,
+  Col,
+  Space,
+  Switch,
+  Typography,
+} from "antd";
 import type { FormInstance } from "antd/es/form";
 // Phase 71 契约组件：禁裸 antd Input/Select/TextArea。
 import { AppInput, AppSelect, AppTextArea } from "@/components/ui";
@@ -89,10 +101,9 @@ export function ScheduleModal({
   const { message } = App.useApp();
   const [submitting, setSubmitting] = useState(false);
 
+  // 仅 runMode 需要订阅（决定显示哪一组字段）；runTime/weekday/intervalMinutes
+  // 只在提交时经 values 读取，无需 useWatch 触发重渲染（原订阅是未使用的死代码）。
   const runMode = Form.useWatch("runMode", form);
-  const runTime = Form.useWatch("runTime", form);
-  const weekday = Form.useWatch("weekday", form);
-  const intervalMinutes = Form.useWatch("intervalMinutes", form);
 
   /** 关联任务候选项（编辑时补上当前已选任务，避免只显示内部标识） */
   const initialTaskOptions = useMemo(() => {
@@ -271,7 +282,7 @@ export function ScheduleModal({
       onCancel={onCancel}
       width={640}
       destroyOnHidden
-      maskClosable={false}
+      mask={{ closable: false }}
     >
       <Form<ScheduleFormValues>
         form={form}
@@ -285,11 +296,7 @@ export function ScheduleModal({
           }
         }}
       >
-        <Form.Item
-          name="name"
-          label="名称"
-          rules={[{ required: true, message: "请输入调度名称" }]}
-        >
+        <Form.Item name="name" label="名称" rules={[{ required: true, message: "请输入调度名称" }]}>
           <AppInput placeholder="例如：每天早上生成日报" />
         </Form.Item>
 
@@ -307,7 +314,7 @@ export function ScheduleModal({
 
         <Form.Item name="runMode" label="运行方式">
           <Radio.Group>
-            <Space direction="vertical">
+            <Space orientation="vertical">
               {RUN_MODE_OPTIONS.map((opt) => (
                 <Radio key={opt.value} value={opt.value}>
                   {opt.label}
@@ -351,9 +358,7 @@ export function ScheduleModal({
 
         {runMode === "custom" && (
           <Form.Item label="运行规则">
-            <Text type="secondary">
-              当前使用的是自定义规则，请在下方「高级设置」中查看或调整。
-            </Text>
+            <Text type="secondary">当前使用的是自定义规则，请在下方「高级设置」中查看或调整。</Text>
           </Form.Item>
         )}
 

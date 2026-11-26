@@ -4,7 +4,7 @@
 
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import type { FC } from "react";
-import { Table, Button, Space, Form, Card, Layout, Input, Modal, App } from "antd";
+import { Table, Button, Space, Form, Card, Layout, Modal, App } from "antd";
 import { SearchOutlined, ReloadOutlined } from "@ant-design/icons";
 import type { Execution } from "@/types/rpa";
 import type { PageResponse } from "@/types/base";
@@ -19,11 +19,10 @@ import { EXECUTION_STATUS_OPTIONS } from "../constants";
 import { post } from "@/lib/api";
 // Phase 71 (W3)：裸 Input/Select → 契约组件。
 // 执行状态为固定枚举（业务禁搜）→ children 改写 options + showSearch={false}。
-import { AppInput, AppSelect } from "@/components/ui";
+import { AppInput, AppSelect, AppTextArea } from "@/components/ui";
 import { FilterBar, StatCards } from "@/components/shared";
 
 const { Content } = Layout;
-const { TextArea } = Input;
 
 const ExecutionManagement: FC = () => {
   const { message } = App.useApp();
@@ -158,14 +157,15 @@ const ExecutionManagement: FC = () => {
   const handleCancelExecution = useCallback(
     (record: Execution) => {
       let reason = "";
+      // 非删除类确认（取消执行 ≠ 删除数据，不适用 ConfirmDelete 的删除文案模板）。
+      // 按 Phase 65 契约允许的出口：显式豁免并注明原因。
+      // eslint-disable-next-line no-restricted-syntax -- 非删除类确认：取消执行是运行时中断，不是数据删除，ConfirmDelete 固定「删除后不可恢复」文案不适用
       Modal.confirm({
         title: "确认取消执行",
         content: (
           <div>
-            <p>
-              确定要取消任务「{record.taskName}」的执行吗？Worker 将在下一个动作边界停止。
-            </p>
-            <TextArea
+            <p>确定要取消任务「{record.taskName}」的执行吗？Worker 将在下一个动作边界停止。</p>
+            <AppTextArea
               placeholder="取消原因（将记入审计日志）"
               rows={2}
               onChange={(e) => {

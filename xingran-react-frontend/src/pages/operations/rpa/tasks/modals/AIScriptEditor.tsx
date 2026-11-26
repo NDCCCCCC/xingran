@@ -82,6 +82,7 @@ const KNOWN_ACTION_TYPES: readonly string[] = ACTION_TYPE_OPTIONS.map((o) => o.v
  *   - selector 文本 → {type:"css"}（后端 ScriptAction 只有字符串选择器）
  *   - attributes.description → description
  */
+// eslint-disable-next-line react-refresh/only-export-components -- 纯函数与组件同文件是有意收拢：mapAIActions 是 handleGenerate 内部的 DTO 映射，拆走会造成双处维护
 export function mapAIActions(dtos: AIScriptActionDTO[] | undefined): Action[] {
   if (!dtos || dtos.length === 0) return [];
   return dtos
@@ -114,6 +115,7 @@ type GenerateErrorKind = "failed" | "timeout" | "empty" | "unavailable";
  * 这里优先看 HTTP 状态 + message 关键词；两者都拿不到时保守判为非不可用
  * （宁可让用户重试一次，也不要误把可重试的故障说成「功能没开」）。
  */
+// eslint-disable-next-line react-refresh/only-export-components -- 纯函数与组件同文件是有意收拢：isAIDisabledResponse 判定的是本组件独占的错误形态（fallback 测试直接调用）
 export function isAIDisabledResponse(error: unknown): boolean {
   const err = error as
     | {
@@ -126,8 +128,7 @@ export function isAIDisabledResponse(error: unknown): boolean {
 
   const status = err.response?.status ?? err.status;
   const message =
-    err.response?.data?.message ??
-    (typeof err.message === "string" ? err.message : "");
+    err.response?.data?.message ?? (typeof err.message === "string" ? err.message : "");
 
   // 后端约定：AI 未启用返回 400 且文案明确说「不可用」
   if (status === 400 && /不可用/.test(message)) return true;
@@ -440,7 +441,13 @@ export function AIScriptEditor({
                 </Space>
               </Space>
             }
-            type={generateError.kind === "empty" ? "warning" : generateError.kind === "unavailable" ? "info" : "error"}
+            type={
+              generateError.kind === "empty"
+                ? "warning"
+                : generateError.kind === "unavailable"
+                  ? "info"
+                  : "error"
+            }
             showIcon
             style={{ marginTop: 16 }}
             data-testid="ai-generate-error"

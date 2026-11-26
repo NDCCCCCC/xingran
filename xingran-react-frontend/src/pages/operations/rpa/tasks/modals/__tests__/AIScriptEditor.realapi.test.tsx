@@ -9,7 +9,7 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
-import { App as AntdApp, Form } from "antd";
+import { App as AntdApp } from "antd";
 import { MemoryRouter } from "react-router-dom";
 import type { ReactElement, ReactNode } from "react";
 
@@ -95,7 +95,7 @@ describe("AIScriptEditor 实调 POST /rpa/ai/generate", () => {
   });
 
   it("失败态：后端报错时展示可读错误并允许重试", async () => {
-    const handle = await generateWith("某个任务", (h) => {
+    await generateWith("某个任务", (h) => {
       h.endpoint.mockRejectedValue({ message: "API 返回错误 500: provider down" });
     });
 
@@ -110,7 +110,7 @@ describe("AIScriptEditor 实调 POST /rpa/ai/generate", () => {
   });
 
   it("空结果态：200 但 actions 为空时给出警告而非假装成功", async () => {
-    const handle = await generateWith("模糊描述", (h) => {
+    await generateWith("模糊描述", (h) => {
       h.endpoint.mockResolvedValue({ code: 0, data: { actions: [], explanation: "" } });
     });
 
@@ -121,7 +121,7 @@ describe("AIScriptEditor 实调 POST /rpa/ai/generate", () => {
   });
 
   it("超时态：请求 AbortError 时提示超时（而非笼统失败）", async () => {
-    const handle = await generateWith("长时间任务", (h) => {
+    await generateWith("长时间任务", (h) => {
       h.endpoint.mockRejectedValue({ name: "AbortError", code: "ERR_CANCELED" });
     });
 

@@ -127,7 +127,7 @@ describe("简单选项与定时规则互逆", () => {
   ];
 
   it("定时规则 → 简单选项 → 定时规则（原文不变）", () => {
-    cases.forEach(({ preset, opts, cron }) => {
+    cases.forEach(({ preset, cron }) => {
       const parsed = cronToPreset(cron);
       expect(parsed.preset).toBe(preset);
       if (parsed.preset === "custom") {
@@ -138,7 +138,9 @@ describe("简单选项与定时规则互逆", () => {
   });
 
   it("简单选项 → 定时规则 → 简单选项（选项不变）", () => {
-    cases.forEach(({ preset, opts, cron }) => {
+    // 用例的 opts 只用于「造表」的输入侧；断言口径从 cron 反解后的 parsed.opts 出发，
+    // 故解构时不取 opts（取用会触发 no-unused-vars）。原 args 仅剩 preset/cron 两值。
+    cases.forEach(({ preset, cron }) => {
       const parsed = cronToPreset(cron);
       expect(parsed.preset).toBe(preset);
       if (parsed.preset === "custom") {
@@ -297,10 +299,9 @@ describe("定时调度列表列定义", () => {
     const actionColumn = columns.find((col) => col.key === "action");
     expect(actionColumn).toBeTruthy();
     // 渲染元素里不应出现删除按钮文案
-    const rendered = (actionColumn?.render as (v: unknown, r: ScheduleRecord) => { render?: () => unknown })(
-      undefined,
-      makeRecord()
-    ) as { render?: () => unknown };
+    const rendered = (
+      actionColumn?.render as (v: unknown, r: ScheduleRecord) => { render?: () => unknown }
+    )(undefined, makeRecord()) as { render?: () => unknown };
     expect(JSON.stringify(rendered)).not.toContain("删除");
   });
 });

@@ -34,8 +34,7 @@ import { isTerminalRecordingState } from "./types";
 
 const { Text } = Typography;
 
-/** 心跳周期（与 155 liveview 一致） */
-const KEEPALIVE_INTERVAL_MS = 20_000;
+/** 心跳周期（与 155 liveview 一致）—— 由调用方的轮询节奏复用，本组件无需自带常量 */
 /** 会话快照轮询周期 */
 const POLL_INTERVAL_MS = 1_500;
 /** 等待画面就绪的超时（超时给可读提示，不停会话） */
@@ -59,9 +58,8 @@ export interface RecordingPanelProps {
  * selector 是字符串（worker 侧），前端 Action.selector 是 {type,value} 对象。
  * 导出以便单测（动作回填是录制链路的最后一公里，字段映射错误会让步骤列表全哑）。
  */
-export function toFrontendActions(
-  raw: Array<Record<string, unknown>> | undefined
-): Action[] {
+// eslint-disable-next-line react-refresh/only-export-components -- 纯函数与组件同文件是有意收拢：toFrontendActions 是本组件独占的 DTO→Action 映射（recordingPanel.test.ts 直接测它）
+export function toFrontendActions(raw: Array<Record<string, unknown>> | undefined): Action[] {
   if (!Array.isArray(raw)) return [];
   return raw.map((item, index) => {
     const selectorValue = typeof item.selector === "string" ? item.selector : "";
@@ -97,9 +95,7 @@ function PickOverlay({
     <Card
       size="small"
       title="选择定位方式（越靠前越稳定）"
-      extra={
-        <Button type="text" size="small" icon={<CloseCircleOutlined />} onClick={onClose} />
-      }
+      extra={<Button type="text" size="small" icon={<CloseCircleOutlined />} onClick={onClose} />}
       style={{ marginTop: 12 }}
       data-testid="recording-pick-overlay"
     >
@@ -130,12 +126,11 @@ function PickOverlay({
   );
 }
 
-export function RecordingPanel({ taskId, targetUrl, onFinish, onCancel }: RecordingPanelProps) {
+export function RecordingPanel({ taskId, targetUrl, onFinish }: RecordingPanelProps) {
   const { message } = App.useApp();
 
   const [sessionId, setSessionId] = useState("");
   const [state, setState] = useState<string>("created");
-  const [stateText, setStateText] = useState<string>("正在准备");
   const [frame, setFrame] = useState<LiveFrame | null>(null);
   const [pick, setPick] = useState<RecordingPickResult | null>(null);
   const [fatal, setFatal] = useState("");
@@ -149,7 +144,9 @@ export function RecordingPanel({ taskId, targetUrl, onFinish, onCancel }: Record
   // ==================== 1) 开始录制 ====================
   useEffect(() => {
     let cancelled = false;
-    setStarting(true);
+    // 不在 effect 内同步 setStarting(true)：starting 的 useState 初值已是 true，
+    // 这里同步 setState 会触发 react-hooks/set-state-in-effect（级联渲染）。
+    // taskId/targetUrl 变化需要重置时由调用方 remount（key 变化）承担。
     startRecording({ taskId, targetUrl })
       .then((res) => {
         if (cancelled) return;
@@ -162,12 +159,10 @@ export function RecordingPanel({ taskId, targetUrl, onFinish, onCancel }: Record
         sessionRef.current = data.sessionId;
         setSessionId(data.sessionId);
         setState(data.state || "starting");
-        setStateText(data.stateText || "正在准备");
       })
       .catch((error) => {
         if (cancelled) return;
-        const msg =
-          (error as { message?: string })?.message || "开始录制失败，请稍后重试";
+        const msg = (error as { message?: string })?.message || "开始录制失败，请稍后重试";
         setFatal(msg);
         setStarting(false);
       });
@@ -206,7 +201,6 @@ export function RecordingPanel({ taskId, targetUrl, onFinish, onCancel }: Record
           const snap = res.data;
           if (!snap) return;
           setState(snap.state);
-          setStateText(snap.stateText);
           if (snap.lastPick) setPick(snap.lastPick);
           if (isTerminalRecordingState(snap.state)) {
             if (snap.state === "stopped" && snap.result && !finishedRef.current) {
@@ -262,9 +256,8 @@ export function RecordingPanel({ taskId, targetUrl, onFinish, onCancel }: Record
     if (!id || stopping) return;
     setStopping(true);
     stopRecording(id)
-      .then(() => {
-        setStateText("正在整理步骤…");
-      })
+      // 「正在整理步骤…」这个过渡态不参与渲染（进度看 Card 头部的 state Tag），
+      // 停止成功后的收尾由轮询侧的 terminal state 驱动，这里无需额外的 setState。
       .catch((error) => {
         setStopping(false);
         message.error((error as { message?: string })?.message || "结束录制失败");

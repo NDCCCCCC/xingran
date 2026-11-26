@@ -118,12 +118,7 @@ function isPlainInt(field: string): boolean {
 }
 
 /** 取值域内取整，超界或非法时回落默认值 */
-function clampInt(
-  value: unknown,
-  min: number,
-  max: number,
-  fallback: number
-): number {
+function clampInt(value: unknown, min: number, max: number, fallback: number): number {
   const num = typeof value === "number" ? value : Number(value);
   if (!Number.isFinite(num)) return fallback;
   const rounded = Math.trunc(num);
@@ -147,10 +142,7 @@ function clampInt(
  *   presetToCron("weekly", { weekday: 1, hour: 9, minute: 0 }) → "0 9 * * 1"
  *   presetToCron("interval", { minutes: 15 })          → 间隔 15 分钟（斜杠步长写法）
  */
-export function presetToCron(
-  preset: SimplePreset,
-  opts: Partial<PresetOptions> = {}
-): string {
+export function presetToCron(preset: SimplePreset, opts: Partial<PresetOptions> = {}): string {
   switch (preset) {
     case "daily": {
       const o = opts as Partial<DailyOptions>;
@@ -299,7 +291,7 @@ export function parseClockTime(value: string): { hour: number; minute: number } 
 // ---------------------------------------------------------------------------
 
 /** 单个 cron 字段允许的字符集（数字 / * / , / -） */
-const CRON_FIELD_PATTERN = /^[0-9*/,\-]+$/;
+const CRON_FIELD_PATTERN = /^[0-9*/,-]+$/;
 
 /** 各字段的取值域（5 位口径：分 时 日 月 周） */
 const CRON_FIELD_RANGES: Array<[number, number]> = [
