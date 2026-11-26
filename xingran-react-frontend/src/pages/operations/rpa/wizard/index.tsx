@@ -31,7 +31,6 @@ import { RPA_ROUTES } from "../routes";
 const { Content } = Layout;
 const { Title, Text } = Typography;
 
-
 export default function TaskWizardPage() {
   const { message } = App.useApp();
   const navigate = useNavigate();
@@ -69,11 +68,14 @@ export default function TaskWizardPage() {
   );
 
   /** AI 生成完成 → 回填到向导并重新挂载（用 key 触发 state 重置） */
-  const handleAIConfirm = useCallback((actions: Action[]) => {
-    setPendingActions(actions);
-    setAiOpen(false);
-    message.success(`已生成 ${actions.length} 个步骤，请核对`);
-  }, [message]);
+  const handleAIConfirm = useCallback(
+    (actions: Action[]) => {
+      setPendingActions(actions);
+      setAiOpen(false);
+      message.success(`已生成 ${actions.length} 个步骤，请核对`);
+    },
+    [message]
+  );
 
   return (
     <Layout style={{ background: "transparent" }}>
@@ -84,14 +86,9 @@ export default function TaskWizardPage() {
               <Title level={4} style={{ margin: 0 }}>
                 新建自动化任务
               </Title>
-              <Text type="secondary">
-                三步就能让电脑替你重复做这些事，不需要懂任何技术。
-              </Text>
+              <Text type="secondary">三步就能让电脑替你重复做这些事，不需要懂任何技术。</Text>
             </div>
-            <Button
-              icon={<ArrowLeftOutlined />}
-              onClick={() => navigate(RPA_ROUTES.taskList)}
-            >
+            <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(RPA_ROUTES.taskList)}>
               返回任务列表
             </Button>
           </Space>

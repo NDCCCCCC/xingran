@@ -174,16 +174,12 @@ describe("describeAction 业务语义中文名", () => {
         })
       )
     ).toBe("在「金额」填入 1280");
-    expect(
-      describeAction(mk({ type: "click", params: { label: "提交" } }))
-    ).toBe("点击「提交」");
+    expect(describeAction(mk({ type: "click", params: { label: "提交" } }))).toBe("点击「提交」");
   });
 
   it("优先使用动作自带的中文 description", () => {
     expect(
-      describeAction(
-        mk({ type: "click", description: "点击按钮「登录」", params: { label: "x" } })
-      )
+      describeAction(mk({ type: "click", description: "点击按钮「登录」", params: { label: "x" } }))
     ).toBe("点击按钮「登录」");
   });
 
@@ -201,7 +197,7 @@ describe("describeAction 业务语义中文名", () => {
   it("从 selector 提取可读标签（不让 CSS 糊到用户脸上）", () => {
     expect(
       describeAction(
-        mk({ type: "click", selector: { type: "css", value: "[data-testid=\"submit-btn\"]" } })
+        mk({ type: "click", selector: { type: "css", value: '[data-testid="submit-btn"]' } })
       )
     ).not.toContain("data-testid");
     expect(
@@ -533,10 +529,9 @@ describe("TaskWizard 三步向导", () => {
 
   it("录制来源但无动作时调用 onOpenRecorder（不留死路）", async () => {
     const onOpenRecorder = vi.fn();
-    render(
-      <TaskWizard onSave={vi.fn()} onCancel={vi.fn()} onOpenRecorder={onOpenRecorder} />,
-      { wrapper }
-    );
+    render(<TaskWizard onSave={vi.fn()} onCancel={vi.fn()} onOpenRecorder={onOpenRecorder} />, {
+      wrapper,
+    });
     fireEvent.click(screen.getByTestId("wizard-source-record"));
     fireEvent.click(screen.getByTestId("wizard-next"));
     await waitFor(() => {
@@ -577,7 +572,7 @@ describe("TaskWizard 三步向导", () => {
         id: "s1",
         type: "click",
         description: "点击按钮「登录」",
-        selector: { type: "css", value: "[data-testid=\"login\"]" },
+        selector: { type: "css", value: '[data-testid="login"]' },
       },
     ];
     const { container } = render(

@@ -160,7 +160,7 @@ const LOGIN_TEMPLATE: TaskTemplate = {
       hint: "等登录完成、首页加载出来",
       selector: "#main-content",
       params: { duration: 3000 },
-      }),
+    }),
     mkStep("打开网页", "navigate", {
       hint: "打开你需要的数据页面",
       params: { url: "{{homeUrl}}" },
@@ -236,7 +236,7 @@ const FORM_TEMPLATE: TaskTemplate = {
       hint: "等「提交成功」的提示出现",
       selector: ".success-tip",
       params: { duration: 3000 },
-      }),
+    }),
   ],
 };
 
@@ -296,7 +296,7 @@ const EXPORT_TEMPLATE: TaskTemplate = {
       hint: "等查询结果表格出来",
       selector: ".result-table",
       params: { duration: 3000 },
-      }),
+    }),
     mkStep("点击按钮", "click", {
       hint: "点击导出，把结果下载下来",
       selector: "#export-btn",
@@ -345,7 +345,10 @@ export function instantiateTemplate(
     }
     // 选择器里也可能有占位符（少见的动态 id 场景）
     const selector = step.action.selector
-      ? { ...step.action.selector, value: substitutePlaceholders(step.action.selector.value, values) }
+      ? {
+          ...step.action.selector,
+          value: substitutePlaceholders(step.action.selector.value, values),
+        }
       : undefined;
 
     return {

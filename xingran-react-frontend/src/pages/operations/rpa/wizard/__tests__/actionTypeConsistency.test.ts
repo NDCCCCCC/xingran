@@ -54,9 +54,7 @@ describe("REC-03 前端动作枚举单一真相源", () => {
 
   it("ACTION_TYPE_OPTIONS 从共享枚举派生（不再是手写的 9 项）", () => {
     expect(ACTION_TYPE_OPTIONS.length).toBe(EXPECTED_ACTION_TYPE_COUNT);
-    expect(ACTION_TYPE_OPTIONS.map((o) => o.value).sort()).toEqual(
-      [...RPA_ACTION_TYPES].sort()
-    );
+    expect(ACTION_TYPE_OPTIONS.map((o) => o.value).sort()).toEqual([...RPA_ACTION_TYPES].sort());
   });
 
   it("每个动作都有非空中文名，且中文名不含 ASCII 字母", () => {
@@ -64,10 +62,7 @@ describe("REC-03 前端动作枚举单一真相源", () => {
       const label = ACTION_TYPE_TEXT_MAP[type];
       expect(label, `动作 ${type} 缺少中文名`).toBeTruthy();
       expect(label.trim().length, `动作 ${type} 的中文名为空`).toBeGreaterThan(0);
-      expect(
-        LATIN_LETTER.test(label),
-        `动作 ${type} 的中文名含 ASCII 字母: ${label}`
-      ).toBe(false);
+      expect(LATIN_LETTER.test(label), `动作 ${type} 的中文名含 ASCII 字母: ${label}`).toBe(false);
     }
   });
 
@@ -76,10 +71,7 @@ describe("REC-03 前端动作枚举单一真相源", () => {
       const verb = HUMAN_VERBS[type];
       expect(verb, `动作 ${type} 缺少员工动词`).toBeTruthy();
       expect(verb.trim().length, `动作 ${type} 的员工动词为空`).toBeGreaterThan(0);
-      expect(
-        LATIN_LETTER.test(verb),
-        `动作 ${type} 的员工动词含 ASCII 字母: ${verb}`
-      ).toBe(false);
+      expect(LATIN_LETTER.test(verb), `动作 ${type} 的员工动词含 ASCII 字母: ${verb}`).toBe(false);
     }
   });
 

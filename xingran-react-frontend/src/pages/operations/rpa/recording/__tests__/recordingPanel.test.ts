@@ -50,7 +50,7 @@ describe("recording / toFrontendActions", () => {
   });
 
   it("未知类型兜底为 click 且不抛错（畸形数据不炸步骤列表）", () => {
-    const actions = toFrontendActions([{ /* 无 type */ }]);
+    const actions = toFrontendActions([{/* 无 type */}]);
     expect(actions).toHaveLength(1);
     expect(actions[0].type).toBe("click");
   });

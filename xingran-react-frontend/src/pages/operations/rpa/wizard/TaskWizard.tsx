@@ -231,7 +231,9 @@ export function TaskWizard({
   const { message } = App.useApp();
 
   const [current, setCurrent] = useState(0);
-  const [source, setSource] = useState<WizardSource>(initialActions?.length ? "record" : "template");
+  const [source, setSource] = useState<WizardSource>(
+    initialActions?.length ? "record" : "template"
+  );
   const [templateId, setTemplateId] = useState<string>("");
   const [templateValues, setTemplateValues] = useState<Record<string, string>>({});
   const [actions, setActions] = useState<Action[]>(initialActions ?? []);
@@ -378,9 +380,7 @@ export function TaskWizard({
 
   const editStepValue = useCallback((index: number, value: string) => {
     setActions((prev) =>
-      prev.map((a, i) =>
-        i === index ? { ...a, params: { ...a.params, value } } : a
-      )
+      prev.map((a, i) => (i === index ? { ...a, params: { ...a.params, value } } : a))
     );
   }, []);
 
@@ -407,7 +407,17 @@ export function TaskWizard({
       setSaving(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
-  }, [actions, taskName, description, runMode, scheduleCron, triggerEvent, source, templateId, onSave]);
+  }, [
+    actions,
+    taskName,
+    description,
+    runMode,
+    scheduleCron,
+    triggerEvent,
+    source,
+    templateId,
+    onSave,
+  ]);
 
   // ==================== 渲染 ====================
 
@@ -468,8 +478,7 @@ export function TaskWizard({
                   data-testid={`wizard-source-${item.key}`}
                   data-selected={source === item.key ? "true" : "false"}
                   style={{
-                    borderColor:
-                      source === item.key ? "var(--theme-border-accent)" : undefined,
+                    borderColor: source === item.key ? "var(--theme-border-accent)" : undefined,
                     borderWidth: source === item.key ? 2 : 1,
                   }}
                   onClick={() => setSource(item.key)}
@@ -503,7 +512,8 @@ export function TaskWizard({
                       onClick={() => handlePickTemplate(tpl)}
                       style={{
                         height: "100%",
-                        borderColor: templateId === tpl.id ? "var(--theme-border-accent)" : undefined,
+                        borderColor:
+                          templateId === tpl.id ? "var(--theme-border-accent)" : undefined,
                       }}
                     >
                       <Space orientation="vertical" size={6} style={{ width: "100%" }}>
@@ -709,9 +719,7 @@ export function TaskWizard({
               </Text>
               <Text>
                 运行方式：
-                <Text strong>
-                  {runModeLabel({ runMode, scheduleCron, triggerEvent })}
-                </Text>
+                <Text strong>{runModeLabel({ runMode, scheduleCron, triggerEvent })}</Text>
               </Text>
             </Space>
           </Card>

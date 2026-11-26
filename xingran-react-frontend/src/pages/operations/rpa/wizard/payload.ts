@@ -92,7 +92,9 @@ export function toTaskPayload(draft: WizardDraft): Record<string, unknown> {
 /**
  * runModeLabel 运行方式的中文名（第 3 步确认卡片与测试断言共用）。
  */
-export function runModeLabel(draft: Pick<WizardDraft, "runMode" | "scheduleCron" | "triggerEvent">): string {
+export function runModeLabel(
+  draft: Pick<WizardDraft, "runMode" | "scheduleCron" | "triggerEvent">
+): string {
   switch (draft.runMode) {
     case "immediate":
       return "现在运行一次";

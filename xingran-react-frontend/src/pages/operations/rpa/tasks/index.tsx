@@ -117,7 +117,6 @@ const TaskManagement: FC = () => {
   // 录制产物回填给向导（第 2 步步骤列表的直接来源）。
   const [recordedActions, setRecordedActions] = useState<Action[]>([]);
 
-
   const refreshData = useCallback(() => {
     loadTasks();
   }, [loadTasks]);

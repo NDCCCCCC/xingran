@@ -177,7 +177,8 @@ export function TaskEditModal({ open, form, editingTask, onOk, onCancel }: TaskE
         retryOnFailure: true,
         maxRetries: editingTask.retryCount || editingTask.maxRetries || 3,
         // 数字 0 必须原样回填（不能写成 falsy 判定，否则 0 会回落默认值）
-        status: editingTask.status === undefined || editingTask.status === null ? 0 : editingTask.status,
+        status:
+          editingTask.status === undefined || editingTask.status === null ? 0 : editingTask.status,
         // tags 是字符串，需要转换为数组（用逗号分隔）
         tags: editingTask.tags
           ? editingTask.tags
@@ -536,9 +537,7 @@ export function TaskEditModal({ open, form, editingTask, onOk, onCancel }: TaskE
         destroyOnHidden
         data-testid="template-picker-modal"
       >
-        <Text type="secondary">
-          选一个最接近你日常工作的模板，套用后再逐项改成自己的内容。
-        </Text>
+        <Text type="secondary">选一个最接近你日常工作的模板，套用后再逐项改成自己的内容。</Text>
         <Row gutter={12} style={{ marginTop: 16 }}>
           {TASK_TEMPLATES.map((tpl) => (
             <Col span={8} key={tpl.id}>

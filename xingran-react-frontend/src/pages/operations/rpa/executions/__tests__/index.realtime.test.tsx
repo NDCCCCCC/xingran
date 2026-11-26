@@ -35,9 +35,9 @@ function wrapper({ children }: { children: ReactNode }): ReactElement {
 
 /** 把一条 RPA 进度消息通过 noticeStore 的订阅链派发出去。 */
 function dispatchProgress(overrides: Partial<RPAProgressMessage> = {}) {
-  const listener = (useNoticeStore.getState() as unknown as {
+  const listener = useNoticeStore.getState() as unknown as {
     onRPAProgress: (cb: (m: RPAProgressMessage) => void) => () => void;
-  });
+  };
   // 直接调用 store 的 handleWsMessage 需要构造完整 WS 消息；
   // 这里走更直接的路径：取当前所有订阅者并派发。
   void listener;

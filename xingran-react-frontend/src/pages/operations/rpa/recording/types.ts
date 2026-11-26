@@ -7,13 +7,7 @@
 
 /** 录制会话状态（与后端 RecordingSessionState 同值） */
 export type RecordingState =
-  | "created"
-  | "starting"
-  | "recording"
-  | "stopped"
-  | "failed"
-  | "expired"
-  | "aborted";
+  "created" | "starting" | "recording" | "stopped" | "failed" | "expired" | "aborted";
 
 /** 一级选择器候选（7 级阶梯的其中一级；与后端 RecordingTier 同构） */
 export interface RecordingTier {

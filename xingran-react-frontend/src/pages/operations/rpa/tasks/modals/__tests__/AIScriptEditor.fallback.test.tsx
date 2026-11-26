@@ -78,15 +78,18 @@ describe("isAIDisabledResponse 判定", () => {
   it("400 + 第 N 步（非法动作）→ 不是不可用，应走重试", () => {
     expect(
       isAIDisabledResponse({
-        response: { status: 400, data: { message: "AI 返回的 2 个步骤中有 1 个无法执行：第 2 步" } },
+        response: {
+          status: 400,
+          data: { message: "AI 返回的 2 个步骤中有 1 个无法执行：第 2 步" },
+        },
       })
     ).toBe(false);
   });
 
   it("500 超时 → 不是不可用", () => {
-    expect(isAIDisabledResponse({ response: { status: 500, data: { message: "脚本生成失败" } } })).toBe(
-      false
-    );
+    expect(
+      isAIDisabledResponse({ response: { status: 500, data: { message: "脚本生成失败" } } })
+    ).toBe(false);
   });
 
   it("无响应信息时保守判为非不可用（宁可让用户重试，也不误报功能没开）", () => {
@@ -102,7 +105,10 @@ describe("AIScriptEditor AI 不可用降级", () => {
       h.endpoint.mockRejectedValue({
         response: {
           status: 400,
-          data: { message: "智能生成当前不可用（系统未开启该功能）。请改用「录制一段操作」的方式创建任务。" },
+          data: {
+            message:
+              "智能生成当前不可用（系统未开启该功能）。请改用「录制一段操作」的方式创建任务。",
+          },
         },
       });
     });
