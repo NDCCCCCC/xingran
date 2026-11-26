@@ -48,10 +48,7 @@ function loginAs(user: { id: string; username: string; nickname?: string }) {
 }
 
 /** 注册本轮要用到的全部后端端点并给出默认响应。 */
-function mockBackend(opts: {
-  takeoverById: string;
-  takeoverBy: string;
-}) {
+function mockBackend(opts: { takeoverById: string; takeoverBy: string }) {
   // 兜底：任何未注册端点统一返回安全空响应，避免 mock 返回 undefined 让
   // 页面的 `.catch()` 抛 TypeError（那不是被测逻辑的问题）。
   setGenericFallback({ code: 0, data: {} });
@@ -140,8 +137,8 @@ async function clickTakeoverAndConfirm() {
     expect(document.querySelector(".ant-card-extra")).not.toBeNull();
   });
   const cardExtra = document.querySelector(".ant-card-extra") as HTMLElement;
-  const takeoverBtn = Array.from(cardExtra.querySelectorAll("button")).find(
-    (b) => /接\s*管/.test((b.textContent ?? "").trim())
+  const takeoverBtn = Array.from(cardExtra.querySelectorAll("button")).find((b) =>
+    /接\s*管/.test((b.textContent ?? "").trim())
   );
   expect(takeoverBtn).toBeTruthy();
   fireEvent.click(takeoverBtn as HTMLButtonElement);

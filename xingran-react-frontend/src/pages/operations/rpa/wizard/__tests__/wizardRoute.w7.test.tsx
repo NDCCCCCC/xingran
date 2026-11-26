@@ -35,7 +35,10 @@ function renderWizardAt(initialPath: string) {
           <Route path="/vdi/rpa/wizard" element={<TaskWizardPage />} />
           <Route path="/vdi/rpa" element={<div data-testid="task-list-page">任务列表</div>} />
           {/* 修前那个错误路径：若真的落到这里，说明回归又出现了 */}
-          <Route path="/operations/rpa/tasks" element={<div data-testid="wrong-path">错误路径</div>} />
+          <Route
+            path="/operations/rpa/tasks"
+            element={<div data-testid="wrong-path">错误路径</div>}
+          />
           <Route path="/dashboard" element={<div data-testid="dashboard">仪表盘</div>} />
         </Routes>
         <LocationProbe />
