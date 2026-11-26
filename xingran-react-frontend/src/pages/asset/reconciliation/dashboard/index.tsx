@@ -66,6 +66,20 @@ const CONFLICT_TYPE_FALLBACK = ["A", "B", "C", "D", "E", "F"];
 const SEVERITY_FALLBACK = ["low", "medium", "high", "critical"];
 
 /**
+ * 三张图表的 tooltip 公共片段：浮层挂到 body，而不是图表自身容器。
+ *
+ * 背景：ECharts 6 的 TooltipView 用 `tooltipModel.get('appendToBody', true)` 决定
+ * 挂载点，第二个参数是 ignoreParent 而非默认值，appendToBody/appendTo 都未配置时
+ * 取到 undefined → 浮层 appendChild 到 `api.getDom()`（图表 canvas 容器）。
+ * 本页图表放在 <Card> 里，而 index.css 的 `.ant-card { overflow: hidden }`
+ * 会把超出卡片边界的部分直接裁掉，于是悬停提示一贴边就看不见。
+ *
+ * appendTo: "body" 让浮层脱离卡片裁剪；ECharts 自带的 z-index(9999999)
+ * 保证它仍浮在所有卡片之上，无需额外改 CSS。
+ */
+const TOOLTIP_ON_BODY = { appendTo: "body" as const };
+
+/**
  * 柱状图颜色:字典 listClass/cssClass 优先 → 既有静态色板 fallback → 中性色兜底。
  * 复用共享工具 resolveDictTagColor 把字典写法归一为 antd 预设色,再转 CSS 颜色。
  */
@@ -172,6 +186,7 @@ const Dashboard = () => {
     }));
     return {
       tooltip: {
+        ...TOOLTIP_ON_BODY,
         trigger: "item",
         formatter: "{b}: {c} ({d}%)",
       },
@@ -198,7 +213,7 @@ const Dashboard = () => {
     const categories = dictKeys.length > 0 ? dictKeys : SEVERITY_FALLBACK;
     const values = categories.map((k) => Number(dataMap[k] ?? 0));
     return {
-      tooltip: { trigger: "axis", axisPointer: { type: "shadow" } },
+      tooltip: { ...TOOLTIP_ON_BODY, trigger: "axis", axisPointer: { type: "shadow" } },
       grid: { left: 40, right: 20, top: 30, bottom: 30 },
       xAxis: {
         type: "category",
@@ -225,7 +240,7 @@ const Dashboard = () => {
   const lineOption = useMemo(() => {
     const data = healthTrend.data ?? [];
     return {
-      tooltip: { trigger: "axis" },
+      tooltip: { ...TOOLTIP_ON_BODY, trigger: "axis" },
       legend: { top: 0 },
       grid: { left: 40, right: 20, top: 40, bottom: 30 },
       xAxis: { type: "category", data: data.map((p) => p.date) },
