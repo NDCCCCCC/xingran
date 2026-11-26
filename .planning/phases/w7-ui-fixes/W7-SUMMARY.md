@@ -96,7 +96,7 @@ location probe 内容 = `/vdi/rpa`。
 
 **C. 回归拦截（防再次散落硬编码）**
 
-新增 `__tests__/routes.test.ts`（8 例，PASS）：常量值对齐 PG 实证；扫描源码禁止出现
+新增 `__tests__/routes.test.ts`（7 例，PASS）：常量值对齐 PG 实证；扫描源码禁止出现
 `"/operations/rpa"` / `"/vdi/rpa"` 裸字符串（先剥注释，保留「历史错误路径」这类说明文字）。
 
 ---
@@ -438,7 +438,7 @@ admin          | 超级管理员 | 0
 | 3 | `cd rpa-worker && go build ./...` | ✅ PASS | 交叉编译 `out/rpa-worker-linux-w7` 一次通过 |
 | 4 | `cd rpa-worker && go test ./...` | ✅ PASS（重跑） | `internal/browser` 213.6s PASS；详见 §4.3 flaky 说明 |
 | 5 | `npx tsc --noEmit` | ✅ PASS | 无 `error TS` |
-| 6 | rpa 相关 vitest | ✅ PASS **81 例** | routes 8 + controller 13 + wizardRoute 2 + liveTakeoverMask 5 + live 其余 44 + ExecutionDetailModal liveEntry 2 + wizard 既有 … |
+| 6 | rpa 相关 vitest（`routes.test.ts` + `live/` + `wizard/` + `ExecutionDetailModal.liveEntry`） | ✅ PASS **120 例 / 11 文件** | routes 7 + controller 13 + wizardRoute 2 + liveTakeoverMask 5 + liveHud 8 + liveCanvas 7 + liveFrameParser 26 + liveFrameBus 7 + wizard 既有 35 + actionTypeConsistency 8 + ExecutionDetail liveEntry 2 |
 | 7 | W7 目标包 Go 测试 | ✅ PASS | `pkg/crypto` 3.1s、`internal/core/security` 51.6s、`internal/services/rpa` 0.9s、`internal/api/v1/rpa` 88.5s |
 
 ### 7.1 生产部署与回滚记录（如实登记）
