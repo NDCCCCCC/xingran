@@ -16,7 +16,7 @@ set CGO_ENABLED=0
 go build -o out/xingran-backend-linux ./cmd/main.go
 
 # 或直接用在用脚本（产物同样落 out/）
-# scripts\build-linux.bat [root] / scripts\build_linux.sh / scripts\build-embedded.bat
+# scripts\build-linux.bat [root]（Windows 构建 Linux） / scripts/build_linux.sh（Linux 本机）
 
 # Run tests
 go test ./...

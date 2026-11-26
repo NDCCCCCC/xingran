@@ -240,10 +240,10 @@ RUN go mod download
 # 复制源码
 COPY . .
 
-# 编译（含前端 embed 的版本；scripts/build/build-embedded.sh 走的是这一路）
+# 编译（含前端 embed 的版本；scripts/build_linux.sh 走的是这一路）
 ARG EMBED_FRONTEND=true
 RUN if [ "$EMBED_FRONTEND" = "true" ]; then \
-      sh scripts/build/build-embedded.sh; \
+      sh scripts/build_linux.sh; \
       mv xingran-backend-embedded-linux /out/xingran-backend; \
     else \
       CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /out/xingran-backend ./cmd/main.go; \
@@ -524,7 +524,7 @@ rsync -av uploads/ backup-uploads-$(date +%Y%m%d)/
 | 前端打开空白 | nginx SPA fallback 未配 | 确认 `try_files $uri $uri/ /index.html;` |
 | `/api/...` 404 | nginx 反代路径 | 改成 `proxy_pass http://backend:9000;`（去掉 `/api/` 前缀） |
 | 上传文件消失 | `uploads/` 卷未挂载 | `docker compose exec backend ls /app/uploads` |
-| `templates/...` no such file | Dockerfile 没走 embed 构建路径 | 检查 `scripts/build/build-embedded.sh` 是否被调用 |
+| `templates/...` no such file | Dockerfile 没走 embed 构建路径 | 检查 `scripts/build_linux.sh` 是否被调用 |
 | 自动迁移没跑 | `SKIP_AUTOMIGRATE=true` | 设为 `false` 或移除该环境变量 |
 
 ---

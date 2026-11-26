@@ -181,7 +181,7 @@ sudo -E vim /opt/xingran/configs/config.yaml
 #   security.request_encryption.require_encryption: true
 
 # 4. 编译（含前端 embed 的版本）
-scripts/build/build-embedded.sh
+scripts/build_linux.sh
 # 产物：xingran-backend-embedded-linux
 
 # 5. 部署
@@ -481,7 +481,7 @@ curl -s https://yourdomain.com/api/v1/system/menus/my-menus \
 | 前端打开空白 | nginx 没配 SPA fallback | `try_files $uri $uri/ /index.html;` |
 | `/api/...` 404 | nginx 反代路径不对 | `proxy_pass http://127.0.0.1:9000;`（**注意尾斜杠**） |
 | RPA Worker 报 `connection refused :2375` | Docker daemon 没监听 TCP | 配 `/etc/docker/daemon.json` 加 `tcp://127.0.0.1:2375` |
-| `templates/...` no such file | 二进制是早期版本未 embed | 改用 `scripts/build/build-embedded.sh` 重新构建 |
+| `templates/...` no such file | 二进制是早期版本未 embed | 改用 `scripts/build_linux.sh` 重新构建 |
 | 工位导入报"部门名称不是 UUID" | org_id 传了部门名 | 导入数据必须用 UUID（migration 084 修复历史数据） |
 
 ---

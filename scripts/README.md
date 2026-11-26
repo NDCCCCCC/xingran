@@ -63,21 +63,17 @@ export DB_NAME=xingran
 
 ## 各子目录说明
 
-### 构建脚本（顶层 + `build/` 子目录）
+### 构建脚本（顶层）
 
-`bat`/`sh` 配对，覆盖 Windows / Linux（macOS 通常也能跑 `.sh`）。`scripts/build/` 下脚本用 `%~dp0..\..`、`scripts/` 顶层脚本用 `%~dp0..` / `dirname/..` 各自上溯到项目根，可从任意 cwd 调用（两者层级不同，不可一概而论）。**产物统一 `out/`**（见上文「构建产物路径」）。
+两个构建入口均产出**前后端一体化** Linux 产物（`-tags=embed`，前端已嵌入，与 CI deploy.yml 同形态），并自动注入/递增版本号（VERSION 机制见 `scripts/build/bump-version.mjs`）。**产物统一 `out/`**（见上文「构建产物路径」）。
 
 ```bash
 # scripts/ 顶层（产物 out/）
-./build-linux.bat [root]     # 内嵌前端 Linux（VITE_BASE 切换）
-./build_linux.sh             # 纯后端 Linux
-./build-embedded.bat         # 内嵌前端 Windows
-./build-embedded.sh          # 内嵌前端 Linux
+./build-linux.bat [root]     # 权威入口：Windows 上构建 Linux（VITE_BASE 切换 /xingran|root）
+./build_linux.sh             # Linux 本机构建（dist 缺失自动补建 + 产物 embed 自检）
 
-# scripts/build/ 子目录（产物 out/）
+# scripts/build/ 子目录
 cd scripts/build
-./build.bat                  # 纯后端 Linux
-./build_and_deploy.bat       # 纯后端 Linux + 部署说明
 ./generate_swagger.bat       # Swagger 生成（Windows）
 ```
 
@@ -140,7 +136,7 @@ go test ./tests/e2e/...
 
 | 文件 | 用途 |
 |------|------|
-| `build-embedded.bat/.sh`、`build-linux.bat`、`build_linux.sh` | 本地构建（产物统一 `out/`） |
+| `build-linux.bat`、`build_linux.sh` | 本地构建（前后端一体化 embed，产物统一 `out/`） |
 | `check-route-registry.mjs`、`scan-routes.cjs`、`route-registry.json` | 路由注册表门禁 |
 | `check-frontend-api-urls.mjs`、`frontend-url-exemptions.json` | 前端 API URL ↔ 后端路由交叉校验（读 route-registry.json，消费方 scripts/frontend-url-exemptions.json 为豁免登记，reason 必填） |
 | `check-status-literals.sh` | 状态字面量门禁 |
