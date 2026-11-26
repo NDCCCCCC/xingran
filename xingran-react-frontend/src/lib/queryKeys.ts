@@ -112,6 +112,11 @@ export const queryKeys = {
     all: ["vdi"] as const,
     servers: () => ["vdi", "servers"] as const,
   },
+  // 站点品牌（brand.* sys_config）：管理端读端点独立于公开端点（公开端点有 5min 缓存）
+  branding: {
+    all: ["branding"] as const,
+    admin: () => ["branding", "admin"] as const,
+  },
 } as const;
 
 export type QueryKeys = typeof queryKeys;

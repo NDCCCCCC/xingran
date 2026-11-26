@@ -12,6 +12,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/store/authStore";
 import { useMenuStore } from "@/store/menuStore";
+import { useBrandStore } from "@/store/brandStore";
 import { TextCaptcha } from "@/components/captcha";
 import CaptchaModal, { type CaptchaSuccessData } from "@/components/captcha/CaptchaModal";
 import { getCaptchaConfig } from "@/services/captcha";
@@ -43,6 +44,8 @@ const Login: FC = () => {
   const { message } = App.useApp();
   const [loading, setLoading] = useState(false);
   const [loginError, setLoginError] = useState<string>("");
+  // 品牌文案：brandStore（App 启动已拉取；失败=DEFAULT_BRANDING 兜底，登录页永不空白）
+  const brand = useBrandStore((s) => s.config);
   const [form] = Form.useForm();
   const navigate = useNavigate();
   const login = useAuthStore((s) => s.login);
@@ -178,25 +181,22 @@ const Login: FC = () => {
         </div>
 
         <div className="login-brand__top">
-          <div className="login-brand__mark">星</div>
-          <span className="login-brand__wordmark">XingRan-Next</span>
+          <div className="login-brand__mark">
+            {brand.logoUrl ? (
+              <img
+                src={brand.logoUrl}
+                alt="Logo"
+                style={{ width: "100%", height: "100%", objectFit: "contain" }}
+              />
+            ) : (
+              brand.siteMark
+            )}
+          </div>
+          <span className="login-brand__wordmark">{brand.siteName}</span>
         </div>
 
         <div className="login-brand__center">
-          <span className="login-brand__eyebrow">
-            <span className="login-brand__eyebrow-dot" />
-            v1.0 · 国密级安全
-          </span>
-
-          <h1 className="login-brand__title">
-            光启万物
-            <span className="login-brand__title-sep">·</span>
-            荫庇四方
-          </h1>
-
-          <p className="login-brand__tagline">
-            以国密算法为基座,融合自动化与 AI 调度,让每一次资源调度都可观测、可审计、可信赖。
-          </p>
+          <p className="login-brand__tagline">{brand.tagline}</p>
 
           <div className="login-brand__features">
             <div className="login-brand__feature">
@@ -235,7 +235,7 @@ const Login: FC = () => {
           <span className="login-brand__badge">SM2</span>
           <span className="login-brand__badge">SM3</span>
           <span className="login-brand__badge">SM4</span>
-          <span className="login-brand__copyright">© 2026 XingRan-Next</span>
+          <span className="login-brand__copyright">{brand.copyright}</span>
         </div>
       </aside>
 
@@ -244,7 +244,7 @@ const Login: FC = () => {
         <div className="login-form-card">
           <div className="login-header">
             <h2 className="login-header__title">欢迎回来</h2>
-            <p className="login-header__subtitle">请使用您的账号登录以访问运维控制台</p>
+            <p className="login-header__subtitle">{brand.subtitle}</p>
           </div>
 
           {loginError && (
@@ -308,7 +308,7 @@ const Login: FC = () => {
 
           <div className="login-footer">
             <span>使用企业账号登录</span>
-            <span>v1.0.0</span>
+            <span>v{typeof __APP_VERSION__ === "undefined" ? "dev" : __APP_VERSION__}</span>
           </div>
         </div>
       </main>

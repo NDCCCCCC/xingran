@@ -22,6 +22,7 @@ import {
   MailOutlined,
   PictureOutlined,
   TeamOutlined,
+  SkinOutlined,
 } from "@ant-design/icons";
 import type { SettingsCategory } from "@/design-system/components/SettingsShell";
 import { PERMISSION_CODES } from "@/constants/permissionCodes";
@@ -30,8 +31,16 @@ import APIConfigPage from "./api-config";
 import CaptchaBackgroundSettingsPage from "./captcha-background";
 import ManagerSyncSettings from "./manager-sync";
 import BackupRestoreSettings from "./backup-restore";
+import BrandSettings from "./brand-settings";
 
 export const systemSettingsCategories: SettingsCategory[] = [
+  {
+    key: "brand",
+    label: "站点品牌",
+    icon: <SkinOutlined />,
+    content: <BrandSettings />,
+    description: "站点名称、Logo、登录页宣传语与版权信息，数据库持久化，保存后立即生效。",
+  },
   {
     key: "email",
     label: "邮箱配置",

@@ -615,6 +615,12 @@ func GetRoutePermissions() []RoutePermission {
 		{"/system/configs/:id/update", "POST", ConfigEdit, "编辑参数配置"},
 		{"/system/configs/:id/delete", "POST", ConfigRemove, "删除参数配置"},
 
+		// 站点品牌配置（系统设置-站点品牌 tab）：写端点登记 strict config:edit。
+		// 读端点（GET /system/branding）不登记，由读组 ANY-of config:list/view 放行；
+		// 公开端点（GET /system/branding/public、GET /system/branding/logo）免认证，不登记。
+		{"/system/branding/update", "POST", ConfigEdit, "更新站点品牌配置"},
+		{"/system/branding/logo", "POST", ConfigEdit, "上传站点 Logo"},
+
 		// 全库备份与恢复（quick 261110-tbq）；读端点不登记（由读组 ANY-of 放行）。
 		{"/system/db-backup/export", "POST", SystemBackupExport, "触发全库备份导出"},
 		{"/system/db-backup/restore", "POST", SystemBackupRestore, "导入并恢复全库备份"},

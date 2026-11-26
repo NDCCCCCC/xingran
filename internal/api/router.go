@@ -223,6 +223,12 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 			v1.SetupAuthRouter(auth, core)
 		}
 
+		// 站点品牌公开接口（无需认证；登录页渲染站名/logo/宣传语用）
+		brandingPublic := system.Group("/branding")
+		{
+			systemV1.SetupBrandingPublicRouter(brandingPublic, core)
+		}
+
 		// 需要认证的接口
 		authorized := system.Group("")
 		// 使用带黑名单检查的 JWT 认证中间件
@@ -261,6 +267,12 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 			themeConfig.Use(middleware.RequirePermissions([]string{permSystemConfig}, core))
 			{
 				systemV1.SetupDefaultThemeRouter(themeConfig, core)
+			}
+
+			// 站点品牌配置管理（系统设置-站点品牌 tab；复用 system:config 权限族，不新增码）
+			brandingAdmin := authorized.Group("/branding")
+			{
+				systemV1.SetupBrandingRouter(brandingAdmin, core)
 			}
 
 			// 通知配置管理（需要系统配置权限）

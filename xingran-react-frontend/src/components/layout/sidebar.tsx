@@ -4,6 +4,7 @@ import type { MenuProps } from "antd";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useMenuStore } from "@/store/menuStore";
 import { useLayoutStore } from "@/store/layoutStore";
+import { useBrandStore } from "@/store/brandStore";
 import type { Menu as MenuType } from "@/types";
 import {
   buildMenuPathMap,
@@ -72,6 +73,8 @@ const convertToMenuItem = (menu: MenuType, parentPath: string = ""): MenuItem =>
 
 const Sidebar = () => {
   const { message } = App.useApp();
+  // 品牌文案：brandStore（App 启动已拉取；失败=DEFAULT_BRANDING 兜底）
+  const brand = useBrandStore((s) => s.config);
   const [openKeys, setOpenKeys] = useState<string[]>([]);
   const expectedOpenKeysRef = useRef<string[] | null>(null);
   const navigate = useNavigate();
@@ -292,9 +295,17 @@ const Sidebar = () => {
         {/* 品牌区（原型 .sidebar-brand：金方块 mark + font-display 字标） */}
         <div className="sidebar-brand">
           <span className="brand-mark" aria-hidden="true">
-            星
+            {brand.logoUrl ? (
+              <img
+                src={brand.logoUrl}
+                alt="Logo"
+                style={{ width: "100%", height: "100%", objectFit: "contain" }}
+              />
+            ) : (
+              brand.siteMark
+            )}
           </span>
-          {!sidebarCollapsed && <span className="brand-wordmark">XingRan-Next</span>}
+          {!sidebarCollapsed && <span className="brand-wordmark">{brand.siteName}</span>}
         </div>
 
         {loading ? (
@@ -327,7 +338,9 @@ const Sidebar = () => {
             <span className="sm-chip">SM2</span>
             <span className="sm-chip">SM3</span>
             <span className="sm-chip">SM4</span>
-            <span className="ver">v1.0.0</span>
+            <span className="ver">
+              v{typeof __APP_VERSION__ === "undefined" ? "dev" : __APP_VERSION__}
+            </span>
           </div>
         )}
       </div>

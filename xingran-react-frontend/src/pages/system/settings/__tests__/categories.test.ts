@@ -23,13 +23,13 @@ import { userSettingsCategories } from "@/pages/settings/categories";
 import { PERMISSION_CODES } from "@/constants/permissionCodes";
 
 describe("systemSettingsCategories（系统设置注册表）", () => {
-  it("恰好 5 个分类：邮箱 / API通知 / 验证码背景图 / 经理同步 / 备份与恢复", () => {
-    expect(systemSettingsCategories).toHaveLength(5);
+  it("恰好 6 个分类：站点品牌 / 邮箱 / API通知 / 验证码背景图 / 经理同步 / 备份与恢复", () => {
+    expect(systemSettingsCategories).toHaveLength(6);
   });
 
-  it("key 集合 = email/api/captcha/manager/backup 且唯一（?cat= 参数值契约）", () => {
+  it("key 集合 = brand/email/api/captcha/manager/backup 且唯一（?cat= 参数值契约）", () => {
     const keys = systemSettingsCategories.map((c) => c.key);
-    expect(keys).toEqual(["email", "api", "captcha", "manager", "backup"]);
+    expect(keys).toEqual(["brand", "email", "api", "captcha", "manager", "backup"]);
     expect(new Set(keys).size).toBe(keys.length);
   });
 
@@ -62,13 +62,18 @@ describe("systemSettingsCategories（系统设置注册表）", () => {
     const manager = systemSettingsCategories.find((c) => c.key === "manager");
     expect(manager?.permission).toBe(PERMISSION_CODES.opsManagerRule.list);
 
-    // 其余分类常驻：备份页的 F 按钮码在存量库中未必授给超管（240 不写 sys_role_menu），
-    // 若按 F 码隐藏整块会让超管彻底失去功能入口。
+    // 站点品牌与备份恢复同理：都挂在「系统设置」菜单下，不另设权限码隐藏整块
+    //（站点品牌的写按钮由 system:config:edit 门控，读与本页其它分类一致）。
     for (const c of systemSettingsCategories) {
       if (c.key !== "manager") {
         expect(c.permission).toBeUndefined();
       }
     }
+  });
+
+  it("站点品牌分类存在且排在最前（品牌配置优先暴露）", () => {
+    expect(systemSettingsCategories[0].key).toBe("brand");
+    expect(systemSettingsCategories[0].label).toBe("站点品牌");
   });
 
   it("默认分类 key=email 存在（SettingsShell defaultCat 消费契约）", () => {

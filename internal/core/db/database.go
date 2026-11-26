@@ -1257,6 +1257,11 @@ func (d *Database) AutoMigrate() error {
 		if err := d.runAndRecord(258, "rpa_schedule_menu", migrations.Migrate258RpaScheduleMenu); err != nil {
 			applogger.Errorf("RPA 定时调度菜单播种失败 (非阻断,留待下次启动): %v", err)
 		}
+		// 259：站点品牌信息 seed —— 登录页/侧边栏文案收敛为 sys_config brand.* 可配置项。
+		// 失败只影响品牌可配置化（前端仍有硬编码 fallback），不阻断启动。**非阻断**。
+		if err := d.runAndRecord(259, "brand_config_seed", migrations.Migrate259BrandConfigSeed); err != nil {
+			applogger.Errorf("站点品牌配置种子迁移失败 (非阻断,留待下次启动): %v", err)
+		}
 		// 缺权限行只让普通角色备份删除 403 / 前端删除按钮不显示；父菜单缺失时迁移内部降级返回 nil。
 		if err := d.runAndRecord(246, "backup_remove_permission_f_type_seed", migrations.Migrate246BackupRemovePermissionFTypeSeed); err != nil {
 			applogger.Errorf("备份删除权限种子迁移失败 (非阻断,留待下次启动): %v", err)
