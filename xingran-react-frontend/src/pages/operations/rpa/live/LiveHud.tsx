@@ -265,11 +265,7 @@ export function LiveHud({
           {!hasFrame && emptyPage && onRefreshState && (
             // 按钮必须能点：HUD 整体 pointerEvents=none，这里显式打开。
             <span style={{ pointerEvents: "auto" }}>
-              <Button
-                size="small"
-                data-testid="live-empty-page-refresh"
-                onClick={onRefreshState}
-              >
+              <Button size="small" data-testid="live-empty-page-refresh" onClick={onRefreshState}>
                 {EMPTY_PAGE_REFRESH_TEXT}
               </Button>
             </span>

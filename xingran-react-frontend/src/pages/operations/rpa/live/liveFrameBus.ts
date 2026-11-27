@@ -21,7 +21,11 @@
 
 import type { WebSocketNoticeMessage } from "@/types/notice";
 import { useNoticeStore } from "@/store/noticeStore";
-import { parseEmptyPageHint, parseLiveFrameMessage, parseLiveStateMessage } from "./liveFrameParser";
+import {
+  parseEmptyPageHint,
+  parseLiveFrameMessage,
+  parseLiveStateMessage,
+} from "./liveFrameParser";
 import type { LiveContext, LiveFrameEnvelope } from "./types";
 
 /** 帧消息类型（协议 §1） */

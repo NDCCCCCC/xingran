@@ -40,8 +40,7 @@ func NewServiceGroup(db *gorm.DB, cfg *config.Config, noticeHub *websocket.Notic
 
 	// Phase 155：实时画面中枢。logger 用窄接口（printf 风格），避免中枢反向
 	// 依赖 core；noticeHub 允许为 nil（单测路径），中枢内部判空。
-	var logSink interface{ Info(string, ...interface{}) }
-	logSink = apploggerShim{}
+	var logSink interface{ Info(string, ...interface{}) } = apploggerShim{}
 	liveView := NewLiveViewHub(db, cfg, noticeHub, cacheInstance, logSink)
 
 	// Phase W6 / REC-01：录制会话中枢。cache 用于下发 Redis 指令 + 暂存会话态；

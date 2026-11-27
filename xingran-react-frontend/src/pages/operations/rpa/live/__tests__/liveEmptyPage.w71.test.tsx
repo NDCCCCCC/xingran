@@ -30,9 +30,7 @@ const COMPACT_PROPS = {
 
 describe("缺陷 C：暂无画面提示", () => {
   it("已推流 0 帧超时 → 显示「暂无画面」而不是「等待画面…」", () => {
-    render(
-      <LiveHud {...COMPACT_PROPS} hasFrame={false} emptyPage onRefreshState={vi.fn()} />
-    );
+    render(<LiveHud {...COMPACT_PROPS} hasFrame={false} emptyPage onRefreshState={vi.fn()} />);
 
     const hint = screen.getByTestId("live-empty-page-hint");
     expect(hint).toHaveTextContent(EMPTY_PAGE_HINT_TEXT);
@@ -43,9 +41,7 @@ describe("缺陷 C：暂无画面提示", () => {
 
   it("给出「刷新状态」按钮，点一下真的调用回调（用户能操作）", () => {
     const onRefresh = vi.fn();
-    render(
-      <LiveHud {...COMPACT_PROPS} hasFrame={false} emptyPage onRefreshState={onRefresh} />
-    );
+    render(<LiveHud {...COMPACT_PROPS} hasFrame={false} emptyPage onRefreshState={onRefresh} />);
 
     const btn = screen.getByTestId("live-empty-page-refresh");
     expect(btn).toHaveTextContent(EMPTY_PAGE_REFRESH_TEXT);
@@ -54,9 +50,7 @@ describe("缺陷 C：暂无画面提示", () => {
   });
 
   it("反向用例：已有画面帧 → 不显示提示、也没有刷新按钮", () => {
-    render(
-      <LiveHud {...COMPACT_PROPS} hasFrame emptyPage={false} onRefreshState={vi.fn()} />
-    );
+    render(<LiveHud {...COMPACT_PROPS} hasFrame emptyPage={false} onRefreshState={vi.fn()} />);
     expect(screen.queryByTestId("live-empty-page-hint")).toBeNull();
     expect(screen.queryByTestId("live-empty-page-refresh")).toBeNull();
     // 帧已到 → 连「等待画面…」也不该出现

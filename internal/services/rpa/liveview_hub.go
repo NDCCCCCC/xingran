@@ -456,9 +456,7 @@ func (h *LiveViewHub) DropWatcher(executionID, userID, reason string) bool {
 	s, ok := h.sessions[executionID]
 	lastOne := false
 	if ok {
-		if _, found := s.watchers[userID]; found {
-			delete(s.watchers, userID)
-		}
+		delete(s.watchers, userID)
 		lastOne = len(s.watchers) == 0
 		if lastOne {
 			delete(h.sessions, executionID)
@@ -757,7 +755,7 @@ func (h *LiveViewHub) IngestFrame(ctx context.Context, up *LiveViewUpstreamFrame
 	}
 	execID := up.Frame.ExecutionID
 	h.mu.Lock()
-	s, ok := h.sessions[execID]
+	_, ok := h.sessions[execID]
 	if !ok {
 		h.mu.Unlock()
 		return 0
@@ -767,7 +765,7 @@ func (h *LiveViewHub) IngestFrame(ctx context.Context, up *LiveViewUpstreamFrame
 	recipients := h.revalidateWatchers(ctx, execID)
 
 	h.mu.Lock()
-	s, ok = h.sessions[execID]
+	s, ok := h.sessions[execID]
 	if !ok {
 		h.mu.Unlock()
 		return 0

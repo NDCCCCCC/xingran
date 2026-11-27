@@ -115,7 +115,9 @@ export function parseLiveStateMessage(content: unknown): LiveContext | null {
  *   · 后端 janitor 主动推：`{ context: {executionId}, emptyPageHint: true, ... }`
  *   · 后端 State 端点（前端自己刷新时读 stats）：不走本函数
  */
-export function parseEmptyPageHint(content: unknown): { executionId: string; waitingMs: number } | null {
+export function parseEmptyPageHint(
+  content: unknown
+): { executionId: string; waitingMs: number } | null {
   if (typeof content !== "string" || content === "") return null;
 
   let parsed: unknown;

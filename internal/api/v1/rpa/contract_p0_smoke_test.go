@@ -561,7 +561,7 @@ func TestContractP0_TaskRoundTrip_TagsAndZeroStatus(t *testing.T) {
 	assert.EqualValues(t, 0, respData(resp)["priority"], "priority 必须能改回 0")
 
 	// --- 未传 status 的更新不得冲掉既有值（nil ≠ 0）---
-	code, resp = doContractP0(t, engine, "/api/v1/rpa/tasks/"+taskID+"/update", map[string]interface{}{
+	code, _ = doContractP0(t, engine, "/api/v1/rpa/tasks/"+taskID+"/update", map[string]interface{}{
 		"name": "round-trip-task-renamed",
 	})
 	require.Equal(t, http.StatusOK, code)

@@ -86,7 +86,6 @@ export default function TaskWizardPage() {
     [canAdd, handleSave, message]
   );
 
-
   /** AI 生成完成 → 回填到向导并重新挂载（用 key 触发 state 重置） */
   const handleAIConfirm = useCallback(
     (actions: Action[]) => {
