@@ -23,6 +23,8 @@ import { TaskWizard } from "./TaskWizard";
 import type { WizardDraft } from "./payload";
 import { toTaskPayload } from "./payload";
 import { AIScriptEditor } from "../tasks/modals/AIScriptEditor";
+import { useActionPermission } from "@/components/shared/useActionPermission";
+import { PERMISSION_CODES } from "@/constants/permissionCodes";
 // W7 / UI-FIX-01：路由常量唯一事实来源。历史上这里三处写死
 // `/operations/rpa/tasks` —— 该路径不存在任何路由（RPA 菜单由 sys_menu seed
 // 播种，真实路由是 /vdi/rpa），写错会让 SPA 落到 catch-all → dashboard。
@@ -34,6 +36,11 @@ const { Title, Text } = Typography;
 export default function TaskWizardPage() {
   const { message } = App.useApp();
   const navigate = useNavigate();
+
+  // W7.3 / RBAC 门控：向导页是「新建任务」的写入口，必须接入三态门控。
+  // gating 覆盖率门禁实测暴露本页未覆盖（v1.56 Phase 156 新增页面时漏铺）。
+  const permGate = useActionPermission();
+  const canAdd = permGate.decide(PERMISSION_CODES.rpaTask.add).visible;
 
   const [aiOpen, setAiOpen] = useState(false);
   const [pendingActions, setPendingActions] = useState<Action[] | undefined>();
@@ -67,6 +74,19 @@ export default function TaskWizardPage() {
     [message, navigate]
   );
 
+  /** 无 ops:rpa:task:add 权限时拦住保存（门控在前端也必须生效，不能只靠后端 403）。 */
+  const guardedSave = useCallback(
+    async (draft: WizardDraft) => {
+      if (!canAdd) {
+        message.warning("你没有新建自动化任务的权限，请联系管理员开通");
+        return;
+      }
+      await handleSave(draft);
+    },
+    [canAdd, handleSave, message]
+  );
+
+
   /** AI 生成完成 → 回填到向导并重新挂载（用 key 触发 state 重置） */
   const handleAIConfirm = useCallback(
     (actions: Action[]) => {
@@ -97,7 +117,7 @@ export default function TaskWizardPage() {
         <Card style={{ marginTop: 16 }}>
           <TaskWizard
             key={`${pendingActions?.length ?? 0}-${pendingActions?.[0]?.id ?? "init"}`}
-            onSave={handleSave}
+            onSave={guardedSave}
             onCancel={() => navigate(RPA_ROUTES.taskList)}
             onOpenAIGenerator={() => setAiOpen(true)}
             onOpenRecorder={() => {

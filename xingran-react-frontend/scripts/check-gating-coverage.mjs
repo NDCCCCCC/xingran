@@ -85,7 +85,15 @@ const exemptionsFile = path.join(scriptDir, "gating-exemptions.json");
 //   全部走 useActionPermission() + PERMISSION_CODES.rpaExecution.list（复用执行读
 //   权限，**不新增权限码**）；故不需要新增 N/A 豁免，豁免仍为 39。
 //   恒等式以 EXPECTED_PAGE_COUNT=74 重新成立（已门控 35 + 豁免 39 = 74）。
-const EXPECTED_PAGE_COUNT = 74;
+// 2026-11-27 W7.3 裁决：EXPECTED_PAGE_COUNT 74 -> 76。
+//
+// 原因：v1.56 Phase 155/156 新增两个 RPA 页面（live/index.tsx 与 wizard/index.tsx），
+// 它们由 migration_255/256 的 sys_menu seed 播种，不在静态路由表里 —— 页面口径
+// 因此从 74 增到 76。这是**口径变更**，不是门控缺口被掩盖：
+//   - live/index.tsx 自 Phase 155 起就接了三态门控（当时已计入 74 的“已门控”）
+//   - wizard/index.tsx 漏铺门控，是本次门禁实测暴露的真实缺口，已在同批补上
+// 现等式：已门控 37 + 豁免 39 = 76 ✓
+const EXPECTED_PAGE_COUNT = 76;
 /** 口径断言：N/A 豁免页数（增减须同批改本常量并在 86-STATE.md 说明理由） */
 // monitor RBAC 接线（2026-11-11）：monitor/cache、monitor/job、monitor/logs 三页
 // 铺开权限门控（PERMISSION_CODES.monitor* 区块落地）后移出豁免清单，豁免 47 → 44；
