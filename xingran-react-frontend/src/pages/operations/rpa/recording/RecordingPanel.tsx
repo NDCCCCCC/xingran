@@ -159,6 +159,10 @@ export function RecordingPanel({ taskId, targetUrl, onFinish }: RecordingPanelPr
         sessionRef.current = data.sessionId;
         setSessionId(data.sessionId);
         setState(data.state || "starting");
+        // 成功分支必须清 starting —— 否则渲染条件 `starting && !fatal` 恒真，
+        // 用户永远停在「正在打开录制画面，请稍候…」的 Spin 上，录制画面永不出现。
+        // （这个缺陷在 PR #114 补组件级测试时被实测暴露：live-canvas 始终不存在。）
+        setStarting(false);
       })
       .catch((error) => {
         if (cancelled) return;
