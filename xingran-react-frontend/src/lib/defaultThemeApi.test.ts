@@ -25,17 +25,17 @@ describe("defaultThemeApi 端点契约", () => {
   });
 
   it("getDefaultThemeConfig GET /system/settings/config/theme/default 并解包 data", async () => {
-    mockGet.mockResolvedValueOnce({ code: 0, data: { primaryColor: "#1677ff" } });
+    mockGet.mockResolvedValueOnce({ code: 0, data: { primaryColor: "theme-primary" } });
     const cfg = await getDefaultThemeConfig();
     expect(mockGet).toHaveBeenCalledWith("/system/settings/config/theme/default");
-    expect(cfg).toEqual({ primaryColor: "#1677ff" });
+    expect(cfg).toEqual({ primaryColor: "theme-primary" });
   });
 
   it("setDefaultThemeConfig POST 同一路径并透传配置体", async () => {
     mockPost.mockResolvedValueOnce({ code: 0 });
-    await setDefaultThemeConfig({ primaryColor: "#1677ff" });
+    await setDefaultThemeConfig({ primaryColor: "theme-primary" });
     expect(mockPost).toHaveBeenCalledWith("/system/settings/config/theme/default", {
-      primaryColor: "#1677ff",
+      primaryColor: "theme-primary",
     });
   });
 
