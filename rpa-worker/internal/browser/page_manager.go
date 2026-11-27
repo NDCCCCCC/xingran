@@ -2,6 +2,7 @@ package browser
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"path"
 	"strings"
@@ -105,7 +106,36 @@ func (m *PageManager) Click(selector string) error {
 	return m.ClickWith(selector, proto.InputMouseButtonLeft, 1)
 }
 
+// clickMouseBudget 真实鼠标点击的预算（失败即退化到页面内触发）。
+//
+// 取值依据（生产诊断实证）：同一按钮「Eval click」3ms 生效、「rod 鼠标点击」
+// 在 30s 预算下耗尽——卡在可交互检测/坐标。正常点击远小于 1s，因此 5s
+// 既不会误伤慢机器，也不会让整条任务在白等 30s。
+const clickMouseBudget = 5 * time.Second
+
+// interactBudget 键盘输入/悬停等交互元素的预算（失败即退化到页面内触发）。
+//
+// 与 clickMouseBudget 同口径：正常交互远小于 1s；被遮挡时 rod 会一直等到
+// 预算耗尽，5s 让兜底及时接管，又不至于误伤慢机器。
+const interactBudget = 5 * time.Second
+
 // ClickWith 指定鼠标键与点击次数（双击 / 右键共用）。
+//
+// W7.1 / 缺陷 A 同族（第五层）：**真实鼠标点击失败时的 JS 兜底**。
+//
+// 真跑生产库 6 个 goto 任务时定位到（诊断实证）：
+//
+//	[A] Eval 直接 el.click()   → 2ms 成功
+//	[B] PageManager.Click(#su) → context deadline exceeded（耗尽 30s 预算）
+//
+// rod 的 Element.Click 走「可交互检测 + 坐标计算 + Input.dispatchMouseEvent」，
+// 目标元素被浮层/遮罩覆盖、或在视口外时，它会一直等到超时。此时**页面本身
+// 完全正常**（JS 触发立刻生效），失败原因不是脚本配置、也不是我们的归一化。
+//
+// 兜底语义（保守且显式）：
+//   - 只在鼠标路径**失败**时启用，成功后永不替换（不改变既有成功路径的语义）；
+//   - 只用于左键单击（右键菜单/双击有独立的语义预期，不做静默替换）；
+//   - 必须留 WARN 日志，运维能看到「这一步用的是 JS 触发而非真实鼠标」。
 func (m *PageManager) ClickWith(selector string, button proto.InputMouseButton, count int) error {
 	m.logger.Debug("click element",
 		logger.String("selector", selector),
@@ -115,11 +145,132 @@ func (m *PageManager) ClickWith(selector string, button proto.InputMouseButton, 
 
 	el, err := m.resolveOrErr(selector)
 	if err == nil {
-		err = el.Click(button, count)
+		// 鼠标派发单独给一个**短预算**（不是元素操作总预算 30s）：
+		// 命中的元素被浮层遮挡时 rod 会一直等到超时，而退化到页面内触发
+		// 只要几毫秒。真跑实证：30s 预算下整步耗时 30.0s；给 5s 预算后
+		// 退化接管，整步仍在可接受范围内，且成功路径不受影响（正常点击秒回）。
+		err = el.Context(el.GetContext()).Timeout(clickMouseBudget).Click(button, count)
+	}
+	if err != nil && button == proto.InputMouseButtonLeft && count == 1 {
+		// 真实鼠标路径失败 → 退化为页面内 JS 触发（等价「用户点了一下」）。
+		jsErr := m.clickByJS(selector)
+		if jsErr == nil {
+			m.logger.Warn("鼠标点击失败，已退化为页面内触发（元素可能被浮层遮挡）",
+				logger.String("selector", selector),
+				logger.Err(err))
+			m.recordSelector(selector, start, nil)
+			return nil
+		}
+		err = jsErr
 	}
 	m.recordSelector(selector, start, err)
 	return err
 }
+
+// waitElementForJS 在页面内短轮询等待元素出现（最多 d，每 200ms 一次）。
+//
+// 为什么需要（真跑实证）：点击搜索后页面开始导航，紧接着的下一步在**旧文档
+// 或加载中**的文档上 querySelector → not-found。这不是「元素不存在」，而是
+// 「此刻还没渲染完」。生产库的历史 goto 任务全是「搜索→再搜索」的连续动作，
+// 正好踩在这个时序上。
+//
+// **每次探查都带独立预算**：页面若已假死（执行中途 Chrome 掉线），
+// m.page.Evaluate 本身会阻塞到 page 超时（15~30s）；不加预算的话这个
+// 5s 等待会被拖成分钟级，把「兜底」变成新的卡点（真跑踩到过）。
+func (m *PageManager) waitElementForJS(selector string, d time.Duration) bool {
+	selJSON, err := json.Marshal(selector)
+	if err != nil {
+		return false
+	}
+	script := fmt.Sprintf(`() => !!(document.querySelector(%s))`, string(selJSON))
+
+	deadline := time.Now().Add(d)
+	for {
+		ok := m.evaluateBoolWithBudget(script, 1*time.Second)
+		if ok {
+			return true
+		}
+		if time.Now().After(deadline) {
+			return false
+		}
+		time.Sleep(200 * time.Millisecond)
+	}
+}
+
+// evaluateBoolWithBudget 带硬预算的布尔求值（求值本身阻塞也不会超过 budget）。
+//
+// goroutine 可能短暂滞留到 page 自身 ctx 结束（最多 15~30s），但调用方立即
+// 拿到「false」继续走错误路径 —— 对「诊断/兜底」路径这是可接受的取舍。
+func (m *PageManager) evaluateBoolWithBudget(script string, budget time.Duration) bool {
+	ch := make(chan bool, 1)
+	go func() {
+		res, err := m.page.Evaluate(script)
+		if err != nil {
+			ch <- false
+			return
+		}
+		ch <- isTruthyAny(res)
+	}()
+	select {
+	case v := <-ch:
+		return v
+	case <-time.After(budget):
+		return false
+	}
+}
+
+// isTruthyAny 粗判 JS 求值结果的真值（rod 返回 bool / string / float 等）。
+func isTruthyAny(v interface{}) bool {
+	switch x := v.(type) {
+	case nil:
+		return false
+	case bool:
+		return x
+	case string:
+		return x != "" && x != "false" && x != "0"
+	case float64:
+		return x != 0
+	}
+	return false
+}
+
+// clickByJS 在页面内直接触发一次点击（不派发真实鼠标事件）。
+//
+// 用于「元素被遮挡/不可交互，但页面逻辑本身正常」的场景 —— 生产实证：同一
+// 元素 Eval click 2ms 生效、rod 鼠标点击 30s 超时。失败时返回可读错误
+// （找不到元素 / 脚本异常），交由上层按原有错误路径处理。
+func (m *PageManager) clickByJS(selector string) error {
+	// 先等元素出现（最多 clickJSWaitBudget）：上一步点击触发导航时，
+	// 本步可能落在旧文档/加载中的文档上。
+	if !m.waitElementForJS(selector, clickJSWaitBudget) {
+		return fmt.Errorf("页面内触发点击失败：找不到元素 %s", selector)
+	}
+	selJSON, err := json.Marshal(selector)
+	if err != nil {
+		return err
+	}
+	script := fmt.Sprintf(`() => {
+		const el = document.querySelector(%s);
+		if (!el) return "not-found";
+		el.click();
+		return "clicked";
+	}`, string(selJSON))
+	res, evalErr := m.page.Evaluate(script)
+	if evalErr != nil {
+		return fmt.Errorf("页面内触发点击失败: %w", evalErr)
+	}
+	if res == "not-found" {
+		return fmt.Errorf("页面内触发点击失败：找不到元素 %s", selector)
+	}
+	return nil
+}
+
+// clickJSWaitBudget JS 兜底路径等待元素出现的预算。
+//
+// 与「找元素」的语义区分：真实交互路径靠 rod 的 Element 等待（预算充足）；
+// JS 兜底是「页面逻辑本来就能跑」的快速路径，给 5s 足够等一次导航完成，
+// 又不会把配置错误（选择器真的过期）拖成几十秒。
+const clickJSWaitBudget = 5 * time.Second
 
 // DoubleClick 双击（Element.Click(left, 2)）。
 func (m *PageManager) DoubleClick(selector string) error {
@@ -144,6 +295,16 @@ func (m *PageManager) Hover(selector string) error {
 }
 
 // Fill fill form
+//
+// W7.1 / 缺陷 A 同族（第五层续）：与 Click 同源的**交互层兜底**。
+//
+// 真跑生产库 goto 任务时定位到：搜索结果页的 #kw 输入框能被阶梯命中，但
+// rod 的 Input（可交互检测 + 焦点 + 键盘派发）挂到 30s 超时；同一元素用
+// 页面内脚本设值 + 派发 input/change 立刻生效。这不是脚本配置错误，也不是
+// 我们的归一化 —— 是 rod 交互层在「元素被浮层遮挡/在视口外」时的行为。
+//
+// 兜底语义与 Click 一致：只在鼠标/键盘路径失败时启用，成功路径完全不改；
+// 必须留 WARN 日志。
 func (m *PageManager) Fill(selector, value string) error {
 	m.logger.Debug("fill form",
 		logger.String("selector", selector),
@@ -156,10 +317,56 @@ func (m *PageManager) Fill(selector, value string) error {
 		if selErr := el.SelectAllText(); selErr != nil {
 			m.logger.Debug("全选清空失败（继续按追加输入）", logger.Err(selErr))
 		}
-		err = el.Input(value)
+		err = el.Context(el.GetContext()).Timeout(interactBudget).Input(value)
+	}
+	if err != nil {
+		// 退化：页面内设值 + 派发 input/change（等价「用户输完并触发校验」）。
+		jsErr := m.setValueByJS(selector, value)
+		if jsErr == nil {
+			m.logger.Warn("键盘输入失败，已退化为页面内设值（元素可能被浮层遮挡）",
+				logger.String("selector", selector), logger.Err(err))
+			m.recordSelector(selector, start, nil)
+			return nil
+		}
+		err = jsErr
 	}
 	m.recordSelector(selector, start, err)
 	return err
+}
+
+// setValueByJS 页面内设值并派发事件（不模拟键盘）。
+//
+// 只用于「元素被遮挡导致 Input 挂住」的兜底；正常路径仍走真实键盘输入，
+// 以保证需要真实键入事件的站点行为不被改变。
+func (m *PageManager) setValueByJS(selector, value string) error {
+	if !m.waitElementForJS(selector, clickJSWaitBudget) {
+		return fmt.Errorf("页面内设值失败：找不到元素 %s", selector)
+	}
+	selJSON, err := json.Marshal(selector)
+	if err != nil {
+		return err
+	}
+	valJSON, err := json.Marshal(value)
+	if err != nil {
+		return err
+	}
+	script := fmt.Sprintf(`() => {
+		const el = document.querySelector(%s);
+		if (!el) return "not-found";
+		try { el.focus(); } catch (e) {}
+		el.value = %s;
+		el.dispatchEvent(new Event("input", { bubbles: true }));
+		el.dispatchEvent(new Event("change", { bubbles: true }));
+		return "set";
+	}`, string(selJSON), string(valJSON))
+	res, evalErr := m.page.Evaluate(script)
+	if evalErr != nil {
+		return fmt.Errorf("页面内设值失败: %w", evalErr)
+	}
+	if res == "not-found" {
+		return fmt.Errorf("页面内设值失败：找不到元素 %s", selector)
+	}
+	return nil
 }
 
 // Select select dropdown option（先按 value 再按文本）

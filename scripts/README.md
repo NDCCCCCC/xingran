@@ -132,6 +132,16 @@ go test ./tests/e2e/...
 
 从 `cmd/` 迁入的 13 个一次性 Go CLI（`package main`，仍被 `go build ./...` 覆盖）：`cleanup_port_status`、`diag_4f001_red`、`mac_*`（6 个）、`reset-ad-breaker`、`verify-*`（4 个）。用法：`go run ./scripts/ops/<name>/`。**新增一次性工具一律放这里，不要放 `cmd/`**（`cmd/` 只保留 `main.go` 与 `agent/`）。
 
+**W7.1（2026-11-27）RPA 动作类型工具集**（缺陷 A 取证与根治，均受 `.planning/phases/w7.1-action-alias-and-gate/W7.1-SUMMARY.md` 约束）：
+
+| 目录 | 用途 | 只读? |
+|------|------|-------|
+| `rpa_action_type_census` | 普查 `sys_rpa_tasks.script` 里各动作 `type` 的存量写法（输出 `ALIAS_SET=`），**新增别名前必须先跑它取证** | 只读 |
+| `rpa_goto_task_dump` | 把带别名的任务脚本原样导出到 `out/rpa-goto-tasks.json`（供 UAT 用例喂真引擎，数据不改） | 只读 |
+| `rpa_navigate_task_dump` | 核查 `navigate` 动作的 URL 键位分布（`params.url` vs `value`），决定是否还需键位提升 | 只读 |
+| `rpa_action_alias_migrate` | 对指定库执行 migration 261（复用 `migrations.Migrate261RPActionTypeAliasNormalize`，幂等） | 幂等写 |
+
+
 ### 顶层在用脚本（登记）
 
 | 文件 | 用途 |

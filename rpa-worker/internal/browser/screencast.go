@@ -53,6 +53,13 @@ type ScreencastOptions struct {
 	ChannelCapacity int
 	// Logger 可选；nil 时不输出。
 	Logger logger.Logger
+
+	// ZeroFrameWarnAfter 开流后多久仍 0 帧就判「页面没有可画内容」并打 WARN。
+	//
+	// W7.1 / 缺陷 C：Chrome 对 about:blank / 空 DOM 的页面不产 screencast 帧，
+	// 前端只能无限显示「等待画面…」，用户无法判断是「还没开始」还是
+	// 「永远不会有」。默认 5s（<=0 用默认值，显式关闭请传 -1）。
+	ZeroFrameWarnAfter time.Duration
 }
 
 // 默认参数集中定义，供 config 与测试共用（避免默认值散落）。
@@ -63,6 +70,8 @@ const (
 	DefaultScreencastEveryNthFrame   = 2
 	DefaultScreencastAckTimeout      = 800 * time.Millisecond
 	DefaultScreencastChannelCapacity = 2
+	// DefaultScreencastZeroFrameWarnAfter 开流后零帧判定的默认阈值（5s）。
+	DefaultScreencastZeroFrameWarnAfter = 5 * time.Second
 )
 
 // normalize 填默认值（越界值回落默认，不 panic）。
@@ -85,6 +94,10 @@ func (o ScreencastOptions) normalize() ScreencastOptions {
 	}
 	if out.ChannelCapacity <= 0 {
 		out.ChannelCapacity = DefaultScreencastChannelCapacity
+	}
+	// 0 与负值语义不同：<=0 视为「用默认」，-1 显式关闭（测试/离线场景）。
+	if out.ZeroFrameWarnAfter == 0 {
+		out.ZeroFrameWarnAfter = DefaultScreencastZeroFrameWarnAfter
 	}
 	return out
 }
@@ -139,11 +152,58 @@ func (f *ScreencastFrame) Base64Data() string {
 // 保证边推流边取数不引入锁竞争（推流路径是延迟敏感的）。
 type ScreencastStats struct {
 	startedAt time.Time
-	frames    int64 // 已投递给消费者的帧
-	acks      int64 // 消费者显式 ACK 的帧
-	dropped   int64 // 超时被强制 ACK 的帧
-	bytes     int64 // 已投递帧的 JPEG 字节总量
+	frames    int64        // 已投递给消费者的帧
+	acks      int64        // 消费者显式 ACK 的帧
+	dropped   int64        // 超时被强制 ACK 的帧
+	bytes     int64        // 已投递帧的 JPEG 字节总量
 	lastFrame atomic.Int64 // 最近一帧的 UnixMilli（0=尚未收帧）
+
+	// —— W7.1 / 缺陷 C：零帧诊断（开流后 N 秒仍 0 帧）——
+	//
+	// zeroFrame 用 atomic.Bool 表达「已判定为空页面」，诊断细节用互斥保护的
+	// 一次性写（判定只发生一次，读取可能在推流任意时刻发生）。
+	zeroFrame       atomic.Bool
+	zeroFrameMu     sync.Mutex
+	zeroFrameDetail ZeroFrameReport
+}
+
+// ZeroFrameReport 零帧判定结果（W7.1 / 缺陷 C）。
+//
+// 判定已发生时 Detected=true，PageURL / DOMEmpty / FramesSeen 是判定当刻的现场，
+// 供 Worker 日志、后端 emptyPageHint 与前端文案三处共用同一条事实。
+type ZeroFrameReport struct {
+	// Detected 是否已判定为「开流后长时间没有画面帧」。
+	Detected bool `json:"detected"`
+	// WaitMS 从开流到判定经过的毫秒数（约等于 ZeroFrameWarnAfter）。
+	WaitMS int64 `json:"waitMs"`
+	// PageURL 判定当刻页面地址（about:blank / 空串是典型空页面）。
+	PageURL string `json:"pageUrl"`
+	// DOMEmpty 页面主体是否有可渲染内容（false 表示 DOM 有内容但仍没帧，
+	// 属于「正在加载 / 渲染卡住」，与 about:blank 的处置不同）。
+	DOMEmpty bool `json:"domEmpty"`
+	// FramesSeen 判定当刻已投递的帧数（正常应为 0）。
+	FramesSeen int64 `json:"framesSeen"`
+}
+
+// ZeroFrame 返回零帧判定结果（未判定时 Detected=false，其余字段为零值）。
+func (s *ScreencastStats) ZeroFrame() ZeroFrameReport {
+	if s == nil || !s.zeroFrame.Load() {
+		return ZeroFrameReport{}
+	}
+	s.zeroFrameMu.Lock()
+	defer s.zeroFrameMu.Unlock()
+	return s.zeroFrameDetail
+}
+
+// markZeroFrame 记录零帧判定（只写一次；已判定则忽略）。
+func (s *ScreencastStats) markZeroFrame(rep ZeroFrameReport) {
+	if s == nil || s.zeroFrame.Load() {
+		return
+	}
+	s.zeroFrameMu.Lock()
+	s.zeroFrameDetail = rep
+	s.zeroFrameMu.Unlock()
+	s.zeroFrame.Store(true)
 }
 
 // NewScreencastStats 构造统计起点（startedAt 可由调用方给，便于跨 tab 重建时延续）。
@@ -218,12 +278,12 @@ type Screencast struct {
 	ctx    context.Context
 	cancel context.CancelFunc
 
-	pumpDone    chan struct{} // 事件泵退出（唯一能保证"不再有 CDP 回调"的信号）
-	framesOnce  sync.Once     // 关闭 frames channel
-	stopOnce    sync.Once     // 停止逻辑只跑一次
-	finishedCh  chan struct{}
-	seq         atomic.Int64
-	closed      atomic.Bool
+	pumpDone   chan struct{} // 事件泵退出（唯一能保证"不再有 CDP 回调"的信号）
+	framesOnce sync.Once     // 关闭 frames channel
+	stopOnce   sync.Once     // 停止逻辑只跑一次
+	finishedCh chan struct{}
+	seq        atomic.Int64
+	closed     atomic.Bool
 }
 
 // StartScreencast 在页签上启动 screencast。
@@ -319,7 +379,88 @@ func StartScreencast(page *rod.Page, opts ScreencastOptions) (
 		wait()
 	}()
 
+	// W7.1 / 缺陷 C：开流后 N 秒仍 0 帧 → 判「页面没有可画内容」并留现场证据。
+	// 与事件泵并行，不占推流路径（推流路径是延迟敏感的）。
+	if opts.ZeroFrameWarnAfter > 0 {
+		go s.watchZeroFrames(cleanPage)
+	}
+
 	return ch, st, s.Stop, nil
+}
+
+// watchZeroFrames 开流后零帧判定（W7.1 / 缺陷 C）。
+//
+// 为什么需要：Chrome 对 about:blank / 空 DOM 的页面**不产 screencast 帧**，
+// 这不是「还没开始」也不是「网络慢」—— 它永远不会有画面。前端如果只显示
+// 「等待画面…」，用户（一般员工）无法判断该等还是该报错，只能一直干等。
+//
+// 判定口径（必须留现场，才能让人看懂）：
+//   - PageURL：about:blank / 空串是「任务还没导航」的典型形态；
+//   - DOMEmpty：body 没有可见文本且没有子元素 —— 页面contentless；
+//     若 DOM 有内容却仍 0 帧，属于「渲染卡住/正在加载」，处置不同（文案也不同）。
+//
+// 不做任何自动补救（不关流、不自动导航）：画面是事实，不能靠猜。
+func (s *Screencast) watchZeroFrames(page *rod.Page) {
+	timer := time.NewTimer(s.opts.ZeroFrameWarnAfter)
+	defer timer.Stop()
+
+	select {
+	case <-s.ctx.Done(): // Stop / page 回收：不需要判定
+		timer.Stop()
+		return
+	case <-timer.C:
+	}
+
+	// 已出帧 → 正常画面，不判定（反向用例的落点）。
+	if atomic.LoadInt64(&s.stats.frames) > 0 {
+		return
+	}
+
+	rep := ZeroFrameReport{
+		Detected:   true,
+		WaitMS:     s.opts.ZeroFrameWarnAfter.Milliseconds(),
+		FramesSeen: 0,
+	}
+
+	// 现场探查不得把流程卡住：给 3s 上限，失败就只留「未知」标记。
+	probeCtx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	probePage := page.Context(probeCtx)
+
+	if info, err := probePage.Info(); err == nil && info != nil {
+		rep.PageURL = info.URL
+	} else if s.logger != nil {
+		s.logger.Debug("零帧判定：读取页面地址失败", logger.Err(err))
+	}
+
+	// DOM 空判定：body 既无可见文本也无子元素 → 没有可画内容。
+	// 用 innerText 而非 innerHTML：样式/脚本/空白不该被当成「有内容」。
+	res, err := probePage.Eval(`() => {
+		const body = document.body;
+		if (!body) return "nobody";
+		const text = (body.innerText || "").trim();
+		if (text.length > 0) return "text";
+		if (body.children && body.children.length > 0) return "children";
+		return "empty";
+	}`)
+	if err != nil {
+		rep.DOMEmpty = false // 读不到就不下「空」的结论，避免误报
+		if s.logger != nil {
+			s.logger.Debug("零帧判定：读取页面内容失败", logger.Err(err))
+		}
+	} else if res != nil {
+		kind := res.Value.Str()
+		rep.DOMEmpty = kind == "empty" || kind == "nobody"
+	}
+
+	s.stats.markZeroFrame(rep)
+	if s.logger != nil {
+		s.logger.Warn("liveview 开流后无画面帧（页面可能停在空白页或无法渲染）",
+			logger.Duration("waited", s.opts.ZeroFrameWarnAfter),
+			logger.Int64("frames", atomic.LoadInt64(&s.stats.frames)),
+			logger.String("page_url", rep.PageURL),
+			logger.Any("dom_empty", rep.DOMEmpty))
+	}
 }
 
 // handleFrame 事件泵内收帧：投递 → 等消费确认 → ACK。

@@ -96,6 +96,10 @@ var ActiveMigrations = []struct {
 	// componentLoader/DynamicRoutes。不扩权限面（调度 4 权限码由 257 播种）。
 	// 按维护约定同步登记（PG + sqlite 两分支都已调用）。
 	{258, "rpa_schedule_menu"},
+	// W7.1 / 缺陷 A：sys_rpa_tasks.script 动作类型别名归一化（goto/url → navigate）。
+	// 生产库实证 6 个 goto 任务；worker 侧 alias 归一化是兜底，本迁移是根治。
+	// 按维护约定同步登记（PG + sqlite 两分支都已调用）。
+	{261, "rpa_action_type_alias_normalize"},
 }
 
 // ReconcileResult 对账结果：registry 与库内 sys_schema_migrations 记录的差异。

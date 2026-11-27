@@ -1,6 +1,7 @@
 package browser
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 	"strings"
@@ -74,6 +75,13 @@ func TierScore(t SelectorTier) int { return tierScores[t] }
 // tierProbeTimeout 单级探测预算。真实执行时 7 级 × 500ms = 3.5s 上限，
 // 远小于 page 默认 30s 超时；单测可临时改小。
 var tierProbeTimeout = 500 * time.Millisecond
+
+// defaultElementOpTimeout 命中元素后的操作预算（W7.1 / 缺陷 A 第四层）。
+//
+// 探测用的 tierProbeTimeout 只该约束「找元素」，绝不能约束「用元素」——
+// 否则一次点击/输入只要耗时超过 500ms 就报 context deadline exceeded。
+// 这里给 30s（与 worker 默认元素超时同量级），调用方显式传 timeout 时优先用传值。
+const defaultElementOpTimeout = 30 * time.Second
 
 // ladderAttempt 单级尝试结果（错误信息里逐级回显）。
 type ladderAttempt struct {
@@ -412,9 +420,6 @@ func (m *PageManager) findElementWithTimeout(selector string, timeout time.Durat
 	if rawPage == nil {
 		return nil, 0, fmt.Errorf("page 无底层 rod.Page 句柄")
 	}
-	// 每级探测都受 tierProbeTimeout 约束：阶梯是「快速猜测」，不负责
-	// 长时间等待（等待语义由 WaitFor 的轮询负责）。
-	probe := rawPage.Timeout(tierProbeTimeout)
 
 	hints := parseSelector(selector)
 	m.ladderHint = hints.hint
@@ -432,6 +437,17 @@ func (m *PageManager) findElementWithTimeout(selector string, timeout time.Durat
 			continue
 		}
 
+		// ================================================================
+		// W7.1 / 缺陷 A（第四层修复，续）：**每级各自一份 500ms 预算**。
+		//
+		// 修复前 probe 在循环外创建一次，7 级共用同一个带 deadline 的 page 句柄
+		// → 第一级耗尽预算后，后面每一级都立刻 "context deadline exceeded"，
+		// 阶梯形同虚设（真跑 6 个 goto 任务时，凡第一级没命中的动作全部报
+		// deadline 而不是「未命中」）。注释里写的「7 级 × 500ms = 3.5s 上限」
+		// 正是每级独立预算的语义，实现与设计在此处漂移。
+		// ================================================================
+		probe := rawPage.Context(context.Background()).Timeout(tierProbeTimeout)
+
 		el, hit, err := m.tryTier(probe, tier, cands)
 		if err != nil {
 			attempts = append(attempts, ladderAttempt{
@@ -441,7 +457,26 @@ func (m *PageManager) findElementWithTimeout(selector string, timeout time.Durat
 		}
 
 		if timeout > 0 {
-			el = el.Timeout(timeout)
+			el = el.Context(context.Background()).Timeout(timeout)
+		} else {
+			// ================================================================
+			// W7.1 / 缺陷 A（第四层）：探测 ctx 泄漏到**元素句柄**上。
+			//
+			// 这里的 el 是从 probe（只给了 tierProbeTimeout=500ms）派生的，
+			// 带着那个一次性 deadline。修复前 timeout<=0 时不重绑，于是后续
+			// el.Click() / el.Input() / el.Text() 只要超过 500ms 就立刻
+			// "context deadline exceeded" —— 与慢网络无关，是句柄自己的 ctx
+			// 已过期。
+			//
+			// 为什么历史上一路没暴露：goto 任务在第一步（类型不支持）就失败，
+			// step2 的 fill/click 从来没执行过。别名修好后它立刻成为新的
+			// 失败点（生产库 6 个任务真跑时 step2/step3 全部 deadline exceeded）。
+			//
+			// 修法：命中的元素**始终**改用干净 ctx（Context 是纯替换，不继承
+			// probe 的 deadline），再按操作预算设超时。默认预算取 worker 的
+			// 元素操作超时（30s），与 page 创建时不再设全局 Timeout 的口径一致。
+			// ================================================================
+			el = el.Context(context.Background()).Timeout(defaultElementOpTimeout)
 		}
 		m.recordSelectorHit(hit, tier, start, nil)
 		m.logger.Debug("选择器阶梯命中",

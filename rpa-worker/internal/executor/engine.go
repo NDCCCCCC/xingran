@@ -85,6 +85,15 @@ func (e *Engine) Execute(ctx context.Context, task *types.TaskMessage, workerID 
 	e.currentExecutionID = task.ExecutionID
 	e.currentWorkerID = workerID
 
+	// W7.1 / 缺陷 A：反序列化阶段命中的别名在这里统一打 WARN（types 包没有
+	// logger）。两条进入路径（顶层 script / 嵌套动作）共用同一份文案口径，
+	// 运维因此能持续发现历史写法。
+	for _, raw := range task.NormalizedAliases() {
+		if normalized, _ := types.NormalizeActionType(raw); normalized != types.ActionType(raw) {
+			e.logNormalizedActionType(raw, normalized, "")
+		}
+	}
+
 	// 检查是否是子任务
 	isSubTask, parentExecutionID, subTaskIndex := e.extractSubTaskMeta(task)
 
@@ -214,8 +223,43 @@ func (e *Engine) Execute(ctx context.Context, task *types.TaskMessage, workerID 
 
 			// Retry logic
 			if action.Retry > 0 {
+				// ============================================================
+				// W7.1 / 缺陷 B：先判定「这个错误重试有没有意义」
+				//
+				// 生产实证（缺陷 B 的完整因果链）：
+				//   goto 任务 step1 retry=2 > 0 → 进入本分支 → 先调 gate(force=true)
+				//   → copilot 模式下 needWait 恒 true → 永久阻塞，10 分钟内无任何
+				//   后续动作，最终 context deadline exceeded；页面停在 about:blank，
+				//   screencast 一帧不发（后端 30 分钟 /liveview/frame 请求数 = 0）。
+				//
+				// 根因：force 闸门的设计意图是「动作**真的执行失败**时，copilot/
+				// manual 停下来等人看一眼」；而 unsupported action type / 缺选择器 /
+				// 缺 url 这类是**不可重试的配置错误**，重试 100 次也不会成功，
+				// 触发人工闸门只会把人锁死在「等一个没有意义的确认」上。
+				//
+				// 处理：配置错误 → 不 gate、不空转重试，直接 failed 并给可读原因。
+				// ============================================================
+				if types.IsNonRetryable(err) {
+					e.logger.Warn("non-retryable configuration error, skipping retry and human gate",
+						logger.String("execution_id", task.ExecutionID),
+						logger.String("action_type", string(action.Type)),
+						logger.Int("declared_retry", action.Retry),
+						logger.Int("step", i+1),
+						logger.Err(err),
+					)
+					// 叠加层也要立刻反映失败原因（用户在看画面时能读到「为什么停」）。
+					e.refreshLiveContext(task.ExecutionID, &action, i+1, len(task.Script),
+						types.StatusFailed,
+						fmt.Sprintf("配置错误（已跳过重试）：%s", err.Error()), variables)
+					errorResult := e.createErrorResult(result, err, i+1, len(task.Script))
+					e.reportSubTaskResult(ctx, task, errorResult)
+					return errorResult, nil
+				}
+
 				// Phase 155 / LIVEVIEW-03：失败自动暂停 —— copilot/manual 在重试前
 				// 停下等人看一眼；auto 不打断（否则自动任务会被人工拖死）。
+				// 注意（W7.1 / 缺陷 B）：本闸门**只应**由可重试失败触发；
+				// 配置错误在上面的 IsNonRetryable 分支已 fail-fast。
 				if gateErr := e.liveActionGate(ctx, task.ExecutionID, &action, true); gateErr != nil {
 					if ctx.Err() != nil {
 						cancelled := e.createCancelledResult(result, ctx.Err(), i+1, len(task.Script))
@@ -315,34 +359,35 @@ func (e *Engine) executeAction(ctx context.Context, page browser.Page, pageMgr *
 	switch action.Type {
 	case types.ActionNavigate:
 		url, ok := params["url"].(string)
-		if !ok {
-			return fmt.Errorf("missing url parameter")
+		if !ok || url == "" {
+			// W7.1 / 缺陷 B：参数缺失属**配置错误**，重试不会成功 → 不可重试。
+			return types.NewNonRetryableError("该步骤没有设置要打开的网址（缺少 url 参数）")
 		}
 		return pageMgr.Goto(url)
 
 	case types.ActionClick:
 		if action.Selector == "" {
-			return fmt.Errorf("missing selector")
+			return types.NewNonRetryableError("该步骤没有设置点击目标（缺少选择器）")
 		}
 		return pageMgr.Click(action.Selector)
 
 	case types.ActionFill:
 		if action.Selector == "" {
-			return fmt.Errorf("missing selector")
+			return types.NewNonRetryableError("填写步骤没有设置目标输入框（缺少选择器）")
 		}
 		value, ok := params["value"].(string)
 		if !ok {
-			return fmt.Errorf("missing value parameter")
+			return types.NewNonRetryableError("填写步骤没有设置要填入的内容（缺少 value 参数）")
 		}
 		return pageMgr.Fill(action.Selector, value)
 
 	case types.ActionSelect:
 		if action.Selector == "" {
-			return fmt.Errorf("missing selector")
+			return types.NewNonRetryableError("下拉选择步骤没有设置目标（缺少选择器）")
 		}
 		value, ok := params["value"].(string)
 		if !ok {
-			return fmt.Errorf("missing value parameter")
+			return types.NewNonRetryableError("下拉选择步骤没有设置要选的项（缺少 value 参数）")
 		}
 		return pageMgr.Select(action.Selector, value)
 
@@ -384,7 +429,7 @@ func (e *Engine) executeAction(ctx context.Context, page browser.Page, pageMgr *
 
 	case types.ActionWaitFor:
 		if action.Selector == "" {
-			return fmt.Errorf("missing selector")
+			return types.NewNonRetryableError("等待元素步骤没有设置目标（缺少选择器）")
 		}
 		timeout := time.Duration(action.Timeout) * time.Millisecond
 		if timeout == 0 {
@@ -457,7 +502,13 @@ func (e *Engine) executeAction(ctx context.Context, page browser.Page, pageMgr *
 		return e.executeScript(ctx, pageMgr, action, variables)
 
 	default:
-		return fmt.Errorf("unsupported action type: %s", action.Type)
+		// W7.1 / 缺陷 B：未知动作类型是**配置错误**（脚本写错 / 历史别名未归一化），
+		// 重试永远不会成功，必须 fail-fast 而不是送进人工闸门空转。
+		//
+		// 文案面向一般员工：不出现 ActionType / switch / enum 这类内部说法，
+		// 只说「这个步骤的类型不被支持」，并把原始 type 原样带上便于排查。
+		return types.NewNonRetryableErrorf(
+			"该步骤的类型「%s」不被支持，请在任务脚本里修正这一步", action.Type)
 	}
 }
 
@@ -468,7 +519,8 @@ func (e *Engine) executeLoop(ctx context.Context, page browser.Page, pageMgr *br
 	// Get loop data source
 	dataSource, ok := action.Params["dataSource"]
 	if !ok {
-		return fmt.Errorf("loop action requires dataSource parameter")
+		// W7.1 / 缺陷 B：脚本参数缺失 = 配置错误，重试无意义。
+		return types.NewNonRetryableError("循环步骤没有设置数据来源（缺少 dataSource 参数）")
 	}
 
 	// Convert dataSource to array
@@ -483,7 +535,7 @@ func (e *Engine) executeLoop(ctx context.Context, page browser.Page, pageMgr *br
 	case []map[string]interface{}:
 		dataArray = v
 	default:
-		return fmt.Errorf("dataSource must be an array of objects")
+		return types.NewNonRetryableError("循环步骤的数据来源格式不正确（应为对象数组）")
 	}
 
 	if len(dataArray) == 0 {
@@ -494,7 +546,7 @@ func (e *Engine) executeLoop(ctx context.Context, page browser.Page, pageMgr *br
 	// Get nested actions to execute for each iteration
 	nestedActionsRaw, ok := action.Params["actions"]
 	if !ok {
-		return fmt.Errorf("loop action requires actions parameter")
+		return types.NewNonRetryableError("循环步骤没有设置要重复执行的子步骤（缺少 actions 参数）")
 	}
 
 	// Convert nested actions
@@ -690,7 +742,7 @@ func (e *Engine) subscribeForHumanInput(ctx context.Context, executionID, worker
 // executeExtract execute extract action to get data from page
 func (e *Engine) executeExtract(ctx context.Context, pageMgr *browser.PageManager, action *types.Action, variables *VariableScope) error {
 	if action.Selector == "" {
-		return fmt.Errorf("extract action requires selector")
+		return types.NewNonRetryableError("提取步骤没有设置要提取的目标（缺少选择器）")
 	}
 
 	// Get extract target variable name
@@ -703,6 +755,14 @@ func (e *Engine) executeExtract(ctx context.Context, pageMgr *browser.PageManage
 	extractType := "text"
 	if et, ok := action.Params["type"].(string); ok && et != "" {
 		extractType = et
+	}
+
+	// W7.1 / 缺陷 A 同族（批量提取）：历史脚本用 extractType="multiple" +
+	// fields[] 批量取多条（生产库实证：百度搜索结果提取测试 / 综合端到端 两个
+	// goto 任务）。修复前它落到 default → 「提取方式 multiple 不被支持」，
+	// 而这一步恰好是那两个任务的核心目的（提搜索结果）。
+	if extractType == "multiple" || extractType == "list" || extractType == "table" {
+		return e.executeExtractMultiple(ctx, pageMgr, action, variables, targetVar)
 	}
 
 	// Extract data based on type
@@ -719,11 +779,12 @@ func (e *Engine) executeExtract(ctx context.Context, pageMgr *browser.PageManage
 	case "attribute":
 		attrName, ok := action.Params["attribute"].(string)
 		if !ok || attrName == "" {
-			return fmt.Errorf("attribute extract type requires attribute parameter")
+			return types.NewNonRetryableError("提取属性时没有指定属性名（缺少 attribute 参数）")
 		}
 		extractedValue, err = pageMgr.GetAttribute(action.Selector, attrName)
 	default:
-		return fmt.Errorf("unsupported extract type: %s", extractType)
+		return types.NewNonRetryableErrorf(
+			"提取步骤的提取方式「%s」不被支持（可选 text/value/html/attribute）", extractType)
 	}
 
 	if err != nil {
@@ -754,6 +815,130 @@ func (e *Engine) executeExtract(ctx context.Context, pageMgr *browser.PageManage
 	return nil
 }
 
+// executeExtractMultiple 批量提取（extractType=multiple/list/table）。
+//
+// 历史脚本形状（生产库实证）：
+//
+//	{"type":"multiple","fields":[
+//	   {"attribute":"text","name":"title","selector":"h3"},
+//	   {"attribute":"href","name":"link","selector":"a"}],
+//	 "maxItems":5,"outputVariable":"searchResults"}
+//
+// 语义：在 action.Selector 命中的**每个容器**里，按 fields 逐条取属性，
+// 汇总成 [{title, link}, ...]（最多 maxItems 条）。fields 里的 attribute 既
+// 支持 text/html/value/href 等 DOM 属性，也是「取哪个字段」的唯一键名。
+//
+// 为什么单独实现：worker 原有 extract 只有 text/value/html/attribute 四种
+// 单值语义；multiple 是「一页多条记录」的语义，两者不可混用（否则会退化成
+// 「只取第一条」的假成功）。
+func (e *Engine) executeExtractMultiple(ctx context.Context, pageMgr *browser.PageManager,
+	action *types.Action, variables *VariableScope, targetVar string) error {
+
+	fieldsRaw := action.Params["fields"]
+	fields, ok := fieldsRaw.([]interface{})
+	if !ok || len(fields) == 0 {
+		return types.NewNonRetryableError("批量提取步骤没有设置要提取的字段（缺少 fields 参数）")
+	}
+
+	// maxItems 缺省 20（避免无界抓取）。
+	maxItems := 20
+	if m, ok := action.Params["maxItems"].(int); ok && m > 0 {
+		maxItems = m
+	} else if f, ok := action.Params["maxItems"].(float64); ok && f > 0 {
+		maxItems = int(f)
+	}
+
+	// 把字段定义序列化成脚本参数（Go → JS），由页面一次算完，避免逐字段往返。
+	fieldSpec := make([]map[string]string, 0, len(fields))
+	for _, f := range fields {
+		m, ok := f.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		name, _ := m["name"].(string)
+		sel, _ := m["selector"].(string)
+		attr, _ := m["attribute"].(string)
+		if name == "" {
+			continue
+		}
+		if attr == "" {
+			attr = "text"
+		}
+		fieldSpec = append(fieldSpec, map[string]string{"name": name, "selector": sel, "attribute": attr})
+	}
+	if len(fieldSpec) == 0 {
+		return types.NewNonRetryableError("批量提取的 fields 定义不完整（每项需要 name）")
+	}
+
+	specJSON, err := json.Marshal(fieldSpec)
+	if err != nil {
+		return fmt.Errorf("批量提取字段定义序列化失败: %w", err)
+	}
+	containerJSON, _ := json.Marshal(action.Selector)
+
+	script := fmt.Sprintf(`(function(){
+		var spec = %s, containerSel = %s, max = %d;
+		var containers = [];
+		if (containerSel) {
+			containers = Array.from(document.querySelectorAll(containerSel));
+		}
+		if (containers.length === 0) containers = [document];
+		var out = [];
+		for (var i = 0; i < containers.length && out.length < max; i++) {
+			var root = containers[i];
+			var item = {};
+			var any = false;
+			for (var j = 0; j < spec.length; j++) {
+				var f = spec[j];
+				var el = null;
+				try { el = f.selector ? root.querySelector(f.selector) : root; } catch (e) { el = null; }
+				if (!el) continue;
+				var v = "";
+				switch (f.attribute) {
+				case "text": v = (el.textContent || "").trim(); break;
+				case "html": v = el.innerHTML || ""; break;
+				case "value": v = el.value || ""; break;
+				default:
+					var a = el.getAttribute(f.attribute);
+					v = a === null ? "" : a;
+				}
+				item[f.name] = v;
+				if (v !== "") any = true;
+			}
+			if (any) out.push(item);
+		}
+		return out;
+	})()`, string(specJSON), string(containerJSON), maxItems)
+
+	val, err := pageMgr.Evaluate(script)
+	if err != nil {
+		return fmt.Errorf("批量提取执行失败: %w", err)
+	}
+
+	scope := ScopeTask
+	if sc, ok := action.Params["scope"].(string); ok {
+		switch sc {
+		case "session":
+			scope = ScopeSession
+		case "loop":
+			scope = ScopeLoop
+		}
+	}
+	if err := variables.Set(scope, targetVar, val); err != nil {
+		return fmt.Errorf("批量提取回写变量 %s 失败: %w", targetVar, err)
+	}
+
+	count := 0
+	if arr, ok := val.([]interface{}); ok {
+		count = len(arr)
+	}
+	e.logger.Debug("批量提取完成",
+		logger.String("target_var", targetVar),
+		logger.Int("items", count),
+		logger.Int("max_items", maxItems))
+	return nil
+}
+
 // executeScroll execute scroll action
 func (e *Engine) executeScroll(ctx context.Context, pageMgr *browser.PageManager, action *types.Action, variables *VariableScope) error {
 	// Get scroll direction (down, up, toElement)
@@ -777,13 +962,13 @@ func (e *Engine) executeScroll(ctx context.Context, pageMgr *browser.PageManager
 		return pageMgr.ScrollUp(pixels)
 	case "toElement":
 		if action.Selector == "" {
-			return fmt.Errorf("scroll to element requires selector")
+			return types.NewNonRetryableError("滚动到元素步骤没有设置目标（缺少选择器）")
 		}
 		return pageMgr.ScrollToElement(action.Selector)
 	case "in", "element":
 		// ENGINE-02：元素内滚动（滚动条在容器里，不滚动整页）
 		if action.Selector == "" {
-			return fmt.Errorf("scroll in element requires selector")
+			return types.NewNonRetryableError("元素内滚动步骤没有设置容器（缺少选择器）")
 		}
 		dx, _ := action.Params["deltaX"].(int)
 		dy, _ := action.Params["deltaY"].(int)
@@ -794,7 +979,8 @@ func (e *Engine) executeScroll(ctx context.Context, pageMgr *browser.PageManager
 		}
 		return pageMgr.ScrollInElement(action.Selector, dx, dy)
 	default:
-		return fmt.Errorf("unsupported scroll direction: %s", direction)
+		return types.NewNonRetryableErrorf(
+			"滚动方向的设置「%s」不被支持（可选 down/up/toElement/in）", direction)
 	}
 }
 
@@ -803,7 +989,7 @@ func (e *Engine) executeAutoLogin(ctx context.Context, page browser.Page, pageMg
 	// Get login URL from params
 	loginURL, ok := action.Params["loginUrl"].(string)
 	if !ok {
-		return fmt.Errorf("autologin action requires loginUrl parameter")
+		return types.NewNonRetryableError("自动登录步骤没有设置登录页地址（缺少 loginUrl 参数）")
 	}
 
 	// Get session data from variables (passed from TaskMessage)
@@ -1009,15 +1195,67 @@ func (e *Engine) applySessionData(ctx context.Context, page browser.Page, sessio
 	return nil
 }
 
+// ============================================================================
+// W7.1 / 缺陷 A：动作类型别名归一化（唯一入口，不在各 case 里分散判断）
+//
+// 生产实证（v1.56 W7 修复后用户实测仍 0 帧）：
+//   库里 6 个任务（全部 2026-03-10 创建的测试数据）第一步都是 type="goto"，
+//   而 worker 的 ActionType 常量表只有 "navigate"（types.go:70）。mapToAction
+//   原样把 "goto" 塞进 action.Type → executeAction switch 无 case → default
+//   立即返回 "unsupported action type: goto"。
+//
+//   生产日志铁证：liveview attach(00:12:00.009) → gate waiting(00:12:00.094)
+//   间隔仅 85ms —— 真实导航失败不可能这么快，证明动作压根没执行。
+//
+// 别名表取值依据（先取证再定表，不凭想象扩）：
+//   · scripts/ops/rpa_action_type_census 普查生产库：19 个任务 / 12 种 type，
+//     非规范写法只有 "goto"（6 步）→ ALIAS_SET=goto
+//   · 前端 RPA_ACTION_TYPES（src/types/rpa.ts）只有规范写法，无 goto/url
+//   · "url" 是历史脚本把 URL 当类型名的惯用写法（后端 extractURLFromScript
+//     与 convertToWorkerAction 都允许把 URL 放在 value 字段，说明存量脚本里
+//     确有「URL 就是这一步主角」的形状），任务书也明确要求覆盖
+//   · goTo / GOTO 等大小写变体：统一按**大小写不敏感**查表覆盖，避免每种
+//     大小写各写一行（表会随历史数据增长而失控）
+// ============================================================================
+
+// actionTypeAliases 历史/前端惯用写法 → 规范 ActionType（唯一真相已迁到 types 包）。
+//
+// 保留这个薄封装是为了让本文件的调用点语义自解释（executor 只做「映射」），
+// 而**真正的别名表与归一化实现**在 types.ActionTypeAliases / types.NormalizeAction：
+// 动作有两条进入路径（顶层 script 走 json.Unmarshal、嵌套动作走本文件
+// mapToAction），两条都必须在「Action.Type 赋值处」归一化，因此表不能只放在
+// 本文件里 —— 否则 rpa-worker 的 TaskMessage.UnmarshalJSON 无法复用（包依赖方向
+// 是 executor → types，反过来 import 会成环）。
+var actionTypeAliases = types.ActionTypeAliases
+
+// normalizeActionType 把原始 type 字符串归一化成规范 ActionType（委托 types 包）。
+//
+// 返回 (归一化后的类型, 命中的别名原文)。命中别名时调用方负责打 WARN，
+// 便于从日志里继续发现历史数据（别名是兜底，数据迁移才是根治）。
+//
+// 未命中别名时原样返回（**不做**任何近似猜测）：未知类型必须继续走
+// executeAction 的 default 分支给出可读错误，不能被静默吞掉。
+func normalizeActionType(raw string) (types.ActionType, string) {
+	return types.NormalizeActionType(raw)
+}
+
 // mapToAction convert map to Action struct
 // 后端已经发送正确格式的数据，这里只需简单映射字段
+//
+// W7.1 / 缺陷 A：type 的别名归一化在**这里一次性完成**（action.Type 赋值处），
+// 不在每个 case 里分散判断 —— 否则 loop/condition 里的嵌套动作（同样经本函数
+// 转换）会漏掉，而它们恰好是最容易藏历史写法的位置。
 func (e *Engine) mapToAction(m map[string]interface{}) types.Action {
 	action := types.Action{}
 	if id, ok := m["id"].(string); ok {
 		action.ID = id
 	}
 	if actionType, ok := m["type"].(string); ok {
-		action.Type = types.ActionType(actionType)
+		normalized, alias := normalizeActionType(actionType)
+		if alias != "" && alias != string(normalized) {
+			e.logNormalizedActionType(actionType, normalized, action.ID)
+		}
+		action.Type = normalized
 	}
 	if desc, ok := m["description"].(string); ok {
 		action.Description = desc
@@ -1040,7 +1278,33 @@ func (e *Engine) mapToAction(m map[string]interface{}) types.Action {
 		action.Params = params
 	}
 
+	// W7.1 / 缺陷 A（第二层）：navigate 的 URL 键位提升 + 别名归一（委托 types）。
+	//
+	// 为什么必须做：生产库 6 个 goto 任务的 URL 都在 **value** 字段、params 里
+	// 只有 waitUntil（普查实证：navigate 动作的 URL 键位 params.url=6 / value=7，
+	// 两种形状都在存量里）。后端 convertToWorkerAction 只在 type=="navigate"
+	// 时把 value 提升到 params.url —— goto 走不到那句。若只在 worker 侧把类型
+	// 归一化成 navigate 而不补这次提升，错误会从 "unsupported action type"
+	// 变成 "missing url parameter"，任务照样跑不通（只是换了个报错）。
+	//
+	// NormalizeAction 是 types 包的**唯一入口**，与 TaskMessage.UnmarshalJSON
+	// （顶层 script 路径）共用同一份实现与别名表 —— 两条路径不会漂移。
+	types.NormalizeAction(&action)
+
 	return action
+}
+
+// logNormalizedActionType 别名命中的 WARN（nil 安全：nestedActionsFrom 里用
+// `var tmp Engine` 走本函数，logger 为 nil）。
+func (e *Engine) logNormalizedActionType(raw string, normalized types.ActionType, actionID string) {
+	if e == nil || e.logger == nil {
+		return
+	}
+	e.logger.Warn("normalized action type "+raw+" -> "+string(normalized),
+		logger.String("raw_type", raw),
+		logger.String("normalized_type", string(normalized)),
+		logger.String("action_id", actionID),
+	)
 }
 
 // substituteVariables substitute variables（ENGINE-04）。

@@ -104,6 +104,34 @@ export function parseLiveStateMessage(content: unknown): LiveContext | null {
   return parseLiveContext(rawCtx);
 }
 
+/**
+ * W7.1 / 缺陷 C：从 `rpa_liveview_state` 消息里取「暂无画面」提示。
+ *
+ * 为什么单独一个函数而不是塞进 LiveContext：emptyPageHint 是**推流事实**
+ *（已推流 + 零帧 + 超时），不是叠加层情境（步骤/动作/模式）。塞进 context 会
+ * 让「整体替换 context」的既有语义把它一起清掉，提示就闪一下消失。
+ *
+ * 兼容两种信封：
+ *   · 后端 janitor 主动推：`{ context: {executionId}, emptyPageHint: true, ... }`
+ *   · 后端 State 端点（前端自己刷新时读 stats）：不走本函数
+ */
+export function parseEmptyPageHint(content: unknown): { executionId: string; waitingMs: number } | null {
+  if (typeof content !== "string" || content === "") return null;
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(content);
+  } catch {
+    return null;
+  }
+  if (!isRecord(parsed)) return null;
+  if (parsed.emptyPageHint !== true) return null;
+
+  const rawCtx = parsed.context;
+  const executionId = isRecord(rawCtx) ? toStr(rawCtx.executionId) : "";
+  return { executionId, waitingMs: toNumber(parsed.emptyPageWaitingMs) };
+}
+
 /** 从任意对象收敛出 LiveContext（缺字段给安全默认值） */
 export function parseLiveContext(raw: Record<string, unknown>): LiveContext {
   const varsRaw = raw.variables;

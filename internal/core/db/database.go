@@ -1281,6 +1281,14 @@ func (d *Database) AutoMigrate() error {
 		} else if changed260 {
 			d.MenuPermissionChanged = true
 		}
+		// 261：W7.1 / 缺陷 A —— sys_rpa_tasks.script 里的动作类型别名归一化
+		// （goto/url → navigate）。alias 是 worker 侧兜底，本迁移是数据根治。
+		// **非阻断**：迁移失败只让历史数据保持旧写法（worker 仍能靠 alias 跑通），
+		// 不影响启动与执行；但会记 ERROR 且不写版本号，下次启动重试。
+		if err := d.runAndRecord(261, "rpa_action_type_alias_normalize",
+			migrations.Migrate261RPActionTypeAliasNormalize); err != nil {
+			applogger.Errorf("RPA 动作类型别名归一化迁移失败 (非阻断,留待下次启动): %v", err)
+		}
 		// 缺权限行只让普通角色备份删除 403 / 前端删除按钮不显示；父菜单缺失时迁移内部降级返回 nil。
 		if err := d.runAndRecord(246, "backup_remove_permission_f_type_seed", migrations.Migrate246BackupRemovePermissionFTypeSeed); err != nil {
 			applogger.Errorf("备份删除权限种子迁移失败 (非阻断,留待下次启动): %v", err)
@@ -1479,6 +1487,11 @@ func (d *Database) AutoMigrate() error {
 		// sqlite 分支: 258 Phase 158 / REC-02 RPA 定时调度页面菜单（双方言迁移）。**非阻断**。
 		if err := d.runAndRecord(258, "rpa_schedule_menu", migrations.Migrate258RpaScheduleMenu); err != nil {
 			applogger.Errorf("RPA 定时调度菜单播种失败 (非阻断,留待下次启动): %v", err)
+		}
+		// sqlite 分支: 261 W7.1 / 缺陷 A RPA 动作类型别名归一化（双方言幂等）。**非阻断**。
+		if err := d.runAndRecord(261, "rpa_action_type_alias_normalize",
+			migrations.Migrate261RPActionTypeAliasNormalize); err != nil {
+			applogger.Errorf("RPA 动作类型别名归一化迁移失败 (非阻断,留待下次启动): %v", err)
 		}
 		// sqlite 分支: 杂项 RBAC F 型种子（task-4，双方言迁移）。**非阻断**。
 		if err := d.runAndRecord(247, "misc_rbac_f_type_seed", migrations.Migrate247MiscRbacFTypeSeed); err != nil {

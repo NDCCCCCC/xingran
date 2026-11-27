@@ -222,7 +222,7 @@ func (h *Hub) SetMode(executionID string, mode types.LiveMode, operator string) 
 	if old != normalized && normalized == types.LiveModeAuto {
 		ch = s.confirmCh
 		s.confirmCh = make(chan struct{})
-		}
+	}
 	s.mu.Unlock()
 
 	if ch != nil {
@@ -341,6 +341,19 @@ func (h *Hub) BeforeAction(ctx ctxLike, executionID string, action *types.Action
 		needWait = true
 	case force:
 		// 失败自动暂停：copilot/manual 都要停下来等人看，auto 不打断。
+		//
+		// W7.1 / 缺陷 B 契约：**force 只应来自「可重试的运行时失败」**
+		//（网络超时 / 元素未找到 / 导航失败 / 目标站 5xx 等真正执行失败）。
+		//
+		// 反例（生产事故）：动作 type="goto" 在 worker 里没有对应 case，
+		// executeAction 立即返回 unsupported action type —— 这是脚本配置错误，
+		// 重试 100 次也不会成功。当时该动作 retry=2 > 0，于是走到 gate(force=true)
+		// → copilot 模式 needWait 恒 true → 永久阻塞 10 分钟后 deadline exceeded，
+		// 页面停在 about:blank，screencast 一帧不发（后端 30 分钟零帧请求）。
+		//
+		// 现在 executor 在调用本闸门之前用 types.IsNonRetryable 拦住了配置错误
+		// （fail-fast，不进闸门、不空转重试）。本 case 保留，服务真实失败场景；
+		// 如果将来有新的调用点，必须遵守「force 只给可重试失败」这条契约。
 		needWait = mode != types.LiveModeAuto
 	case mode == types.LiveModeManual:
 		needWait = true

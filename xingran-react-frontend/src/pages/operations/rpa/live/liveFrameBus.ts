@@ -21,7 +21,7 @@
 
 import type { WebSocketNoticeMessage } from "@/types/notice";
 import { useNoticeStore } from "@/store/noticeStore";
-import { parseLiveFrameMessage, parseLiveStateMessage } from "./liveFrameParser";
+import { parseEmptyPageHint, parseLiveFrameMessage, parseLiveStateMessage } from "./liveFrameParser";
 import type { LiveContext, LiveFrameEnvelope } from "./types";
 
 /** 帧消息类型（协议 §1） */
@@ -37,10 +37,13 @@ export interface LiveWsPayload {
 
 export type LiveFrameListener = (envelope: LiveFrameEnvelope) => void;
 export type LiveStateListener = (context: LiveContext) => void;
+/** W7.1 / 缺陷 C：暂无画面提示的订阅者 */
+export type LiveEmptyPageListener = (hint: { executionId: string; waitingMs: number }) => void;
 
 /** 模块级监听器集合（与 noticeStore 的 RPA/portWrite 同款：不进响应式 state） */
 const frameListeners = new Set<LiveFrameListener>();
 const stateListeners = new Set<LiveStateListener>();
+const emptyPageListeners = new Set<LiveEmptyPageListener>();
 
 let tapRefCount = 0;
 /** 挂接前 store 上原始的 handleWsMessage（卸载时按引用恢复） */
@@ -66,6 +69,19 @@ function dispatchState(payload: LiveWsPayload): void {
       cb(context);
     } catch (error) {
       console.error("[LiveView] 情境监听器异常:", error);
+    }
+  });
+}
+
+/** W7.1 / 缺陷 C：分发「暂无画面」提示（与情境分开，避免被整体替换清掉）。 */
+function dispatchEmptyPage(payload: LiveWsPayload): void {
+  const hint = parseEmptyPageHint(payload.content);
+  if (!hint) return;
+  emptyPageListeners.forEach((cb) => {
+    try {
+      cb(hint);
+    } catch (error) {
+      console.error("[LiveView] 暂无画面监听器异常:", error);
     }
   });
 }
@@ -98,7 +114,12 @@ export function installLiveFrameTap(): () => void {
       const content = (message as unknown as { content?: unknown })?.content;
       if (typeof type !== "string" || type !== LIVE_FRAME_TYPE) {
         if (typeof type === "string" && type === LIVE_STATE_TYPE) {
-          dispatchState({ type, content: typeof content === "string" ? content : "" });
+          const content = (message as unknown as { content?: unknown })?.content;
+          const text = typeof content === "string" ? content : "";
+          // W7.1 / 缺陷 C：同一信封可能同时带 context 与 emptyPageHint。
+          // 先分情境（HUD 叠加层），再分提示（画布文案），两者互不覆盖。
+          dispatchState({ type, content: text });
+          dispatchEmptyPage({ type, content: text });
         }
         return;
       }
@@ -136,8 +157,17 @@ export function onLiveState(callback: LiveStateListener): () => void {
   };
 }
 
+/** W7.1 / 缺陷 C：订阅「暂无画面」提示（返回退订函数） */
+export function onLiveEmptyPage(callback: LiveEmptyPageListener): () => void {
+  emptyPageListeners.add(callback);
+  return () => {
+    emptyPageListeners.delete(callback);
+  };
+}
+
 /** 清空全部监听器（仅供测试 / 页面硬重置；生产路径由各 useEffect cleanup 负责） */
 export function resetLiveListeners(): void {
   frameListeners.clear();
   stateListeners.clear();
+  emptyPageListeners.clear();
 }

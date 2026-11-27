@@ -113,17 +113,17 @@ type LiveViewFrame struct {
 
 // LiveViewContextSnapshot 叠加层情境（Worker 侧已脱敏）。
 type LiveViewContextSnapshot struct {
-	ExecutionID  string            `json:"executionId"`
-	TaskName     string            `json:"taskName"`
-	WorkerID     string            `json:"workerId"`
-	WorkerName   string            `json:"workerName"`
-	Step         int               `json:"step"`
-	TotalSteps   int               `json:"totalSteps"`
-	ActionType   string            `json:"actionType"`
-	ActionDesc   string            `json:"actionDesc"`
-	Status       string            `json:"status"`
-	Mode         LiveViewMode      `json:"mode"`
-	TakeoverBy   string            `json:"takeoverBy,omitempty"`
+	ExecutionID string       `json:"executionId"`
+	TaskName    string       `json:"taskName"`
+	WorkerID    string       `json:"workerId"`
+	WorkerName  string       `json:"workerName"`
+	Step        int          `json:"step"`
+	TotalSteps  int          `json:"totalSteps"`
+	ActionType  string       `json:"actionType"`
+	ActionDesc  string       `json:"actionDesc"`
+	Status      string       `json:"status"`
+	Mode        LiveViewMode `json:"mode"`
+	TakeoverBy  string       `json:"takeoverBy,omitempty"`
 	// TakeoverByID 接管者用户 ID（W7 / UI-FIX-02）
 	//
 	// takeoverBy 是展示名（nickname/username），会随用户改昵称、随 SM2/HS256
@@ -216,31 +216,39 @@ type LiveViewStats struct {
 	Frames      int64 `json:"frames"`
 	Dropped     int64 `json:"dropped"`
 	LastFrameMS int64 `json:"lastFrameMs"`
+	// W7.1 / 缺陷 C：已推流但超过阈值仍无帧 → 页面没有可画内容。
+	//
+	// 前端据此把「等待画面…」换成「当前页面暂无画面（可能停在空白页或正在
+	// 加载）」，并给「刷新状态」按钮。判据全部在后端（帧数 + 开流时长），
+	// 不依赖 Worker 回传任何新字段 —— 少一个跨进程契约面。
+	EmptyPageHint bool `json:"emptyPageHint"`
+	// EmptyPageWaitingMS 已等待的毫秒数（给用户看「等了多久」）。
+	EmptyPageWaitingMS int64 `json:"emptyPageWaitingMs"`
 }
 
 // watcher 一个观看者（用户级，不按连接，因为 WS 是每用户一条）。
 type watcher struct {
-	userID    string
-	lastSeen  time.Time
-	joinedAt  time.Time
-	lastPerm  time.Time
-	permOK    bool
+	userID   string
+	lastSeen time.Time
+	joinedAt time.Time
+	lastPerm time.Time
+	permOK   bool
 }
 
 // LiveViewHub 后端侧实时画面中枢（单例，挂在 ServiceGroup）。
 type LiveViewHub struct {
-	db         *gorm.DB
-	cfg        *config.Config
-	noticeHub  *websocket.NoticeHub
-	cache      cache.Cache
-	log        interface{ Info(string, ...interface{}) }
+	db        *gorm.DB
+	cfg       *config.Config
+	noticeHub *websocket.NoticeHub
+	cache     cache.Cache
+	log       interface{ Info(string, ...interface{}) }
 
-	mu        sync.Mutex
-	sessions  map[string]*liveViewSession
-	closed    bool
+	mu          sync.Mutex
+	sessions    map[string]*liveViewSession
+	closed      bool
 	janitorDone chan struct{}
-	ctx       context.Context
-	cancel    context.CancelFunc
+	ctx         context.Context
+	cancel      context.CancelFunc
 }
 
 // liveViewSession 单执行的观看态。
@@ -252,11 +260,17 @@ type liveViewSession struct {
 	// takeoverByID 接管者用户 ID（控制权权威判据，W7 / UI-FIX-02）
 	takeoverByID string
 	takeoverAt   time.Time
-	watchers    map[string]*watcher
-	context     *LiveViewContextSnapshot
-	lastFrameAt int64
-	frames      int64
-	dropped     int64
+	watchers     map[string]*watcher
+	context      *LiveViewContextSnapshot
+	lastFrameAt  int64
+	frames       int64
+	dropped      int64
+	// W7.1 / 缺陷 C：本次推流开始时刻（首个 watcher 触发 watch 时记下）。
+	// 与 frames 一起构成「已推流但 N 秒零帧」的判据；watcher 全走即会话销毁，
+	// 所以不需要重置逻辑。
+	streamStartedAt time.Time
+	// emptyPageNotified 「暂无画面」提示已推过一次（避免 janitor 每轮重推）。
+	emptyPageNotified bool
 	// started 用于「无执行时停流」判定：Worker 上报帧即刷新。
 	lastWorkerSignal time.Time
 }
@@ -356,6 +370,11 @@ func (h *LiveViewHub) Watch(ctx context.Context, executionID, userID, userName s
 		Streaming:    len(s.watchers),
 		TakeoverBy:   s.takeoverBy,
 		TakeoverByID: s.takeoverByID,
+	}
+	// W7.1 / 缺陷 C：记录推流起点（首个 watcher 触发的 watch）。重复 watch 不重置
+	// —— 「已经等了多久」就该从第一次开流算起，否则每次刷新都归零。
+	if s.streamStartedAt.IsZero() {
+		s.streamStartedAt = now
 	}
 	h.mu.Unlock()
 
@@ -896,13 +915,32 @@ func (h *LiveViewHub) Stats(executionID string) LiveViewStats {
 	if !ok {
 		return LiveViewStats{}
 	}
-	return LiveViewStats{
+	out := LiveViewStats{
 		Watchers:    len(s.watchers),
 		Frames:      s.frames,
 		Dropped:     s.dropped,
 		LastFrameMS: s.lastFrameAt,
 	}
+	// W7.1 / 缺陷 C 判据：已开流超过 EmptyPageHintAfter 且一帧未收到。
+	//
+	// 为什么判据在后端而不在 Worker：Worker 与后端是两条独立部署，Worker 侧的
+	// 「零帧」结论要经过一次 HTTP 上报才能到前端，而帧本身一次也没到过 ——
+	// 由「帧数 + 开流时长」这两个后端已持有的事实判定，恢复路径最短。
+	if !s.streamStartedAt.IsZero() && s.frames == 0 {
+		waited := time.Since(s.streamStartedAt)
+		if waited >= emptyPageHintAfter {
+			out.EmptyPageHint = true
+			out.EmptyPageWaitingMS = waited.Milliseconds()
+		}
+	}
+	return out
 }
+
+// emptyPageHintAfter 「已推流但零帧」的判定阈值（W7.1 / 缺陷 C）。
+//
+// 5s 与 Worker 侧 ZeroFrameWarnAfter 同值：两侧看到同一条事实，日志与 UI
+// 不会出现「Worker 说空页面、前端还在等待画面」的分裂。
+const emptyPageHintAfter = 5 * time.Second
 
 // janitor 唯一内务 goroutine：清心跳超时的 watcher（不按执行起 goroutine）。
 func (h *LiveViewHub) janitor() {
@@ -923,12 +961,13 @@ func (h *LiveViewHub) janitor() {
 	}
 }
 
-// sweep 一轮：移除心跳超时的 watcher；空会话即删。
+// sweep 一轮：移除心跳超时的 watcher；空会话即删；必要时推「暂无画面」提示。
 func (h *LiveViewHub) sweep() {
+	// 锁内只做状态维护与收集，**不**在持锁期间做 IO（publish 会走 cache/redis）。
 	h.mu.Lock()
-	defer h.mu.Unlock()
 	now := time.Now()
 	idle := h.idleTimeout()
+	var hints []*emptyPageHint
 	for execID, s := range h.sessions {
 		for uid, w := range s.watchers {
 			if now.Sub(w.lastSeen) > idle {
@@ -937,8 +976,55 @@ func (h *LiveViewHub) sweep() {
 		}
 		if len(s.watchers) == 0 {
 			delete(h.sessions, execID)
+			continue
+		}
+		// W7.1 / 缺陷 C：已推流但零帧超过阈值 → 给前端推一条带 emptyPageHint
+		// 的 rpa_liveview_state（不可丢广播），让「等待画面…」及时换成
+		// 「当前页面暂无画面」。
+		//
+		// 只在「首次越线」时推一次（emptyPageNotified 去重），否则每 2s 一条
+		// 会变成噪声；用户点「刷新状态」时前端会重新 GET state，那里不限次数。
+		if !s.emptyPageNotified && !s.streamStartedAt.IsZero() && s.frames == 0 &&
+			now.Sub(s.streamStartedAt) >= emptyPageHintAfter {
+			s.emptyPageNotified = true
+			hint := &emptyPageHint{
+				execID:    execID,
+				waitingMS: now.Sub(s.streamStartedAt).Milliseconds(),
+			}
+			for uid := range s.watchers {
+				hint.uids = append(hint.uids, uid)
+			}
+			if len(hint.uids) > 0 {
+				hints = append(hints, hint)
+			}
 		}
 	}
+	h.mu.Unlock()
+
+	for _, hint := range hints {
+		payload, err := json.Marshal(map[string]interface{}{
+			"context": map[string]interface{}{
+				"executionId": hint.execID,
+			},
+			"emptyPageHint":      true,
+			"emptyPageWaitingMs": hint.waitingMS,
+		})
+		if err != nil {
+			h.logf("liveview empty page hint marshal failed (execution=%s): %v", hint.execID, err)
+			continue
+		}
+		h.noticeHub.PublishLiveStateToUsers(hint.uids, hint.execID,
+			websocket.MessageTypeRPALiveState, string(payload))
+		h.logf("liveview empty page hint pushed (execution=%s, waited=%dms)",
+			hint.execID, hint.waitingMS)
+	}
+}
+
+// emptyPageHint 待推送的「零帧」提示（锁内收集、出锁发送）。
+type emptyPageHint struct {
+	execID    string
+	waitingMS int64
+	uids      []string
 }
 
 // Close 关闭中枢（停 janitor，清会话表；不下发 stop —— Worker 会因 idle 自行停流）。

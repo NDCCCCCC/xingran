@@ -97,6 +97,14 @@ export interface LiveStateSnapshot {
     frames?: number;
     dropped?: number;
     lastFrameMs?: number;
+    /**
+     * W7.1 / 缺陷 C：已推流但超过阈值仍零帧 —— 页面没有可画内容
+     *（典型：停在 about:blank 或空 DOM）。前端据此把「等待画面…」换成
+     *「当前页面暂无画面（可能停在空白页或正在加载）」并给「刷新状态」按钮。
+     */
+    emptyPageHint?: boolean;
+    /** 已等待的毫秒数（给用户看「等了多久」，不出现内部术语） */
+    emptyPageWaitingMs?: number;
   };
 }
 

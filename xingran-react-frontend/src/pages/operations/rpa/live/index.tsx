@@ -32,7 +32,7 @@ import type {
   LiveMode,
 } from "./types";
 import { computeFrameStats, type FrameStats } from "./liveFrameParser";
-import { installLiveFrameTap, onLiveFrame, onLiveState } from "./liveFrameBus";
+import { installLiveFrameTap, onLiveEmptyPage, onLiveFrame, onLiveState } from "./liveFrameBus";
 import {
   continueExecution,
   fetchLiveState,
@@ -56,6 +56,16 @@ const { Text } = Typography;
 export const KEEPALIVE_INTERVAL_MS = 20_000;
 /** 帧率统计窗口内保留的最大样本数（3s 窗口 × 10fps ≈ 30，留一倍余量） */
 const MAX_FRAME_SAMPLES = 80;
+
+/**
+ * W7.1 / 缺陷 C：已推流多久仍零帧就判「暂无画面」（与后端的 emptyPageHintAfter
+ * 同为 5s，两侧口径一致）。
+ *
+ * 前端也自己计时，不只依赖后端推送：后端 janitor 每 2s 一轮，且会话可能在
+ * 「首个 watch publish 到达 Worker 之前」就被建立 —— 只依赖后端推送会让文案
+ * 晚好几秒才出现，而这段时间正是用户最容易误以为「再等等就有」的窗口。
+ */
+export const EMPTY_PAGE_HINT_AFTER_MS = 5_000;
 
 /** 从错误对象提取 HTTP 状态码（api.ts 的 handleHttpResponseError 会把 status 挂上） */
 function errorStatus(error: unknown): number | undefined {
@@ -108,6 +118,16 @@ export default function RpaLiveViewPage() {
   const [mode, setMode] = useState<LiveMode>("copilot");
   const [frame, setFrame] = useState<LiveFrame | null>(null);
   const [stats, setStats] = useState<FrameStats>({ fps: 0, mbps: 0, samples: 0 });
+
+  // W7.1 / 缺陷 C：已推流但零帧超时（true → 显示「当前页面暂无画面」+ 刷新按钮）。
+  //
+  // 三条置真路径（任一即真）：
+  //   1. 本页自己计时：watching 起 EMPTY_PAGE_HINT_AFTER_MS 后仍无首帧；
+  //   2. 后端 janitor 推 rpa_liveview_state 带 emptyPageHint；
+  //   3. 刷新状态时 GET state 的 stats.emptyPageHint。
+  // 置假路径：收到任意一帧（hasFrame 一旦为真即清）。
+  const [emptyPage, setEmptyPage] = useState(false);
+  const emptyPageTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ---------- 权限门控（403/401 后置位，之后不再发任何请求） ----------
   const [fatalError, setFatalError] = useState("");
@@ -258,6 +278,8 @@ export default function RpaLiveViewPage() {
       if (frameExec && frameExec !== curIdRef.current) return;
 
       setFrame(envelope.frame);
+      // W7.1 / 缺陷 C：出帧即证明「有画面」，把「暂无画面」提示收回。
+      setEmptyPage(false);
       if (envelope.context) setContext(envelope.context);
 
       const now = Date.now();
@@ -272,12 +294,45 @@ export default function RpaLiveViewPage() {
       setContext(ctx);
     });
 
+    // W7.1 / 缺陷 C：后端 janitor 主动推的「暂无画面」提示。
+    const offEmpty = onLiveEmptyPage((hint) => {
+      if (hint.executionId && hint.executionId !== curIdRef.current) return;
+      setEmptyPage(true);
+    });
+
     return () => {
       offFrame();
       offState();
+      offEmpty();
       releaseTap();
     };
   }, []);
+
+  // ==================== 5b) 零帧计时（前端自己也能判定） ====================
+  //
+  // watching 开始后计时 EMPTY_PAGE_HINT_AFTER_MS：届时仍没有帧 → 判「暂无画面」。
+  // 收到首帧或停止推流时清掉计时器（不留悬空 timer）。
+  useEffect(() => {
+    if (emptyPageTimerRef.current) {
+      clearTimeout(emptyPageTimerRef.current);
+      emptyPageTimerRef.current = null;
+    }
+    if (!watching || frame !== null) return;
+    emptyPageTimerRef.current = setTimeout(() => {
+      emptyPageTimerRef.current = null;
+      // 双保险：计时到点时再看一眼是否已有帧（避免「刚出帧又被判空」的竞态）。
+      setFrame((latest) => {
+        if (latest === null) setEmptyPage(true);
+        return latest;
+      });
+    }, EMPTY_PAGE_HINT_AFTER_MS);
+    return () => {
+      if (emptyPageTimerRef.current) {
+        clearTimeout(emptyPageTimerRef.current);
+        emptyPageTimerRef.current = null;
+      }
+    };
+  }, [watching, frame]);
 
   // ==================== 6) 输入注入 ====================
   const handleInput = useCallback((command: LiveInputCommand) => {
@@ -300,11 +355,34 @@ export default function RpaLiveViewPage() {
     fetchLiveState(id)
       .then((res) => {
         if (res.data?.context) setContext(res.data.context);
+        // W7.1 / 缺陷 C：刷新时读后端判定的 emptyPageHint（若此时已有帧则不置）。
+        if (res.data?.stats?.emptyPageHint) setEmptyPage(true);
       })
       .catch(() => {
         // 刷新失败不致命：下一次 rpa_liveview_state 帧会把 HUD 收敛
       });
   }, []);
+
+  /**
+   * W7.1 / 缺陷 C：「刷新状态」按钮回调（给一般员工用）。
+   *
+   * 语义 = 「按一下，看看现在到底有没有画面」：
+   *   1. 立刻重新拉后端 state（含 stats.emptyPageHint）；
+   *   2. 重新发一次 watch（幂等：Worker 侧已在观看则只刷活跃时间，不重复占名额）；
+   *   3. 若仍无帧，文案保持「当前页面暂无画面」—— 不假装成「正在加载」。
+   */
+  const handleRefreshState = useCallback(() => {
+    const id = curIdRef.current;
+    if (!id || blockedRef.current) return;
+    refreshState(id);
+    watchExecution(id)
+      .then(() => {
+        message.success("已刷新画面状态");
+      })
+      .catch((error) => {
+        message.error(errorMessage(error, "刷新状态失败"));
+      });
+  }, [message, refreshState]);
 
   const handleTakeover = useCallback(() => {
     const id = curIdRef.current;
@@ -541,6 +619,8 @@ export default function RpaLiveViewPage() {
                 onModeChange={handleModeChange}
                 stats={stats}
                 hasFrame={frame !== null}
+                emptyPage={emptyPage}
+                onRefreshState={handleRefreshState}
               />
             }
           />

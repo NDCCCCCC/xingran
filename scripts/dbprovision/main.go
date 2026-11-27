@@ -29,6 +29,7 @@ import (
 	gormlogger "gorm.io/gorm/logger"
 
 	"github.com/xingran-next/xingran-go-backend/internal/core/db"
+	"github.com/xingran-next/xingran-go-backend/internal/core/db/migrations"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/internal/models/operations"
 	rpamodels "github.com/xingran-next/xingran-go-backend/internal/models/rpa"
@@ -143,6 +144,19 @@ func main() {
 	sqlDB.SetMaxOpenConns(2)
 	sqlDB.SetMaxIdleConns(1)
 	fmt.Printf("connected %s:%s/%s\n", host, port, name)
+
+	// 数据迁移 261：W7.1 / 缺陷 A —— RPA 动作类型别名归一化。
+	//
+	// 为什么放在 dbprovision（而不是只靠应用启动的 AutoMigrate 块）：
+	// 生产部署常以 SKIP_AUTOMIGRATE=true 起（旁路只跑 215-220 子集 + 补建表），
+	// 261 在那个分支里不会执行；这条迁移又必须在**任何 goto 任务被重跑之前**生效。
+	// 幂等（逐任务解析、命中别名才写），重复执行安全。
+	fmt.Println("running migration 261: rpa action type alias normalize")
+	if err := migrations.Migrate261RPActionTypeAliasNormalize(gdb); err != nil {
+		fmt.Fprintln(os.Stderr, "migration 261 FAILED:", err)
+		os.Exit(3)
+	}
+	fmt.Println("migration 261 OK")
 
 	all := append(db.MigrateModelList(), extraModels()...)
 	var created, existed, failed []string

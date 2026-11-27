@@ -9,7 +9,7 @@
  */
 
 import { useMemo } from "react";
-import { Space, Tag, Tooltip, Typography } from "antd";
+import { Button, Space, Tag, Tooltip, Typography } from "antd";
 import { AppSelect } from "@/components/ui";
 import {
   actionTypeLabel,
@@ -25,6 +25,23 @@ const { Text } = Typography;
 /** 变量最多展示条数（其余收进「更多」气泡） */
 export const HUD_MAX_VARIABLES = 8;
 
+/**
+ * W7.1 / 缺陷 C：已推流但零帧时的提示文案。
+ *
+ * 为什么不能只说「等待画面…」：生产事故里页面停在 about:blank，
+ * Chrome 对空页面**不产 screencast 帧** —— 这不是「还没开始」，而是
+ * 「永远不会有画面」。用户（一般员工）看着「等待画面…」只能一直干等，
+ * 既不知道该等多久，也不知道该报错。
+ *
+ * 文案约束（任务书硬要求）：不得出现 screencast / CDP / frame 这类术语，
+ * 只说「当前页面暂无画面」+ 两种最常见的原因 + 可以做什么。
+ */
+export const EMPTY_PAGE_HINT_TEXT = "当前页面暂无画面（可能停在空白页或正在加载）";
+/** 「等待画面…」（正常等待中的文案，未越线时使用） */
+export const WAITING_FRAME_TEXT = "等待画面…";
+/** 「刷新状态」按钮文案（点了会重新拉一次后端状态 + 重连画面） */
+export const EMPTY_PAGE_REFRESH_TEXT = "刷新状态";
+
 export interface LiveHudProps {
   /** 叠加层情境（来自 rpa_liveview_state / state 端点 / 帧内 context） */
   context: LiveContext | null;
@@ -36,9 +53,26 @@ export interface LiveHudProps {
   stats?: FrameStats;
   /** 是否已拿到首帧（false 时给"等待画面"提示） */
   hasFrame?: boolean;
+  /**
+   * W7.1 / 缺陷 C：已推流但超时零帧（后端 emptyPageHint / 前端 5s 计时）。
+   *
+   * true 时把「等待画面…」换成「当前页面暂无画面」，并显示「刷新状态」按钮 ——
+   * 用户能一眼看出「不是还没开始，而是这个页面本来就没有画面」。
+   */
+  emptyPage?: boolean;
+  /** 「刷新状态」回调（点了重新拉后端状态；缺省时不显示按钮） */
+  onRefreshState?: () => void;
 }
 
-export function LiveHud({ context, mode, onModeChange, stats, hasFrame = false }: LiveHudProps) {
+export function LiveHud({
+  context,
+  mode,
+  onModeChange,
+  stats,
+  hasFrame = false,
+  emptyPage = false,
+  onRefreshState,
+}: LiveHudProps) {
   // W7 / UI-FIX-02：角标是否「已接管」以 isTakenOver 为准（任意一份接管者
   // 信息非空即真），展示名走 controllerDisplayName 兜底，避免出现
   // 「已接管 · 」这种半截文案（后端 takeoverBy 空但 takeoverById 非空的场景）。
@@ -221,7 +255,24 @@ export function LiveHud({ context, mode, onModeChange, stats, hasFrame = false }
 
         <Space size={8} style={{ pointerEvents: "none" }}>
           {!hasFrame && (
-            <Text style={{ color: "var(--theme-bg-surface)", fontSize: 11 }}>等待画面…</Text>
+            <Text
+              data-testid={emptyPage ? "live-empty-page-hint" : "live-waiting-frame-hint"}
+              style={{ color: "var(--theme-bg-surface)", fontSize: 11 }}
+            >
+              {emptyPage ? EMPTY_PAGE_HINT_TEXT : WAITING_FRAME_TEXT}
+            </Text>
+          )}
+          {!hasFrame && emptyPage && onRefreshState && (
+            // 按钮必须能点：HUD 整体 pointerEvents=none，这里显式打开。
+            <span style={{ pointerEvents: "auto" }}>
+              <Button
+                size="small"
+                data-testid="live-empty-page-refresh"
+                onClick={onRefreshState}
+              >
+                {EMPTY_PAGE_REFRESH_TEXT}
+              </Button>
+            </span>
           )}
           {stats && (
             <Text style={{ color: "var(--theme-bg-surface)", fontSize: 11 }}>
