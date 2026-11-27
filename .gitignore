@@ -179,3 +179,7 @@ tmp_swag/
 
 # æœ¬åœ°è‡ªåŠ¨é€’å¢ç‰ˆæœ¬å·ï¼ˆscripts/build/bump-version.mjs ç»´æŠ¤ï¼‰
 /VERSION
+
+# ±¾µØ CLI ×´Ì¬£¨gh device-id µÈ£©£¬²»µÃÈë¿â
+.local/
+
