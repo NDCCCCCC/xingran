@@ -149,19 +149,19 @@ type RecordingStatusUpdate struct {
 
 // RecordingPickUpdate Worker → 后端的拾取结果上报体。
 type RecordingPickUpdate struct {
-	SessionID        string `json:"sessionId"`
-	WorkerID         string `json:"workerId,omitempty"`
-	Found            bool   `json:"found"`
-	Tag              string `json:"tag,omitempty"`
-	Type             string `json:"type,omitempty"`
-	Text             string `json:"text,omitempty"`
+	SessionID        string          `json:"sessionId"`
+	WorkerID         string          `json:"workerId,omitempty"`
+	Found            bool            `json:"found"`
+	Tag              string          `json:"tag,omitempty"`
+	Type             string          `json:"type,omitempty"`
+	Text             string          `json:"text,omitempty"`
 	Tiers            []RecordingTier `json:"tiers,omitempty"`
-	Recommended      string `json:"recommended,omitempty"`
-	RecommendedTier  int    `json:"recommendedTier,omitempty"`
-	RecommendedScore int    `json:"recommendedScore,omitempty"`
-	Frame            string `json:"frame,omitempty"`
-	Message          string `json:"message,omitempty"`
-	Timestamp        int64  `json:"timestamp,omitempty"`
+	Recommended      string          `json:"recommended,omitempty"`
+	RecommendedTier  int             `json:"recommendedTier,omitempty"`
+	RecommendedScore int             `json:"recommendedScore,omitempty"`
+	Frame            string          `json:"frame,omitempty"`
+	Message          string          `json:"message,omitempty"`
+	Timestamp        int64           `json:"timestamp,omitempty"`
 }
 
 // RecordingResultUpdate Worker → 后端的最终产出上报体。
@@ -181,9 +181,9 @@ type RecordingResultUpdate struct {
 
 // RecordingSession 单个录制会话。
 type RecordingSession struct {
-	ID       string                 `json:"id"`
-	TaskID   string                 `json:"taskId,omitempty"`
-	WorkerID string                 `json:"workerId,omitempty"`
+	ID       string `json:"id"`
+	TaskID   string `json:"taskId,omitempty"`
+	WorkerID string `json:"workerId,omitempty"`
 	// OperatorID / OperatorName 操作者（审计与归属）。
 	OperatorID   string `json:"operatorId,omitempty"`
 	OperatorName string `json:"operatorName,omitempty"`
@@ -249,14 +249,14 @@ type RecordingHubOption struct {
 func NewRecordingHub(opt RecordingHubOption) *RecordingHub {
 	ctx, cancel := context.WithCancel(context.Background())
 	h := &RecordingHub{
-		cache:      opt.Cache,
-		noticeHub:  opt.NoticeHub,
-		log:        opt.Log,
-		db:         opt.DB,
-		taskSvc:    opt.TaskService,
-		sessions:   make(map[string]*RecordingSession),
-		ctx:        ctx,
-		cancel:     cancel,
+		cache:       opt.Cache,
+		noticeHub:   opt.NoticeHub,
+		log:         opt.Log,
+		db:          opt.DB,
+		taskSvc:     opt.TaskService,
+		sessions:    make(map[string]*RecordingSession),
+		ctx:         ctx,
+		cancel:      cancel,
 		janitorDone: make(chan struct{}),
 	}
 	go h.janitor()
@@ -409,11 +409,12 @@ func (h *RecordingHub) Keepalive(ctx context.Context, sessionID string) error {
 	if h == nil {
 		return fmt.Errorf("录制服务未初始化")
 	}
-	s, ok := h.get(sessionID)
+	h.mu.Lock()
+	s, ok := h.getMut(sessionID)
 	if !ok {
+		h.mu.Unlock()
 		return fmt.Errorf("录制会话不存在或已结束")
 	}
-	h.mu.Lock()
 	s.lastSeen = time.Now()
 	s.UpdatedAt = s.lastSeen
 	h.mu.Unlock()
@@ -435,13 +436,17 @@ func (h *RecordingHub) AbortSession(ctx context.Context, sessionID, reason strin
 	if h == nil {
 		return
 	}
-	s, ok := h.get(sessionID)
+	h.mu.Lock()
+	s, ok := h.getMut(sessionID)
 	if !ok {
+		h.mu.Unlock()
 		return
 	}
 	if IsTerminalRecordingState(s.State) {
+		h.mu.Unlock()
 		return
 	}
+	h.mu.Unlock()
 	cmd := map[string]interface{}{
 		"action":    "abort",
 		"sessionId": sessionID,
@@ -452,7 +457,7 @@ func (h *RecordingHub) AbortSession(ctx context.Context, sessionID, reason strin
 		h.logf("录制中止指令下发失败 (session=%s): %v", sessionID, err)
 	}
 	h.mu.Lock()
-	s.State = RecordingSessionExpired
+	s.State = RecordingSessionAborted
 	s.Message = reason
 	s.UpdatedAt = time.Now()
 	h.mu.Unlock()
@@ -467,11 +472,12 @@ func (h *RecordingHub) ReportStatus(ctx context.Context, up *RecordingStatusUpda
 	if up == nil || up.SessionID == "" {
 		return fmt.Errorf("状态上报缺少 sessionId")
 	}
-	s, ok := h.get(up.SessionID)
+	h.mu.Lock()
+	s, ok := h.getMut(up.SessionID)
 	if !ok {
+		h.mu.Unlock()
 		return fmt.Errorf("录制会话不存在或已结束")
 	}
-	h.mu.Lock()
 	if IsTerminalRecordingState(s.State) {
 		h.mu.Unlock()
 		return nil // 终态不再变更（Worker 迟到的上报）
@@ -510,10 +516,14 @@ func (h *RecordingHub) ReportPick(ctx context.Context, up *RecordingPickUpdate) 
 	if up == nil || up.SessionID == "" {
 		return fmt.Errorf("拾取上报缺少 sessionId")
 	}
-	s, ok := h.get(up.SessionID)
+	h.mu.Lock()
+	s, ok := h.getMut(up.SessionID)
 	if !ok {
+		h.mu.Unlock()
 		return fmt.Errorf("录制会话不存在或已结束")
 	}
+	h.mu.Unlock()
+
 	pick := &RecordingPickResult{
 		SessionID:        up.SessionID,
 		Found:            up.Found,
@@ -544,11 +554,12 @@ func (h *RecordingHub) ReportResult(ctx context.Context, up *RecordingResultUpda
 	if up == nil || up.SessionID == "" {
 		return fmt.Errorf("产出上报缺少 sessionId")
 	}
-	s, ok := h.get(up.SessionID)
+	h.mu.Lock()
+	s, ok := h.getMut(up.SessionID)
 	if !ok {
+		h.mu.Unlock()
 		return fmt.Errorf("录制会话不存在或已结束")
 	}
-	h.mu.Lock()
 	s.Result = &RecordingResultData{
 		Actions:    up.Actions,
 		Steps:      up.Steps,
@@ -621,6 +632,25 @@ func (h *RecordingHub) get(sessionID string) (*RecordingSession, bool) {
 	// 返回副本（避免调用方在锁外改字段）。
 	cp := *s
 	return &cp, true
+}
+
+// getMut 取 map 中的**真实指针**（调用方必须已持有 h.mu）。”
+//
+// 为什么需要它：get() 返回的是副本（对外只读语义正确），但 ReportStatus /
+// ReportPick / ReportResult / AbortSession / Keepalive 这 5 个方法拿到副本后
+// 在锁内改字段 —— 改的是副本，map 里的会话永远不变，于是：
+//
+//	· Keepalive 刷不到 lastSeen → 用户正在录，janitor 却判闲置把会话清掉
+//	· EventCount / LastPick / Result 全部丢失 → 前端轮询 GetSession 永远看到旧态
+//	· AbortSession 置不了终态 → 会话停在 recording，稍后被 sweep 当 expired 清
+//
+// 这个缺陷在 PR #114 补覆盖率用例时被实测暴露（5 个用例同时红）。
+func (h *RecordingHub) getMut(sessionID string) (*RecordingSession, bool) {
+	if h == nil {
+		return nil, false
+	}
+	s, ok := h.sessions[sessionID]
+	return s, ok
 }
 
 // ListSessions 列出会话（按创建时间倒序）。
