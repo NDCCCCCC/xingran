@@ -401,6 +401,17 @@ func (c *Core) initCacheAndWarmUp() error {
 			applogger.Infof("[迁移] 209 菜单缓存已失效 (系统设置 component 路径变更)")
 		}
 
+		// 权限播种迁移（如 260 补 system:config 四码 F 型按钮 + 授权）配套的
+		// user 级菜单缓存失效：Redis 里 menu:user:perms:{userID} 有 30 分钟 TTL，
+		// 不失效的话即使新权限已落库，前端 /my-menus/permissions 仍返回旧快照，
+		// 用户看到"按钮灰着"，只能重新登录或等过期。此处只清 user-scoped 三个
+		// 前缀（菜单本体 tree/router/all 未变，无需连带失效）。
+		if c.DB != nil && c.DB.MenuPermissionChanged {
+			system.InvalidateUserMenuCacheByProvider(context.Background(),
+				system.NewCacheProvider(c.DataCacheService))
+			applogger.Infof("[迁移] 菜单权限播种后 user 级菜单/权限缓存已失效")
+		}
+
 		// 初始化缓存管理器（增强功能）
 		// 缓存预热功能默认禁用，可通过配置启用
 		cacheManagerEnabled := c.Config.Cache.WarmUpEnabled

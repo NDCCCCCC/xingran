@@ -38,6 +38,11 @@ type Database struct {
 	// 缓存 —— 迁移执行期 c.Cache 尚未创建, 迁移函数内拿不到 cache 实例
 	// (Phase 70 PATTERNS 事实 1 的时序约束)。
 	SettingsMenuComponentChanged bool
+	// MenuPermissionChanged 表示本次启动的菜单权限播种迁移（如 260 补 F 型按钮
+	// 并授权）实际改写了 sys_menu / sys_role_menu。core.go 在缓存服务就绪后按此
+	// 标志失效 user 级菜单缓存（menu:user:perms 等），否则 30min TTL 内前端权限集
+	// 仍是旧快照，用户必须重新登录或等缓存过期才能看到新按钮权限。
+	MenuPermissionChanged bool
 	// migrationLockConn 持有启动期 PG advisory lock 的专用 *sql.Conn。
 	// 仅 AutoMigrate 期间非空;releaseMigrationAdvisoryLock 后重置为 nil。
 	// 不导出,避免外部代码误关连接导致 pg_advisory_unlock noop。
@@ -1264,9 +1269,17 @@ func (d *Database) AutoMigrate() error {
 		}
 		// 260：system:config 四个动作细码 F 型播种（孤儿码转正）。
 		// 缺行会让前端权限集不含 view/add/edit/remove → 参数配置与站点品牌按钮恒禁用。
-		// F 行由 grantActionPermissionToParentHolders 授给持 system:config 的角色。**非阻断**。
-		if err := d.runAndRecord(260, "config_action_permission_f_type_seed", migrations.Migrate260ConfigActionPermissionFTypeSeed); err != nil {
+		// F 行由 grantActionPermissionToParentHoldersChanged 授给持 system:config 的角色。
+		// changed 标志供 core.go 失效 user 级菜单缓存（否则 30min TTL 内前端仍读到旧权限集）。**非阻断**。
+		changed260 := false
+		if err := d.runAndRecord(260, "config_action_permission_f_type_seed", func(db *gorm.DB) error {
+			var err error
+			changed260, err = migrations.Migrate260ConfigActionPermissionFTypeSeed(db)
+			return err
+		}); err != nil {
 			applogger.Errorf("system:config 动作权限种子迁移失败 (非阻断,留待下次启动): %v", err)
+		} else if changed260 {
+			d.MenuPermissionChanged = true
 		}
 		// 缺权限行只让普通角色备份删除 403 / 前端删除按钮不显示；父菜单缺失时迁移内部降级返回 nil。
 		if err := d.runAndRecord(246, "backup_remove_permission_f_type_seed", migrations.Migrate246BackupRemovePermissionFTypeSeed); err != nil {

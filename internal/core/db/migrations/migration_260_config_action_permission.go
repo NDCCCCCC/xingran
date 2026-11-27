@@ -1,10 +1,13 @@
 package migrations
 
 import (
+	"errors"
 	"fmt"
 	"log"
 
 	"gorm.io/gorm"
+
+	"github.com/xingran-next/xingran-go-backend/internal/models"
 )
 
 // ============================================================================
@@ -59,21 +62,27 @@ var configActionPermissionSeeds = []actionPermissionSeed{
 
 // Migrate260ConfigActionPermissionFTypeSeed 播种 system:config 四个动作细码并
 // 精准授权给持父菜单（system:config）的角色。双方言、幂等、非阻断降级。
-func Migrate260ConfigActionPermissionFTypeSeed(db *gorm.DB) error {
+//
+// 返回 changed=true 表示本次调用**实际写过数据**（新建 F 行或新增授权）——
+// database.go 据此置位 Database.MenuPermissionChanged，让 core.go 在缓存
+// 服务就绪后失效 user 级菜单缓存。若返回 true 却不失效，Redis 里
+// menu:user:perms:{userID} 的 30 分钟旧快照会让前端继续显示"无权限"。
+func Migrate260ConfigActionPermissionFTypeSeed(db *gorm.DB) (bool, error) {
 	log.Println("Running migration 260: system:config action permission F type seed")
 
 	// 0) 入口硬断言：声明块与种子表必须条数相同且逐条相等
 	if len(configActionPermissionFTypeSeedCodes) != len(configActionPermissionSeeds) {
-		return fmt.Errorf("migration 260 致命漂移: F_TYPE 块声明数(%d) != 种子表数(%d)",
+		return false, fmt.Errorf("migration 260 致命漂移: F_TYPE 块声明数(%d) != 种子表数(%d)",
 			len(configActionPermissionFTypeSeedCodes), len(configActionPermissionSeeds))
 	}
 	for i, code := range configActionPermissionFTypeSeedCodes {
 		if code != configActionPermissionSeeds[i].perms {
-			return fmt.Errorf("migration 260 致命漂移: 第 %d 项码不匹配声明(%s) != 种子(%s)",
+			return false, fmt.Errorf("migration 260 致命漂移: 第 %d 项码不匹配声明(%s) != 种子(%s)",
 				i, code, configActionPermissionSeeds[i].perms)
 		}
 	}
 
+	changed := false
 	for _, seed := range configActionPermissionSeeds {
 		parents, err := resolveActionPermissionParents(db, seed)
 		if err != nil {
@@ -85,23 +94,91 @@ func Migrate260ConfigActionPermissionFTypeSeed(db *gorm.DB) error {
 			continue
 		}
 
-		menuID, err := ensureActionPermissionMenu(db, seed, parents[0].ID)
+		menuID, created, err := ensureActionPermissionMenuChanged(db, seed, parents[0].ID)
 		if err != nil {
 			log.Printf("Migration 260: WARNING 创建/获取按钮菜单失败(perms=%s): %v, 跳过该码", seed.perms, err)
 			continue
 		}
+		changed = changed || created
 
 		parentIDs := make([]string, 0, len(parents))
 		for _, p := range parents {
 			parentIDs = append(parentIDs, p.ID)
 		}
-		if err := grantActionPermissionToParentHolders(db, menuID, parentIDs); err != nil {
+		granted, err := grantActionPermissionToParentHoldersChanged(db, menuID, parentIDs)
+		if err != nil {
 			log.Printf("Migration 260: WARNING 授权按钮菜单失败(perms=%s, menuID=%s): %v, 跳过授权",
 				seed.perms, menuID, err)
 			continue
 		}
+		if granted > 0 {
+			changed = true
+		}
 	}
 
-	log.Println("Migration 260 completed: system:config action permissions seeded")
-	return nil
+	log.Printf("Migration 260 completed: system:config action permissions seeded (changed=%v)", changed)
+	return changed, nil
+}
+
+// ensureActionPermissionMenuChanged 与 migration_226 的 ensureActionPermissionMenu 同语义，
+// 但额外返回 created 供上层判定「本次是否真的写了数据」。
+// 不复用既有 helper 是因为改它的签名会波及 226/244/246/247/250 五个迁移（回归面过大）。
+func ensureActionPermissionMenuChanged(db *gorm.DB, seed actionPermissionSeed, primaryParentID string) (string, bool, error) {
+	var existing models.Menu
+	err := db.Where("perms = ? AND menu_type = ?", seed.perms, models.MenuTypeButton).First(&existing).Error
+	if err == nil {
+		return existing.ID, false, nil // 既有行，未写入
+	}
+	if !errors.Is(err, gorm.ErrRecordNotFound) {
+		return "", false, fmt.Errorf("查询既有按钮菜单失败: %w", err)
+	}
+
+	emptyPath := ""
+	icon := "#"
+	perms := seed.perms
+	button := &models.Menu{
+		MenuName: seed.name,
+		ParentID: &primaryParentID,
+		Path:     &emptyPath,
+		MenuType: models.MenuTypeButton,
+		Visible:  models.VisibleHidden,
+		Status:   models.MenuStatusNormal,
+		Perms:    &perms,
+		Icon:     &icon,
+		OrderNum: seed.orderNum,
+	}
+	if err := db.Create(button).Error; err != nil {
+		return "", false, fmt.Errorf("创建按钮权限行失败: %w", err)
+	}
+	// GORM 对 Visible 零值会按 default:1 tag 省略插入列，显式回写归零（visible 0=hidden）
+	if err := db.Model(&models.Menu{}).Where("id = ?", button.ID).
+		Update("visible", models.VisibleHidden).Error; err != nil {
+		return "", true, fmt.Errorf("显式更新按钮 visible=0 失败: %w", err)
+	}
+
+	log.Printf("Created action button permission: %s (ID: %s, perms: %s)", seed.name, button.ID, seed.perms)
+	return button.ID, true, nil
+}
+
+// grantActionPermissionToParentHoldersChanged 与 migration_226 的
+// grantActionPermissionToParentHolders 同语义（NOT EXISTS 幂等、双方言通用），
+// 额外返回本次新增的授权行数（0 表示无变化，不触发缓存失效）。
+// 单独起名而不改 226 的 helper：改其签名会波及 226/244/246/247/250 五个迁移。
+func grantActionPermissionToParentHoldersChanged(db *gorm.DB, menuID string, parentIDs []string) (int64, error) {
+	if len(parentIDs) == 0 {
+		return 0, nil
+	}
+
+	tx := db.Exec(
+		`INSERT INTO sys_role_menu (role_id, menu_id)
+		 SELECT rm.role_id, ? FROM sys_role_menu rm
+		 WHERE rm.menu_id IN ?
+		   AND NOT EXISTS (
+		       SELECT 1 FROM sys_role_menu x
+		       WHERE x.role_id = rm.role_id AND x.menu_id = ?)`,
+		menuID, parentIDs, menuID)
+	if tx.Error != nil {
+		return 0, tx.Error
+	}
+	return tx.RowsAffected, nil
 }

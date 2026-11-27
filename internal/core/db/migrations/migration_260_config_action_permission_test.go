@@ -82,7 +82,7 @@ func TestMigrate260SeedsFourButtonsUnderConfigParent(t *testing.T) {
 	db := freshSQLiteDBForMigrate260(t)
 	parent := seedConfigParent260(t, db)
 
-	if err := Migrate260ConfigActionPermissionFTypeSeed(db); err != nil {
+	if _, err := Migrate260ConfigActionPermissionFTypeSeed(db); err != nil {
 		t.Fatalf("run 260: %v", err)
 	}
 
@@ -127,7 +127,7 @@ func TestMigrate260GrantsOnlyToParentHolders(t *testing.T) {
 		t.Fatalf("grant parent to holder: %v", err)
 	}
 
-	if err := Migrate260ConfigActionPermissionFTypeSeed(db); err != nil {
+	if _, err := Migrate260ConfigActionPermissionFTypeSeed(db); err != nil {
 		t.Fatalf("run 260: %v", err)
 	}
 
@@ -174,7 +174,7 @@ func TestMigrate260IsIdempotent(t *testing.T) {
 	}
 
 	for i := 0; i < 3; i++ {
-		if err := Migrate260ConfigActionPermissionFTypeSeed(db); err != nil {
+		if _, err := Migrate260ConfigActionPermissionFTypeSeed(db); err != nil {
 			t.Fatalf("第 %d 次执行失败: %v", i+1, err)
 		}
 	}
@@ -202,7 +202,7 @@ func TestMigrate260SkipsWhenParentMissing(t *testing.T) {
 	db := freshSQLiteDBForMigrate260(t)
 	// 故意不建父菜单
 
-	if err := Migrate260ConfigActionPermissionFTypeSeed(db); err != nil {
+	if _, err := Migrate260ConfigActionPermissionFTypeSeed(db); err != nil {
 		t.Fatalf("父菜单缺失时不得报错（非阻断约定），实际: %v", err)
 	}
 
@@ -237,7 +237,7 @@ func TestMigrate260PermissionsVisibleToMenuService(t *testing.T) {
 		t.Fatalf("grant parent: %v", err)
 	}
 
-	if err := Migrate260ConfigActionPermissionFTypeSeed(db); err != nil {
+	if _, err := Migrate260ConfigActionPermissionFTypeSeed(db); err != nil {
 		t.Fatalf("run 260: %v", err)
 	}
 

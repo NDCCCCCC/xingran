@@ -15,12 +15,15 @@
  * store preferences）天然回滚，无需额外回滚代码。
  */
 
-import { useCallback, useRef, type FC, type KeyboardEvent } from "react";
-import { App, Card, Switch } from "antd";
+import { useCallback, useRef, useState, type FC, type KeyboardEvent } from "react";
+import { App, Button, Card, Switch } from "antd";
+import { ReloadOutlined } from "@ant-design/icons";
 // Phase 71 (W1)：裸 Select → AppSelect。两处均为 options 形态的固定枚举（3 项 / 4 项，
 // 均 < 8 项 → showSearch 自动为 false）；再显式 showSearch={false} 表达「设置项禁搜」业务意图。
 import { AppSelect } from "@/components/ui";
 import { useSettingsStore } from "@/store/settingsStore";
+import { refreshMenuCache } from "@/store/menuStore";
+import { STORAGE_KEYS } from "@/constants/storage";
 import type { ColorMode, DensityMode } from "@/types/config";
 
 // ---------- 模块级选项常量（DensitySwitcher.tsx 先例：选项/注册表不随渲染重建） ----------
@@ -214,6 +217,64 @@ export const DataSettingsCard: FC = () => {
           />
         </div>
       </div>
+      <PermissionRefreshRow />
     </Card>
+  );
+};
+
+// ---------- 数据设置：权限集刷新（管理端改权限后无需重新登录） ----------
+
+/**
+ * 刷新权限集与菜单缓存。
+ *
+ * 为什么需要入口：权限集在前端有 30 分钟 sessionStorage 快照
+ * （DynamicRoutes 的 MENU_CACHE），后端 menu:user:perms:{userID} 也是 30 分钟
+ * TTL 缓存。管理员刚在角色授权页补了权限码，当前会话看到的仍是旧快照，
+ * 表现为"按钮灰着"，用户只能重新登录或等过期。
+ *
+ * 本行 = 手动解药：清 sessionStorage 快照 + 强制拉 API（fetchAll(true) 内部
+ * 走真实 API 绕 TTL 缓存并回写新快照）。菜单树与权限集一起刷新，
+ * 与 DynamicRoutes 的 hydrate-then-revalidate 口径一致。
+ */
+const PermissionRefreshRow: FC = () => {
+  const [refreshing, setRefreshing] = useState(false);
+  const { message } = App.useApp();
+
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      // 先清 sessionStorage 快照：否则 fetchAll 的 hydrate 会先喂旧值，
+      // 且硬刷新后 DynamicRoutes 仍会从旧快照 restore。
+      try {
+        sessionStorage.removeItem(STORAGE_KEYS.MENU_CACHE);
+      } catch {
+        // 隐私模式 —— 静默
+      }
+      // refreshMenuCache = fetchAll(true)：强制绕过 TTLMenuCache 走真实 API，
+      // 完成后由 store 回写内存缓存；sessionStorage 快照已在上面清掉，
+      // 下次硬刷新时 DynamicRoutes 会重新写新快照。
+      await refreshMenuCache();
+      message.success("权限已刷新，页面按钮已按最新权限更新");
+    } catch {
+      message.error("刷新权限失败，请检查网络后重试");
+    } finally {
+      setRefreshing(false);
+    }
+  }, [message]);
+
+  return (
+    <div className="xr-settings-card-row">
+      <div>
+        <div className="xr-settings-card-row-label">刷新权限</div>
+        <div className="xr-settings-card-row-desc">
+          管理员调整角色权限后，点此立即生效，无需重新登录
+        </div>
+      </div>
+      <div className="xr-settings-card-row-control">
+        <Button icon={<ReloadOutlined />} loading={refreshing} onClick={handleRefresh}>
+          刷新
+        </Button>
+      </div>
+    </div>
   );
 };

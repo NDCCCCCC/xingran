@@ -74,7 +74,12 @@ const Login: FC = () => {
     setLoginError("");
     try {
       await login(loginData);
-      await Promise.all([fetchMenus(), fetchPermissions()]);
+      // 强制刷新（forceRefresh=true）：登录是权限集的天然刷新点，必须绕过
+      // TTLMenuCache 的 5 分钟内存缓存。否则同一浏览器换账号登录（如管理员改完
+      // 权限、用户重新登录）会读到上一会话残留的旧权限集，表现为"按钮灰着"。
+      // 注：fetchAll 已在 authStore.login 内调用过一次（同参数）；这里保持原样
+      // 双拉是为兼容「login 由外部 store 实现」的历史接线，且均为强制刷新不产生脏数据。
+      await Promise.all([fetchMenus(true), fetchPermissions(true)]);
       message.success("登录成功");
       navigate(DASHBOARD);
     } catch (error) {
