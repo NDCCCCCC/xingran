@@ -360,7 +360,8 @@ func (e *Engine) executeScript(ctx context.Context, pageMgr *browser.PageManager
 // mode=variable 时用 left/op/right（op: eq|ne|gt|ge|lt|le|contains|empty）。
 // then / else 是嵌套动作数组，按分支执行。
 func (e *Engine) executeCondition(ctx context.Context, page browser.Page, pageMgr *browser.PageManager,
-	action *types.Action, scope *VariableScope) error {
+	action *types.Action, scope *VariableScope, execCtx *executionCtx) error {
+	execCtx = execCtx.orDefault()
 
 	mode := "js"
 	if m, ok := action.Params["mode"].(string); ok && m != "" {
@@ -456,7 +457,7 @@ func (e *Engine) executeCondition(ctx context.Context, page browser.Page, pageMg
 		logger.Int("actions", len(nested)))
 
 	for i := range nested {
-		if err := e.executeAction(ctx, page, pageMgr, &nested[i], scope); err != nil {
+		if err := e.executeAction(ctx, page, pageMgr, &nested[i], scope, execCtx); err != nil {
 			return fmt.Errorf("condition %s 分支第 %d 个动作失败: %w", branchKey, i+1, err)
 		}
 	}

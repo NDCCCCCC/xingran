@@ -111,7 +111,7 @@ func TestRuntime03_ExecuteAction_ContextCancelled(t *testing.T) {
 	cancel()
 
 	err := eng.executeAction(ctx, nil, nil, &types.Action{Type: types.ActionNavigate,
-		Params: map[string]interface{}{"url": "http://example.invalid"}}, NewVariableScope(nil))
+		Params: map[string]interface{}{"url": "http://example.invalid"}}, NewVariableScope(nil), nil)
 	if !errors.Is(err, context.Canceled) {
 		t.Fatalf("ctx 已取消时 executeAction 应返回 context.Canceled，实际 %v", err)
 	}

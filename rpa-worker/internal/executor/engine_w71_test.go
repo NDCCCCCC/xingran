@@ -172,7 +172,7 @@ func TestMapToAction_UnknownTypeUntouched(t *testing.T) {
 	// recording logger 的空 Engine + 空作用域来走真实分支。
 	eng2 := &Engine{logger: &recordingLogger{}}
 	vars := NewVariableScope(map[string]interface{}{})
-	err := eng2.executeAction(context.Background(), nil, nil, &action, vars)
+	err := eng2.executeAction(context.Background(), nil, nil, &action, vars, nil)
 	if err == nil {
 		t.Fatal("未知类型必须返回错误，不得静默成功")
 	}

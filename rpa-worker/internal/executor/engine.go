@@ -20,21 +20,57 @@ import (
 )
 
 // Engine execution engine
+//
+// W7.2 / 任务 B-2：Engine 必须是**无状态**的（可安全并发）。
+//
+// 原实现把「当前执行」相关字段挂在 Engine 结构体上：
+//
+//	currentExecutionID string
+//	currentWorkerID    string
+//	currentStep        int
+//	currentTotal       int
+//
+// 而 Worker 只 NewEngine 一次（worker.go:186），max_concurrency 个 goroutine
+// 并发跑**同一个** *Engine 实例 → 这些字段被并发写、互相覆盖：
+// 进度上报会写到别的执行记录上，人工干预订阅会挂到别人的 execution_id。
+//
+// 现在这 4 个值改为「每次 Execute 一份」的 executionCtx（见下），
+// 随调用链显式传递；Engine 本身不再持有任何执行态。
 type Engine struct {
-	config             *config.ExecutorConfig
-	workerConfig       *config.WorkerConfig
-	browserManager     *browser.Manager
-	progressReporter   *communication.ProgressReporter
-	logger             logger.Logger
-	redisClient        *redis.Client
-	currentExecutionID string
-	currentWorkerID    string
-	currentStep        int
-	currentTotal       int
-	loopConcurrency    int // 循环内并发执行数量
+	config           *config.ExecutorConfig
+	workerConfig     *config.WorkerConfig
+	browserManager   *browser.Manager
+	progressReporter *communication.ProgressReporter
+	logger           logger.Logger
+	redisClient      *redis.Client
+	loopConcurrency  int // 循环内并发执行数量
 	// liveView Phase 155 / LIVEVIEW-01~05：实时画面会话表（nil 安全：单测与
 	// 离线执行可无推流）。归属：Worker 构造时注入，engine 只在该表上调用。
 	liveView *liveview.Hub
+}
+
+// executionCtx 单次执行的上下文（**每次 Execute 一份**，不共享）。
+//
+// W7.2 / 任务 B-2：替代原先挂在 Engine 上的 4 个共享可变字段。
+// 它随调用链（Execute → executeAction → executeLoop/executePause/…）显式传递，
+// 因此并发的多个执行各自持有自己的副本，互不干扰。
+type executionCtx struct {
+	// executionID 本次执行的执行 id（上报与人工干预订阅都用它）。
+	executionID string
+	// workerID 承接本次执行的 worker id（人工干预频道按它分片）。
+	workerID string
+	// step 当前步序（从 1 开始）。
+	step int
+	// total 本次执行的动作总数。
+	total int
+}
+
+// orDefault nil 安全：测试直接调用动作级函数时可能没有执行上下文。
+func (x *executionCtx) orDefault() *executionCtx {
+	if x == nil {
+		return &executionCtx{}
+	}
+	return x
 }
 
 // SetLiveViewHub 注入实时画面会话表（Phase 155）。
@@ -81,9 +117,14 @@ func (e *Engine) reportProgress(ctx context.Context, req *types.ProgressReport) 
 func (e *Engine) Execute(ctx context.Context, task *types.TaskMessage, workerID string) (*types.ExecutionResult, error) {
 	startTime := time.Now()
 
-	// Set current execution context for pause action
-	e.currentExecutionID = task.ExecutionID
-	e.currentWorkerID = workerID
+	// W7.2 / 任务 B-2：本次执行的上下文（**局部变量**，每次 Execute 一份）。
+	// 原实现写的是 e.currentExecutionID / e.currentWorkerID（Engine 字段），
+	// 并发执行时会互相覆盖 → 进度上报串号、人工干预订阅挂错执行。
+	execCtx := &executionCtx{
+		executionID: task.ExecutionID,
+		workerID:    workerID,
+		total:       len(task.Script),
+	}
 
 	// W7.1 / 缺陷 A：反序列化阶段命中的别名在这里统一打 WARN（types 包没有
 	// logger）。两条进入路径（顶层 script / 嵌套动作）共用同一份文案口径，
@@ -174,8 +215,9 @@ func (e *Engine) Execute(ctx context.Context, task *types.TaskMessage, workerID 
 		}
 
 		// Update current step and total for screenshot reporting
-		e.currentStep = i + 1
-		e.currentTotal = len(task.Script)
+		// （W7.2 / 任务 B-2：写本次执行自己的 execCtx，不再写 Engine 字段）
+		execCtx.step = i + 1
+		execCtx.total = len(task.Script)
 
 		result.Step = i + 1
 		result.Status = types.StatusRunning
@@ -212,7 +254,7 @@ func (e *Engine) Execute(ctx context.Context, task *types.TaskMessage, workerID 
 		}
 
 		// Execute action
-		if err := e.executeAction(ctx, page, pageMgr, &action, variables); err != nil {
+		if err := e.executeAction(ctx, page, pageMgr, &action, variables, execCtx); err != nil {
 			// RUNTIME-04：人工干预 abort → cancelled 终态
 			var abortErr *types.AbortError
 			if errors.As(err, &abortErr) {
@@ -285,7 +327,7 @@ func (e *Engine) Execute(ctx context.Context, task *types.TaskMessage, workerID 
 					)
 					time.Sleep(e.config.InitialDelay)
 
-					if err = e.executeAction(ctx, page, pageMgr, &action, variables); err == nil {
+					if err = e.executeAction(ctx, page, pageMgr, &action, variables, execCtx); err == nil {
 						break
 					}
 					lastErr = err
@@ -337,7 +379,12 @@ func (e *Engine) extractSubTaskMeta(task *types.TaskMessage) (isSubTask bool, pa
 }
 
 // executeAction execute single action
-func (e *Engine) executeAction(ctx context.Context, page browser.Page, pageMgr *browser.PageManager, action *types.Action, variables *VariableScope) error {
+//
+// execCtx：本次执行的上下文（W7.2 / 任务 B-2）。显式传参而非从 Engine 取，
+// 保证并发执行互不干扰（ActionScreenshot / pause 分支要读执行 id 与步序）。
+func (e *Engine) executeAction(ctx context.Context, page browser.Page, pageMgr *browser.PageManager, action *types.Action, variables *VariableScope, execCtx *executionCtx) error {
+	execCtx = execCtx.orDefault()
+
 	// Phase 153 / RUNTIME-03：动作入口 ctx 取消检查点
 	if err := ctx.Err(); err != nil {
 		return err
@@ -417,9 +464,11 @@ func (e *Engine) executeAction(ctx context.Context, page browser.Page, pageMgr *
 
 		// 通过进度上报发送截图
 		e.reportProgress(ctx, &types.ProgressReport{
-			ExecutionID:     e.currentExecutionID,
-			ProgressCurrent: e.currentStep,
-			ProgressTotal:   e.currentTotal,
+			// W7.2 / 任务 B-2：用本次执行自己的 execCtx（原为 Engine 共享字段，
+			// 并发时会读到别的执行的 id → 上报挂到别人的执行记录上）。
+			ExecutionID:     execCtx.executionID,
+			ProgressCurrent: execCtx.step,
+			ProgressTotal:   execCtx.total,
 			Message:         fmt.Sprintf("截图: %s", screenshotName),
 			Status:          types.StatusRunning,
 			Screenshot:      base64Data,
@@ -439,11 +488,11 @@ func (e *Engine) executeAction(ctx context.Context, page browser.Page, pageMgr *
 
 	case types.ActionLoop:
 		// Loop action - iterate over data array and execute nested actions
-		return e.executeLoop(ctx, page, pageMgr, action, variables)
+		return e.executeLoop(ctx, page, pageMgr, action, variables, execCtx)
 
 	case types.ActionPause:
 		// Pause action - wait for human input (for captcha handling)
-		return e.executePause(ctx, pageMgr, action, variables)
+		return e.executePause(ctx, pageMgr, action, variables, execCtx)
 
 	case types.ActionExtract:
 		// Extract action - extract data from page
@@ -471,7 +520,7 @@ func (e *Engine) executeAction(ctx context.Context, page browser.Page, pageMgr *
 		return e.executeClose(ctx, pageMgr, action, variables)
 
 	case types.ActionCondition:
-		return e.executeCondition(ctx, page, pageMgr, action, variables)
+		return e.executeCondition(ctx, page, pageMgr, action, variables, execCtx)
 
 	// ===== Phase 154 / ENGINE-02：差集 B（常量与 case 双缺）=====
 	case types.ActionAssert:
@@ -515,7 +564,8 @@ func (e *Engine) executeAction(ctx context.Context, page browser.Page, pageMgr *
 // executeLoop execute loop action for batch processing
 // 注意：混合模式下，Loop 动作应该由 Worker 的 TaskSplitter 拆分为子任务
 // 这里保留简单的串行执行是为了向后兼容（当混合模式未启用时）
-func (e *Engine) executeLoop(ctx context.Context, page browser.Page, pageMgr *browser.PageManager, action *types.Action, variables *VariableScope) error {
+func (e *Engine) executeLoop(ctx context.Context, page browser.Page, pageMgr *browser.PageManager, action *types.Action, variables *VariableScope, execCtx *executionCtx) error {
+	execCtx = execCtx.orDefault()
 	// Get loop data source
 	dataSource, ok := action.Params["dataSource"]
 	if !ok {
@@ -602,7 +652,7 @@ func (e *Engine) executeLoop(ctx context.Context, page browser.Page, pageMgr *br
 
 		// Execute nested actions
 		for _, nestedAction := range nestedActions {
-			if err := e.executeAction(ctx, page, pageMgr, &nestedAction, variables); err != nil {
+			if err := e.executeAction(ctx, page, pageMgr, &nestedAction, variables, execCtx); err != nil {
 				return fmt.Errorf("loop iteration %d failed: %w", i, err)
 			}
 		}
@@ -613,7 +663,8 @@ func (e *Engine) executeLoop(ctx context.Context, page browser.Page, pageMgr *br
 }
 
 // executePause execute pause action for human intervention
-func (e *Engine) executePause(ctx context.Context, pageMgr *browser.PageManager, action *types.Action, variables *VariableScope) error {
+func (e *Engine) executePause(ctx context.Context, pageMgr *browser.PageManager, action *types.Action, variables *VariableScope, execCtx *executionCtx) error {
+	execCtx = execCtx.orDefault()
 	// Get pause message
 	message := "等待人工输入..."
 	if msg, ok := action.Params["message"].(string); ok && msg != "" {
@@ -642,7 +693,9 @@ func (e *Engine) executePause(ctx context.Context, pageMgr *browser.PageManager,
 	}
 
 	progressReport := &types.ProgressReport{
-		ExecutionID: e.currentExecutionID,
+		// W7.2 / 任务 B-2：用本次执行自己的 execCtx（原为 Engine 共享字段，
+		// 并发时会把人工干预上报挂到别人的执行记录上）。
+		ExecutionID: execCtx.executionID,
 		Status:      types.StatusPaused,
 		Message:     message,
 		Screenshot:  screenshot,
@@ -655,8 +708,11 @@ func (e *Engine) executePause(ctx context.Context, pageMgr *browser.PageManager,
 
 	// 3. Subscribe to Redis Pub/Sub for human input
 	// Channel: worker:human-input:{workerId}:{executionId}
+	// W7.2 / 任务 B-2：显式传本次执行的 execution_id / worker_id ——
+	// 原实现读 Engine 共享字段，并发时会订阅到**别的执行**的频道
+	//（人工干预信号永远收不到）。
 	if e.redisClient != nil {
-		go e.subscribeForHumanInput(ctx, e.currentExecutionID, e.currentWorkerID, userInputChan)
+		go e.subscribeForHumanInput(ctx, execCtx.executionID, execCtx.workerID, userInputChan)
 	}
 
 	// 4. Wait for user input or timeout
@@ -670,12 +726,12 @@ func (e *Engine) executePause(ctx context.Context, pageMgr *browser.PageManager,
 		switch action {
 		case "abort":
 			e.logger.Info("human intervention abort received",
-				logger.String("execution_id", e.currentExecutionID),
+				logger.String("execution_id", execCtx.executionID),
 				logger.String("reason", fmt.Sprintf("%v", input["reason"])))
 			return types.ErrExecutionAborted
 		case "skip":
 			e.logger.Info("human intervention skip received, continuing without input",
-				logger.String("execution_id", e.currentExecutionID))
+				logger.String("execution_id", execCtx.executionID))
 			return nil
 		default: // resume / 未携带 action 的输入
 			// User input received, add to variables（ENGINE-04：写任务层，
