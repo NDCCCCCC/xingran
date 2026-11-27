@@ -25,6 +25,7 @@ package scheduler
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -32,6 +33,7 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/xingran-next/xingran-go-backend/internal/models"
+	rpamodels "github.com/xingran-next/xingran-go-backend/internal/models/rpa"
 	rpav1 "github.com/xingran-next/xingran-go-backend/internal/services/rpa"
 	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 )
@@ -170,6 +172,147 @@ func (y *RPAScheduleJobSyncer) findJob(scheduleID string) (*models.Job, error) {
 		return nil, fmt.Errorf("查询调度任务失败: %w", err)
 	}
 	return &job, nil
+}
+
+// PruneOrphanJobs 对账派生表：摘除「业务表 sys_rpa_schedules 已无对应行」的孤儿 job。
+//
+// W7.2 / 任务 A-1。背景（生产实证）：
+//
+// 生产库 sys_job 的 RPA 分组有 10 条孤儿 job（schedule 已被软删或物理删，
+// job 仍 deleted_at IS NULL / status=0）。调度器启动时
+// （internal/scheduler/cron.go 的 Scheduler.Start）按
+// `Where("status = ?", JobStatusNormal).Find(&jobs)` 加载**全部**启用 job
+// （不区分 job_group），于是这 10 条孤儿被挂进 cron，到点调用
+// rpa_schedule:<已删 id> → handler 里 TriggerNow 查不到 schedule → 报错刷日志。
+//
+// 根因（方向性缺口）：Ensure/Remove 只做「按 id 从业务表推向执行表」，
+// 从不对账执行表里「业务表已经没有」的行。正向同步看不到已软删的 schedule
+// （GORM 软删自动排除），孤儿因此永久存在。
+//
+// 本函数补上反向对账：
+//   1. 扫 sys_job 中 job_group='RPA' 且未软删的所有行（软删行已被 GORM 排除）；
+//   2. 从 invoke_target 解析 scheduleID（格式固定 rpa_schedule:<uuid>）；
+//   3. 用 Unscoped 查 schedule（**含软删行**）：
+//      不存在（物理删）/ 已软删 / 已停用 → 孤儿 → 摘除；
+//      存在且启用 → 保留；
+//   4. 每摘一条打一条 INFO 日志（摘了哪条、为什么），便于运维审计。
+//
+// 复用：本函数不新写一套 job 查询逻辑 —— 摘除一律走既有的 RemoveScheduleJob
+// （内部用 findJob 定位），必要时再按 job.ID 兜底（remark 被人工改过的情况）。
+//
+// 幂等：重复调用无额外副作用；不阻断启动（错误由调用方决定如何处理）。
+func (y *RPAScheduleJobSyncer) PruneOrphanJobs(ctx context.Context) (rpav1.ScheduleJobPruneResult, error) {
+	var result rpav1.ScheduleJobPruneResult
+	if y == nil || y.db == nil {
+		return result, fmt.Errorf("调度器未初始化")
+	}
+
+	items, scanned, err := y.findOrphanJobs(ctx)
+	if err != nil {
+		return result, err
+	}
+	result.Scanned = scanned
+
+	for _, item := range items {
+		// 摘除（复用既有 RemoveScheduleJob —— 内部按 remark 标记定位 job）。
+		if err := y.RemoveScheduleJob(ctx, item.ScheduleID); err != nil {
+			return result, fmt.Errorf("摘除孤儿调度任务失败(schedule=%s): %w", item.ScheduleID, err)
+		}
+		// 兜底：remark 被人工改过会导致 findJob 匹配不到 → 按 job.ID 摘除，
+		// 保证「对账判定为孤儿」一定真的从派生表消失。
+		if still, ferr := y.findJob(item.ScheduleID); ferr == nil && still != nil {
+			if err := y.scheduler.RemoveJob(still.ID); err != nil {
+				return result, fmt.Errorf("兜底摘除孤儿调度任务失败(job=%s): %w", still.ID, err)
+			}
+			applogger.Warnf("[rpa_schedule] 孤儿调度任务按 job id 兜底摘除（remark 标记不匹配）: %s (job=%s)",
+				item.JobName, still.ID)
+		}
+
+		result.Pruned++
+		result.Items = append(result.Items, item)
+		applogger.Infof("[rpa_schedule] 孤儿调度任务已摘除: %s (job=%s, schedule=%s, 原因=%s)",
+			item.JobName, item.JobID, item.ScheduleID, item.Reason)
+	}
+
+	return result, nil
+}
+
+// FindOrphanJobs 只读扫描：找出「业务表已无对应调度」的孤儿 job（**不摘除**）。
+//
+// 与 PruneOrphanJobs 共用同一份判定实现（findOrphanJobs）—— 运维工具的
+// dry-run 报告与真实清理结果不可能出现两套口径。
+func (y *RPAScheduleJobSyncer) FindOrphanJobs(ctx context.Context) ([]rpav1.ScheduleJobPruneItem, error) {
+	if y == nil || y.db == nil {
+		return nil, fmt.Errorf("调度器未初始化")
+	}
+	items, _, err := y.findOrphanJobs(ctx)
+	return items, err
+}
+
+// findOrphanJobs 扫描 RPA 分组的 job，判定哪些已成孤儿（只读，不改数据）。
+//
+// 返回 (孤儿明细, 扫描到的 job 总数, error)。
+func (y *RPAScheduleJobSyncer) findOrphanJobs(ctx context.Context) ([]rpav1.ScheduleJobPruneItem, int, error) {
+	// RPA 分组下未软删的所有 job（软删行由 GORM 自动排除）。
+	var jobs []models.Job
+	if err := y.db.WithContext(ctx).
+		Where("job_group = ?", rpaScheduleJobGroup).
+		Find(&jobs).Error; err != nil {
+		return nil, 0, fmt.Errorf("查询 RPA 调度任务失败: %w", err)
+	}
+
+	var orphans []rpav1.ScheduleJobPruneItem
+	for i := range jobs {
+		job := jobs[i]
+
+		// invoke_target 格式固定 rpa_schedule:<uuid>；不是这个格式的是
+		// 人工建在 RPA 分组下的普通任务 —— 不属于派生镜像，不动它。
+		scheduleID, ok := strings.CutPrefix(job.InvokeTarget, rpaScheduleInvokeTarget+":")
+		if !ok || scheduleID == "" {
+			applogger.Warnf("[rpa_schedule] RPA 分组存在非调度派生的任务，跳过对账: %s (invoke_target=%s)",
+				job.JobName, job.InvokeTarget)
+			continue
+		}
+
+		reason, orphan, err := y.classifySchedule(ctx, scheduleID)
+		if err != nil {
+			return nil, len(jobs), err
+		}
+		if !orphan {
+			continue // 存在且启用 → 保留
+		}
+
+		orphans = append(orphans, rpav1.ScheduleJobPruneItem{
+			JobID:      job.ID,
+			JobName:    job.JobName,
+			ScheduleID: scheduleID,
+			Reason:     reason,
+		})
+	}
+
+	return orphans, len(jobs), nil
+}
+
+// classifySchedule 判断该 schedule 是否已成孤儿（业务语义已不可逆地消失）。
+//
+// 查询必须用 Unscoped（**含软删行**）—— 软删正是孤儿的主要成因之一，
+// 用默认查询会把它当成「不存在」，虽然结果相同，但拿不到 deleted_at，
+// 也无法区分「物理删」与「软删」两种原因（运维审计需要这个区分）。
+func (y *RPAScheduleJobSyncer) classifySchedule(ctx context.Context, scheduleID string) (reason string, orphan bool, err error) {
+	var sched rpamodels.Schedule
+	qErr := y.db.WithContext(ctx).Unscoped().Where("id = ?", scheduleID).First(&sched).Error
+	switch {
+	case errors.Is(qErr, gorm.ErrRecordNotFound):
+		return "调度记录已不存在（物理删除）", true, nil
+	case qErr != nil:
+		return "", false, fmt.Errorf("查询调度失败(schedule=%s): %w", scheduleID, qErr)
+	case sched.DeletedAt.Valid:
+		return "调度记录已软删除", true, nil
+	case sched.Status != rpav1.ScheduleStatusEnabled:
+		return fmt.Sprintf("调度已停用(status=%d)", sched.Status), true, nil
+	default:
+		return "", false, nil
+	}
 }
 
 // createJob 新建一条调度 job 并挂载到 cron 引擎。

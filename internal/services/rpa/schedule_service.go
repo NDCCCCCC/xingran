@@ -8,6 +8,7 @@ import (
 
 	"github.com/robfig/cron/v3"
 	rpamodels "github.com/xingran-next/xingran-go-backend/internal/models/rpa"
+	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"gorm.io/gorm"
 )
 
@@ -60,6 +61,37 @@ type ScheduleJobSyncer interface {
 	EnsureScheduleJob(ctx context.Context, scheduleID, jobName, cronExpr string) error
 	UpdateScheduleJobCron(ctx context.Context, scheduleID, cronExpr string) error
 	RemoveScheduleJob(ctx context.Context, scheduleID string) error
+	// PruneOrphanJobs 对账派生表（sys_job 的 RPA 分组）：
+	// 摘除「业务表 sys_rpa_schedules 已无对应行」的孤儿 job。
+	//
+	// 这是「单写 + 对账」架构里对账的一半（另一半是 Ensure/Remove 的正向同步）：
+	// 正向同步只会「按 id 确保/摘除」，永远发现不了「业务表被绕过 API 直接删掉」
+	// 留下的孤儿。对账方向相反 —— 从派生表回看业务表。
+	//
+	// 幂等：重复调用不产生额外副作用。失败只返回错误，由调用方决定是否阻断启动。
+	PruneOrphanJobs(ctx context.Context) (ScheduleJobPruneResult, error)
+}
+
+// ScheduleJobPruneItem 单条孤儿 job 的对账明细（供运维审计与清理报告）。
+type ScheduleJobPruneItem struct {
+	// JobID 被摘除的 sys_job 行 id。
+	JobID string `json:"jobId"`
+	// JobName 被摘除的 job 展示名。
+	JobName string `json:"jobName"`
+	// ScheduleID 该 job 原本指向的调度 id（从 invoke_target 解析）。
+	ScheduleID string `json:"scheduleId"`
+	// Reason 摘除原因（调度已物理删除 / 已软删除 / 已停用）。
+	Reason string `json:"reason"`
+}
+
+// ScheduleJobPruneResult 孤儿 job 对账结果。
+type ScheduleJobPruneResult struct {
+	// Scanned 扫描到的 RPA 分组 job 总数（含正常 job）。
+	Scanned int `json:"scanned"`
+	// Pruned 本次摘除的孤儿 job 数。
+	Pruned int `json:"pruned"`
+	// Items 逐条明细（顺序 = 扫描顺序）。
+	Items []ScheduleJobPruneItem `json:"items"`
 }
 
 // CreateScheduleRequest 创建调度请求。
@@ -304,17 +336,33 @@ func (s *scheduleServiceImpl) Update(ctx context.Context, req *UpdateScheduleReq
 }
 
 // Delete 删除调度（软删 + 摘除调度 job）。
+//
+// W7.2 / 任务 A-2（顺序加固）：**先摘 job，成功后才软删 schedule**。
+//
+// 旧顺序（先软删 schedule 再摘 job）在摘 job 失败时会留下永久孤儿 ——
+// schedule 已不可见（软删），job 还挂在 sys_job 上且 deleted_at IS NULL，
+// 调度器启动时会把它加载进 cron，到点调 rpa_schedule:<已删 id> 报错刷日志，
+// 而且**没有任何机制会回收它**（SyncEnabledJobs 的正向同步看不到已软删的
+// schedule，见事实 2）。
+//
+// 新顺序的失败语义：
+//   - 摘 job 失败 → 不删 schedule，返回错误 → 调用方/运维可重试（幂等）
+//   - 软删 schedule 失败 → job 已摘，schedule 仍在 → 下次对账会补摘（幂等）
+//
+// 两种失败都不会产生孤儿；孤儿兜底由 SyncEnabledJobs 的 prune 对账负责。
 func (s *scheduleServiceImpl) Delete(ctx context.Context, id string) error {
 	if id == "" {
 		return fmt.Errorf("id 不能为空")
 	}
-	if err := s.db.WithContext(ctx).Where("id = ?", id).Delete(&rpamodels.Schedule{}).Error; err != nil {
-		return fmt.Errorf("删除调度失败: %w", err)
-	}
+	// 先摘 job（失败则中止，不删 schedule —— 可重试，不产生孤儿）
 	if s.jobSyncer != nil {
 		if err := s.jobSyncer.RemoveScheduleJob(ctx, id); err != nil {
-			return fmt.Errorf("摘除调度任务失败: %w", err)
+			return fmt.Errorf("摘除调度任务失败（调度未删除，可重试）: %w", err)
 		}
+	}
+	// 再软删 schedule
+	if err := s.db.WithContext(ctx).Where("id = ?", id).Delete(&rpamodels.Schedule{}).Error; err != nil {
+		return fmt.Errorf("删除调度失败: %w", err)
 	}
 	return nil
 }
@@ -459,8 +507,26 @@ func (s *scheduleServiceImpl) ComputeNextRunTime(cronExpr, timezone string, from
 
 // SyncEnabledJobs 把所有启用的调度同步为调度器 job（启动时调用）。
 //
-// 幂等：已存在的 job 不重复创建（由 ScheduleJobSyncer 实现保证）。
-// 停用的调度在此被摘除（防「停用后重启又被挂上」）。
+// 两步（单向 ensure + 反向对账），缺一不可：
+//
+//  1. 正向同步（业务表 → 派生表）：幂等创建已启用的调度对应的 job；
+//     停用的调度在此被摘除（防「停用后重启又被挂上」）。
+//  2. 反向对账（派生表 → 业务表）：摘除「业务表已无对应调度」的孤儿 job。
+//
+// W7.2 / 任务 A-1（方向性缺口修复）：
+//
+// 旧实现只有第 1 步，且第 1 步**只看业务表**（GORM 软删自动排除已删的 schedule），
+// 于是「绕过 API 直接删 schedule」留下的孤儿 job 永远进不了循环 ——
+// 没有任何机制会回收它们（这正是生产库 10 条孤儿 job 的根因）。
+// 第 2 步从派生表反向回看业务表（Unscoped 查询含软删行），补上了这个方向。
+//
+// 容错：
+//   - 第 1 步的错误照旧返回给调用方（调用方 RegisterRPAScheduleTasks 只 Warn，
+//     不阻断启动）。
+//   - 第 2 步对账失败**不阻断启动**（只记 ERROR 日志）—— 对账是兜底机制，
+//     不能因为一条脏数据让整个后端起不来。
+//   - 第 1 步即使遇到错误也会**继续跑完**再返回，保证第 2 步一定有机会执行
+//     （否则一条脏 schedule 会让本次启动完全跳过对账，孤儿继续残留）。
 func (s *scheduleServiceImpl) SyncEnabledJobs(ctx context.Context) error {
 	var all []rpamodels.Schedule
 	if err := s.db.WithContext(ctx).Find(&all).Error; err != nil {
@@ -469,17 +535,38 @@ func (s *scheduleServiceImpl) SyncEnabledJobs(ctx context.Context) error {
 	if s.jobSyncer == nil {
 		return nil
 	}
+
+	// 第一步：正向同步（业务表 → 派生表）
+	var syncErr error
 	for i := range all {
 		sched := all[i]
 		if sched.Status != ScheduleStatusEnabled {
 			if err := s.jobSyncer.RemoveScheduleJob(ctx, sched.ID); err != nil {
-				return fmt.Errorf("摘除调度任务失败(schedule=%s): %w", sched.ID, err)
+				syncErr = firstError(syncErr, fmt.Errorf("摘除调度任务失败(schedule=%s): %w", sched.ID, err))
 			}
 			continue
 		}
 		if err := s.jobSyncer.EnsureScheduleJob(ctx, sched.ID, sched.Name, sched.CronExpr); err != nil {
-			return fmt.Errorf("注册调度任务失败(schedule=%s): %w", sched.ID, err)
+			syncErr = firstError(syncErr, fmt.Errorf("注册调度任务失败(schedule=%s): %w", sched.ID, err))
 		}
 	}
-	return nil
+
+	// 第二步：反向对账（派生表 → 业务表），摘除孤儿 job。
+	pruneResult, pruneErr := s.jobSyncer.PruneOrphanJobs(ctx)
+	if pruneErr != nil {
+		applogger.Errorf("[rpa_schedule] 调度 job 对账失败（不阻断启动）: %v", pruneErr)
+	} else {
+		applogger.Infof("[rpa_schedule] 调度 job 对账完成: 扫描 %d 条, 摘除孤儿 %d 条",
+			pruneResult.Scanned, pruneResult.Pruned)
+	}
+
+	return syncErr
+}
+
+// firstError 保留第一个错误（后续错误只追加上下文，不覆盖首个原因）。
+func firstError(existing, next error) error {
+	if existing == nil {
+		return next
+	}
+	return fmt.Errorf("%v; 另有错误: %w", existing, next)
 }

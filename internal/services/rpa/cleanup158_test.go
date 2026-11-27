@@ -117,23 +117,42 @@ type fakeScheduleJobSyncer struct {
 	updated  []string
 	removed  []string
 	cronExpr string
+	// pruneResult 对账结果（默认零值 = 没有孤儿）。
+	pruneResult ScheduleJobPruneResult
+	// pruneErr 对账错误（注入失败路径用）。
+	pruneErr error
+	// removeErr 摘 job 错误（注入失败路径用；nil = 正常）。
+	removeErr error
+	// calls 调用顺序（用于断言 Delete 的「先摘 job 后软删」顺序）。
+	calls []string
 }
 
 func (f *fakeScheduleJobSyncer) EnsureScheduleJob(ctx context.Context, scheduleID, jobName, cronExpr string) error {
+	f.calls = append(f.calls, "ensure:"+scheduleID)
 	f.ensured = append(f.ensured, scheduleID)
 	f.cronExpr = cronExpr
 	return nil
 }
 
 func (f *fakeScheduleJobSyncer) UpdateScheduleJobCron(ctx context.Context, scheduleID, cronExpr string) error {
+	f.calls = append(f.calls, "update:"+scheduleID)
 	f.updated = append(f.updated, scheduleID)
 	f.cronExpr = cronExpr
 	return nil
 }
 
 func (f *fakeScheduleJobSyncer) RemoveScheduleJob(ctx context.Context, scheduleID string) error {
+	f.calls = append(f.calls, "remove:"+scheduleID)
+	if f.removeErr != nil {
+		return f.removeErr
+	}
 	f.removed = append(f.removed, scheduleID)
 	return nil
+}
+
+func (f *fakeScheduleJobSyncer) PruneOrphanJobs(ctx context.Context) (ScheduleJobPruneResult, error) {
+	f.calls = append(f.calls, "prune")
+	return f.pruneResult, f.pruneErr
 }
 
 // TestCleanup02_Schedule_CRUD_Lifecycle 调度 CRUD + 启停摘 job 全链路。
