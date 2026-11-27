@@ -7,7 +7,7 @@
  * 断言口径：只锁「端点路径 + HTTP 方法 + 请求体形状 + 合并/降级语义」，
  * 不重复组件层断言。
  */
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockGet = vi.fn();
 const mockPost = vi.fn();
