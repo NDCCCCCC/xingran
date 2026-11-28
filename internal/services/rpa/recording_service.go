@@ -214,8 +214,12 @@ type RecordingSession struct {
 
 	CreatedAt time.Time `json:"createdAt"`
 	UpdatedAt time.Time `json:"updatedAt"`
-	// lastSeen 最近一次活动（闲置超时判定）。
-	lastSeen time.Time
+	// LastSeen 最近一次活动（闲置超时判定）。
+	//
+	// **必须导出并带 json tag**：私有字段不会被 json.Marshal 序列化，回读后
+	// 恒为零值（1970），sweep 会立刻把刚恢复的会话判成闲置——这正是 PR #114
+	// 加回读后暴露的次生缺陷（回读路径与老化判据必须同时成立才自洽）。
+	LastSeen time.Time `json:"lastSeen"`
 }
 
 // RecordingHub 后端侧录制会话中枢（单例，挂在 ServiceGroup）。
@@ -323,7 +327,7 @@ func (h *RecordingHub) StartSession(ctx context.Context, sessionID, taskID, work
 		State:        RecordingSessionCreated,
 		CreatedAt:    now,
 		UpdatedAt:    now,
-		lastSeen:     now,
+		LastSeen:     now,
 	}
 
 	h.mu.Lock()
@@ -448,8 +452,8 @@ func (h *RecordingHub) Keepalive(ctx context.Context, sessionID string) error {
 		h.mu.Unlock()
 		return fmt.Errorf("录制会话不存在或已结束")
 	}
-	s.lastSeen = time.Now()
-	s.UpdatedAt = s.lastSeen
+	s.LastSeen = time.Now()
+	s.UpdatedAt = s.LastSeen
 	h.mu.Unlock()
 
 	cmd := map[string]interface{}{
@@ -505,15 +509,32 @@ func (h *RecordingHub) ReportStatus(ctx context.Context, up *RecordingStatusUpda
 	if up == nil || up.SessionID == "" {
 		return fmt.Errorf("状态上报缺少 sessionId")
 	}
+	// Worker 上报是「执行机还在推进这个会话」的最强证据：
+	// 后端重启后内存表为空、或被老化判成 expired，都应当据此恢复会话，
+	// 而不是回一句「会话不存在」让 Worker 的上报永久丢失。
+	if _, ok := h.GetSessionForRecovery(up.SessionID); !ok {
+		if _, recovered := h.recoverFromPersist(ctx, up.SessionID); !recovered {
+			return fmt.Errorf("录制会话不存在或已结束")
+		}
+	}
+
 	h.mu.Lock()
 	s, ok := h.getMut(up.SessionID)
 	if !ok {
 		h.mu.Unlock()
 		return fmt.Errorf("录制会话不存在或已结束")
 	}
-	if IsTerminalRecordingState(s.State) {
+	// expired 是**后端凭 LastSeen 老化推断**的，不是 Worker 声明的终态。
+	// 有活跃上报 = 执行机还在跑 → 推翻推断，把会话救回来。
+	// （stopped/failed/aborted 才是真终态，仍按「迟到上报忽略」处理。）
+	if s.State == RecordingSessionExpired && isActiveRecordingStatus(up.Status) {
+		h.logf("录制会话被 Worker 上报唤醒（expired → %s）(session=%s)", up.Status, up.SessionID)
+		s.State = RecordingSessionRecording
+		s.Message = ""
+	}
+	if IsTerminalRecordingState(s.State) && up.Status != string(RecordingSessionStopped) {
 		h.mu.Unlock()
-		return nil // 终态不再变更（Worker 迟到的上报）
+		return nil // 真终态不再变更（Worker 迟到的上报）
 	}
 	switch up.Status {
 	case string(RecordingSessionRecording):
@@ -535,7 +556,7 @@ func (h *RecordingHub) ReportStatus(ctx context.Context, up *RecordingStatusUpda
 		s.Message = up.Message
 	}
 	s.UpdatedAt = time.Now()
-	s.lastSeen = s.UpdatedAt
+	s.LastSeen = s.UpdatedAt
 	h.mu.Unlock()
 	h.persist(ctx, s)
 	return nil
@@ -573,7 +594,7 @@ func (h *RecordingHub) ReportPick(ctx context.Context, up *RecordingPickUpdate) 
 	h.mu.Lock()
 	s.LastPick = pick
 	s.UpdatedAt = time.Now()
-	s.lastSeen = s.UpdatedAt
+	s.LastSeen = s.UpdatedAt
 	h.mu.Unlock()
 	h.persist(ctx, s)
 	return nil
@@ -602,7 +623,7 @@ func (h *RecordingHub) ReportResult(ctx context.Context, up *RecordingResultUpda
 	s.State = RecordingSessionStopped
 	s.EventCount = up.EventCount
 	s.UpdatedAt = time.Now()
-	s.lastSeen = s.UpdatedAt
+	s.LastSeen = s.UpdatedAt
 	taskID := s.TaskID
 	h.mu.Unlock()
 	h.persist(ctx, s)
@@ -660,7 +681,7 @@ func (h *RecordingHub) StartSessionForTest(sessionID string) (*RecordingSession,
 		State:     RecordingSessionRecording,
 		CreatedAt: now,
 		UpdatedAt: now,
-		lastSeen:  now,
+		LastSeen:  now,
 	}
 	h.mu.Lock()
 	h.sessions[sessionID] = s
@@ -687,6 +708,24 @@ func (h *RecordingHub) dropPersisted(ctx context.Context, sessionID string) {
 	}
 }
 
+// GetSessionForRecovery 查内存表是否存在该会话（**不触发** Redis 回读与老化判定）。
+//
+// 用途：Worker 上报路径要区分「内存里已有（继续按上报更新）」与「内存里没有
+// （需要从 Redis 快照恢复）」。用 get() 会判僵尸，从而把活跃会话误删。
+func (h *RecordingHub) GetSessionForRecovery(sessionID string) (*RecordingSession, bool) {
+	if h == nil {
+		return nil, false
+	}
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	s, ok := h.sessions[sessionID]
+	if !ok {
+		return nil, false
+	}
+	cp := *s
+	return &cp, true
+}
+
 // get 取会话（内部加锁）。
 func (h *RecordingHub) get(sessionID string) (*RecordingSession, bool) {
 	if h == nil {
@@ -702,10 +741,12 @@ func (h *RecordingHub) get(sessionID string) (*RecordingSession, bool) {
 
 	// 内存未命中 → 从 Redis 回读（后端进程重启后内存表为空，但会话仍在
 	// Worker 侧跑着；不回读会让前端轮询拿到「会话不存在」，用户以为录制丢了）。
+	// 纯前端读取没有任何存活证据，因此按 LastSeen 老化判僵尸。
 	s, err := h.loadPersisted(context.Background(), sessionID)
 	if err != nil || s == nil {
 		return nil, false
 	}
+	h.markStaleIfIdle(s)
 	h.mu.Lock()
 	// 双检：回读期间可能有并发写入的更新版本，以内存中的为准。
 	if existing, ok := h.sessions[sessionID]; ok {
@@ -716,12 +757,25 @@ func (h *RecordingHub) get(sessionID string) (*RecordingSession, bool) {
 	h.sessions[sessionID] = s
 	cp := *s
 	h.mu.Unlock()
+
+	// 已判定失效的僵尸会话：装回内存表是为了让前端这一次能查到「已失效」的
+	// 结论（而不是「不存在」），但它不占并发名额也不该留到最后 —— 立刻删键，
+	// 下次 get 就会按「不存在」处理，sweep 也会在下个周期把它清出内存。
+	if IsTerminalRecordingState(s.State) {
+		h.dropPersisted(context.Background(), sessionID)
+	}
 	return &cp, true
 }
 
-// loadPersisted 从 Redis 回读会话快照（进程重启后的恢复路径）。
+// loadPersisted 从 Redis 回读会话快照（**纯回读**，不做失效判定）。
 //
-// 只回读、不回写内存表以外的东西：调用方负责把结果装回 h.sessions。
+// 为什么不在回读里判僵尸：判定必须分清「谁说的」——
+//
+//	· 前端 get() 触发回读：没有任何存活证据 → 按 LastSeen 老化判僵尸是对的
+//	· Worker 上报触发回读：上报本身就是「它还在录」的最强证据 → 绝不能判僵尸
+//
+// 把判定留在各自调用方，才能避免「Worker 明明活着，却被后端凭过期时间判死」。
+//
 // 反序列化失败/键不存在都返回 (nil, nil)，让上层按「会话不存在」处理。
 func (h *RecordingHub) loadPersisted(ctx context.Context, sessionID string) (*RecordingSession, error) {
 	if h == nil || h.cache == nil || sessionID == "" {
@@ -738,8 +792,75 @@ func (h *RecordingHub) loadPersisted(ctx context.Context, sessionID string) (*Re
 	if s.ID == "" {
 		return nil, nil
 	}
+	// 兼容历史快照（旧代码 LastSeen 是私有字段，压根没进 JSON）：
+	// 用 UpdatedAt 兜底，避免被当成「1970 年就没活动过」。
+	if s.LastSeen.IsZero() {
+		s.LastSeen = s.UpdatedAt
+	}
 	return &s, nil
 }
+
+// markStaleIfIdle 无存活证据时的僵尸判定（仅前端 get 路径使用）。
+//
+// 判据：Worker 的 recordingPollLoop 每 2s 上报一次状态，前端心跳 1.5s 一次。
+// 若 LastSeen 超过 staleSessionAfter 仍标「录制中」，说明执行机不再推进该会话。
+func (h *RecordingHub) markStaleIfIdle(s *RecordingSession) {
+	if s == nil {
+		return
+	}
+	if IsTerminalRecordingState(s.State) || s.LastSeen.IsZero() {
+		return
+	}
+	if age := time.Since(s.LastSeen); age > staleSessionAfter {
+		s.State = RecordingSessionExpired
+		s.Message = "会话已失效（执行机长时间无响应）"
+		s.UpdatedAt = time.Now()
+	}
+}
+
+// recoverFromPersist 在 Worker/前端上报触发回读时把会话装回内存。
+//
+// 与 get() 的关键差别：**不判僵尸**，且允许把后端推断出的 expired 恢复成
+// 上报里声明的活跃状态 —— 因为有活跃上报就证明执行机还在跑。
+// （expired 是后端凭过期时间推断的，不是 Worker 声明的终态，因此可被证据推翻。）
+func (h *RecordingHub) recoverFromPersist(ctx context.Context, sessionID string) (*RecordingSession, bool) {
+	s, err := h.loadPersisted(ctx, sessionID)
+	if err != nil || s == nil {
+		return nil, false
+	}
+	h.mu.Lock()
+	if existing, ok := h.sessions[sessionID]; ok {
+		h.mu.Unlock()
+		return existing, true
+	}
+	if IsTerminalRecordingState(s.State) {
+		h.logf("录制会话从过期快照恢复（%s → 由上报状态接管）(session=%s)", s.State, sessionID)
+		s.State = RecordingSessionRecording
+		s.Message = ""
+	}
+	s.UpdatedAt = time.Now()
+	s.LastSeen = s.UpdatedAt
+	h.sessions[sessionID] = s
+	h.mu.Unlock()
+	return s, true
+}
+
+// isActiveRecordingStatus 判断上报状态是否代表「执行机仍在推进该会话」。
+func isActiveRecordingStatus(status string) bool {
+	switch RecordingSessionState(status) {
+	case RecordingSessionRecording, RecordingSessionStarting:
+		return true
+	}
+	return false
+}
+
+// staleSessionAfter 回读快照的「僵尸会话」阈值。
+//
+// 取值依据：Worker 的 recordingPollLoop 每 2s 上报一次状态（见
+// rpa-worker/internal/worker/recording_listener.go），前端心跳 1.5s 一次。
+// 后端只要连续 2 分钟没收到任何刷新，就认为执行机不再推进该会话。
+// 取 10 倍冗余（≥2 分钟）是为了容忍网络抖动与后端暂停（GC/GC 暂停/慢盘）。
+const staleSessionAfter = 2 * time.Minute
 
 // getMut 取 map 中的**真实指针**（调用方必须已持有 h.mu）。”
 //
@@ -806,7 +927,7 @@ func (h *RecordingHub) sweep() {
 			}
 			continue
 		}
-		if now.Sub(s.lastSeen) > h.IdleTimeout() {
+		if now.Sub(s.LastSeen) > h.IdleTimeout() {
 			expired = append(expired, id)
 		}
 	}
