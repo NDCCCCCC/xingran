@@ -673,20 +673,72 @@ func (h *RecordingHub) GetSession(sessionID string) (*RecordingSession, bool) {
 	return h.get(sessionID)
 }
 
+// dropPersisted 删除 Redis 里的会话快照。
+//
+// 与 loadPersisted 配对：既然 get() 会从 Redis 回读，那么**真正**要丢弃会话的
+// 路径（sweep 回收、Close 关停）就必须同时删键，否则刚清掉的会话会被下一次
+// get() 从 Redis 复活（W6 实测：sweep 后 GetSession 仍能命中）。
+func (h *RecordingHub) dropPersisted(ctx context.Context, sessionID string) {
+	if h == nil || h.cache == nil || sessionID == "" {
+		return
+	}
+	if err := h.cache.Delete(ctx, fmt.Sprintf(recordingSessionKeyFmt, sessionID)); err != nil {
+		h.logf("录制会话 Redis 清理失败 (session=%s): %v", sessionID, err)
+	}
+}
+
 // get 取会话（内部加锁）。
 func (h *RecordingHub) get(sessionID string) (*RecordingSession, bool) {
 	if h == nil {
 		return nil, false
 	}
 	h.mu.Lock()
-	defer h.mu.Unlock()
-	s, ok := h.sessions[sessionID]
-	if !ok {
+	if s, ok := h.sessions[sessionID]; ok {
+		cp := *s // 返回副本（避免调用方在锁外改字段）
+		h.mu.Unlock()
+		return &cp, true
+	}
+	h.mu.Unlock()
+
+	// 内存未命中 → 从 Redis 回读（后端进程重启后内存表为空，但会话仍在
+	// Worker 侧跑着；不回读会让前端轮询拿到「会话不存在」，用户以为录制丢了）。
+	s, err := h.loadPersisted(context.Background(), sessionID)
+	if err != nil || s == nil {
 		return nil, false
 	}
-	// 返回副本（避免调用方在锁外改字段）。
+	h.mu.Lock()
+	// 双检：回读期间可能有并发写入的更新版本，以内存中的为准。
+	if existing, ok := h.sessions[sessionID]; ok {
+		cp := *existing
+		h.mu.Unlock()
+		return &cp, true
+	}
+	h.sessions[sessionID] = s
 	cp := *s
+	h.mu.Unlock()
 	return &cp, true
+}
+
+// loadPersisted 从 Redis 回读会话快照（进程重启后的恢复路径）。
+//
+// 只回读、不回写内存表以外的东西：调用方负责把结果装回 h.sessions。
+// 反序列化失败/键不存在都返回 (nil, nil)，让上层按「会话不存在」处理。
+func (h *RecordingHub) loadPersisted(ctx context.Context, sessionID string) (*RecordingSession, error) {
+	if h == nil || h.cache == nil || sessionID == "" {
+		return nil, nil
+	}
+	raw, err := h.cache.Get(ctx, fmt.Sprintf(recordingSessionKeyFmt, sessionID))
+	if err != nil || raw == "" {
+		return nil, nil
+	}
+	var s RecordingSession
+	if err := json.Unmarshal([]byte(raw), &s); err != nil {
+		return nil, fmt.Errorf("回读录制会话失败: %w", err)
+	}
+	if s.ID == "" {
+		return nil, nil
+	}
+	return &s, nil
 }
 
 // getMut 取 map 中的**真实指针**（调用方必须已持有 h.mu）。”
@@ -765,6 +817,8 @@ func (h *RecordingHub) sweep() {
 		h.mu.Lock()
 		delete(h.sessions, id)
 		h.mu.Unlock()
+		// 同步清 Redis：否则下一次 get() 会把刚回收的会话读回来。
+		h.dropPersisted(context.Background(), id)
 	}
 }
 
