@@ -27,6 +27,7 @@ package rpa
 // ============================================================================
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -97,6 +98,13 @@ func (h *RecordingHandler) Start(c *gin.Context) {
 		req.TargetURL,
 	)
 	if err != nil {
+		// 并发上限 → 429（与 liveview 的 LimitError 同款语义：可读文案 + 建议等待），
+		// 其余 → 400（参数/环境问题）。
+		var limitErr *svcrpa.RecordingLimitError
+		if errors.As(err, &limitErr) {
+			writeRPAError(c, http.StatusTooManyRequests, "开始录制失败："+err.Error())
+			return
+		}
 		writeRPAError(c, http.StatusBadRequest, "开始录制失败："+err.Error())
 		return
 	}

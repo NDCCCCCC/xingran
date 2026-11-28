@@ -192,6 +192,9 @@ type RPAConfig struct {
 	// LiveView Phase 155 / LIVEVIEW-01~05：实时画面参数（后端侧只读展示与限流文案）。
 	// 真正的 screencast 参数在 rpa-worker 的 worker.liveview 节（Worker 是执行端）。
 	LiveView RPALiveViewConfig `mapstructure:"liveview"`
+	// Recording Phase W6 / REC-01：录制会话参数（后端侧只裁决「能开几路」与
+	// 「闲置多久回收」，真正的录制行为在 rpa-worker 的 worker.recording 节）。
+	Recording RPARecordingConfig `mapstructure:"recording"`
 }
 
 // RPALiveViewConfig Phase 155：后端侧实时画面配置。
@@ -210,6 +213,24 @@ type RPALiveViewConfig struct {
 const (
 	DefaultRPALiveViewMaxStreams  = 2
 	DefaultRPALiveViewIdleTimeout = 30 * time.Second
+)
+
+// RPARecordingConfig Phase W6 / REC-01：后端侧录制会话参数。
+//
+// 分工与 LiveView 同款：录制行为（采集哪些事件、选择器阶梯）归 rpa-worker；
+// 后端只保留两项裁决 —— 单 Worker 并发录制上限（用于前置校验与可读错误文案）、
+// 会话闲置回收时限（janitor 判据）。默认值与 rpa-worker 的
+// config.DefaultRecordingMaxSessions / DefaultRecordingIdleTimeout 保持同值，
+// 否则会出现「后端说还能开、Worker 说已满」的口径分裂。
+type RPARecordingConfig struct {
+	MaxSessions int           `mapstructure:"max_sessions"`
+	IdleTimeout time.Duration `mapstructure:"idle_timeout"`
+}
+
+// Phase W6 / REC-01 默认值（与 rpa-worker config 同名默认保持一致）。
+const (
+	DefaultRPARecordingMaxSessions = 2
+	DefaultRPARecordingIdleTimeout = 5 * time.Minute
 )
 
 // RPAAIConfig RPA AI配置。
@@ -616,6 +637,8 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("rpa.liveview.enabled", true)
 	v.SetDefault("rpa.liveview.max_streams", DefaultRPALiveViewMaxStreams)
 	v.SetDefault("rpa.liveview.idle_timeout", DefaultRPALiveViewIdleTimeout)
+	v.SetDefault("rpa.recording.max_sessions", DefaultRPARecordingMaxSessions)
+	v.SetDefault("rpa.recording.idle_timeout", DefaultRPARecordingIdleTimeout)
 }
 
 // GetDSN 获取数据库连接字符串(URL 格式)。

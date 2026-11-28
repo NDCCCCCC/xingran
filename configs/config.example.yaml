@@ -201,6 +201,19 @@ rpa:
     screenshots_dir: "./uploads/rpa/screenshots"
     max_retained_days: 7
 
+  # 实时画面（后端侧只裁决「能否看」「看多久」；screencast 参数在 worker 侧）
+  liveview:
+    enabled: true
+    max_streams: 2             # 单 Worker 并发推流上限（与 worker 侧同值）
+    idle_timeout: 30s          # 观看者无心跳即停流
+
+  # 录制会话（W6 / REC-01；真正的采集行为在 worker.recording）
+  # max_sessions / idle_timeout 必须与 worker 侧同名配置一致，
+  # 否则会出现「后端说还能开、Worker 说已满」的口径分裂。
+  recording:
+    max_sessions: 2            # 单 Worker 并发录制会话上限
+    idle_timeout: 5m           # 会话无活动即自动结束
+
 # VDI 客户端 TLS 证书校验开关
 # 开发环境通常用自签名证书,保持 true
 vdi:

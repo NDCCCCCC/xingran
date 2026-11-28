@@ -37,6 +37,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/xingran-next/xingran-go-backend/internal/config"
 	"github.com/xingran-next/xingran-go-backend/internal/websocket"
 	"github.com/xingran-next/xingran-go-backend/pkg/cache"
 	"gorm.io/gorm"
@@ -69,6 +70,16 @@ const (
 	// RecordingSessionAborted 被强制中止（终态）。
 	RecordingSessionAborted RecordingSessionState = "aborted"
 )
+
+// RecordingLimitError 并发录制会话已达上限（handler 据此转 429，与 liveview 的
+// LimitError 同款语义：可读文案 + 建议等他人结束）。
+type RecordingLimitError struct {
+	Max int
+}
+
+func (e *RecordingLimitError) Error() string {
+	return fmt.Sprintf("并发录制会话已达上限 %d，请稍后重试或等他人结束录制", e.Max)
+}
 
 // IsTerminalRecordingState 是否终态（终态不再接受状态变更）。
 func IsTerminalRecordingState(s RecordingSessionState) bool {
@@ -216,6 +227,8 @@ type RecordingHub struct {
 	db *gorm.DB
 	// taskSvc 任务服务（写回脚本走既有 Update 路径，保持字段语义一致）。
 	taskSvc TaskService
+	// cfg RPA 配置（max_sessions / idle_timeout 来源；nil 时回落默认值）。
+	cfg *config.Config
 
 	mu       sync.Mutex
 	sessions map[string]*RecordingSession
@@ -243,6 +256,10 @@ type RecordingHubOption struct {
 	DB *gorm.DB
 	// TaskService 任务服务（可选：nil 时不落库）。
 	TaskService TaskService
+	// Config RPA 配置（可选：nil 时回落默认值）。max_sessions / idle_timeout
+	// 必须与 rpa-worker 的 worker.recording 同值，否则会出现「后端说还能开、
+	// Worker 说已满」的口径分裂。
+	Config *config.Config
 }
 
 // NewRecordingHub 构造录制中枢并启动唯一 janitor。
@@ -254,6 +271,7 @@ func NewRecordingHub(opt RecordingHubOption) *RecordingHub {
 		log:         opt.Log,
 		db:          opt.DB,
 		taskSvc:     opt.TaskService,
+		cfg:         opt.Config,
 		sessions:    make(map[string]*RecordingSession),
 		ctx:         ctx,
 		cancel:      cancel,
@@ -266,16 +284,18 @@ func NewRecordingHub(opt RecordingHubOption) *RecordingHub {
 // MaxSessions 单 Worker 并发录制会话上限（后端侧只做展示与前置校验，
 // 真正的裁决在 Worker 侧 —— 与 155 的 max_streams 分工一致）。
 func (h *RecordingHub) MaxSessions() int {
-	if h == nil {
-		return 2
+	if h == nil || h.cfg == nil || h.cfg.RPA.Recording.MaxSessions <= 0 {
+		return config.DefaultRPARecordingMaxSessions
 	}
-	// 与 worker 侧默认值保持一致（worker.recording.max_sessions 默认 2）。
-	return 2
+	return h.cfg.RPA.Recording.MaxSessions
 }
 
 // IdleTimeout 后端侧会话闲置超时（默认 5 分钟，与 worker 侧同值）。
 func (h *RecordingHub) IdleTimeout() time.Duration {
-	return 5 * time.Minute
+	if h == nil || h.cfg == nil || h.cfg.RPA.Recording.IdleTimeout <= 0 {
+		return config.DefaultRPARecordingIdleTimeout
+	}
+	return h.cfg.RPA.Recording.IdleTimeout
 }
 
 // StartSession 创建并启动一个录制会话：登记会话 → 下发 start 指令给 Worker。
@@ -310,6 +330,19 @@ func (h *RecordingHub) StartSession(ctx context.Context, sessionID, taskID, work
 	if _, exists := h.sessions[sessionID]; exists {
 		h.mu.Unlock()
 		return nil, fmt.Errorf("录制会话已在进行中")
+	}
+	// 并发录制上限前置校验（REC-01 分工：真正的 page 名额裁决在 Worker 侧，
+	// 后端在这里拦一份是为了「用户一点就拿到可读 429」，而不是等 Worker 拒绝后
+	// 前端干等超时。两端阈值同源 config，见 RPARecordingConfig 注释）。
+	active := 0
+	for _, existing := range h.sessions {
+		if !IsTerminalRecordingState(existing.State) {
+			active++
+		}
+	}
+	if active >= h.MaxSessions() {
+		h.mu.Unlock()
+		return nil, &RecordingLimitError{Max: h.MaxSessions()}
 	}
 	h.sessions[sessionID] = s
 	h.mu.Unlock()
@@ -611,6 +644,28 @@ func (h *RecordingHub) saveActionsToTask(ctx context.Context, taskID string, act
 		ID:     taskID,
 		Script: script,
 	}, "")
+}
+
+// StartSessionForTest 仅供跨包测试注入一个「录制中」会话（生产不使用）。
+//
+// 动机：api 包无法直接写 RecordingHub 的私有 map，而上限分流是用户能感知的
+// 行为，必须在 HTTP 层断言。用受控入口而非放宽结构体可见性。
+func (h *RecordingHub) StartSessionForTest(sessionID string) (*RecordingSession, error) {
+	if h == nil {
+		return nil, fmt.Errorf("录制服务未初始化")
+	}
+	now := time.Now()
+	s := &RecordingSession{
+		ID:        sessionID,
+		State:     RecordingSessionRecording,
+		CreatedAt: now,
+		UpdatedAt: now,
+		lastSeen:  now,
+	}
+	h.mu.Lock()
+	h.sessions[sessionID] = s
+	h.mu.Unlock()
+	return s, nil
 }
 
 // GetSession 取会话快照。
