@@ -40,6 +40,15 @@ export interface LiveCanvasProps {
   isController: boolean;
   /** 输入上抛（页面负责 POST /liveview/input） */
   onInput: (command: LiveInputCommand) => void;
+  /**
+   * 画布点击的**坐标回调**（不注入任何输入）。
+   *
+   * 与 onInput 的区别：onInput 受 isController 门控（只有接管者能操作远端页面）；
+   * 本回调是「只读取点击落在页面哪个位置」，录制面板用它做元素拾取。
+   * 录制时员工在自己的电脑上操作真实页面，画布是**只读**的 —— 但拾取需要
+   * 知道点在了哪，所以这条通路必须绕开 isController。
+   */
+  onCanvasClick?: (pos: { x: number; y: number }) => void;
   /** 叠加层（HUD）由页面注入，绝对定位在 canvas 之上 */
   overlay?: ReactNode;
   /** 画面容器高度（默认 520） */
@@ -59,6 +68,7 @@ export function LiveCanvas({
   frame,
   isController,
   onInput,
+  onCanvasClick,
   overlay,
   height = 520,
 }: LiveCanvasProps) {
@@ -194,7 +204,13 @@ export function LiveCanvas({
 
   const handleMouseDown = useCallback(
     (e: ReactMouseEvent<HTMLCanvasElement>) => {
-      if (!isController) return;
+      if (!isController) {
+        // 非接管者：只把点击坐标交出去（录制面板的元素拾取靠这条通路），
+        // 绝不注入输入 —— 远端页面归接管者控制。
+        const pos = toViewport(e.clientX, e.clientY);
+        if (pos && onCanvasClick) onCanvasClick({ x: pos.x, y: pos.y });
+        return;
+      }
       wrapRef.current?.focus(); // 点画面即聚焦，键盘才能进来
       const pos = toViewport(e.clientX, e.clientY);
       if (!pos) return;
@@ -208,7 +224,7 @@ export function LiveCanvas({
         })
       );
     },
-    [executionId, isController, onInput, toViewport]
+    [executionId, isController, onCanvasClick, onInput, toViewport]
   );
 
   const handleMouseUp = useCallback(

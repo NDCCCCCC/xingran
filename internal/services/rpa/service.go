@@ -51,6 +51,8 @@ func NewServiceGroup(db *gorm.DB, cfg *config.Config, noticeHub *websocket.Notic
 		Log:         logSink,
 		DB:          db,
 		TaskService: taskService,
+		// Config：max_sessions / idle_timeout 的唯一来源（与 worker 侧同值）。
+		Config: cfg,
 	})
 
 	return &ServiceGroup{

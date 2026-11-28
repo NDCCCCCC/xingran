@@ -58,7 +58,7 @@ func seedRecordingSession(h *RecordingHub, id string) *RecordingSession {
 		State:        RecordingSessionRecording,
 		CreatedAt:    now,
 		UpdatedAt:    now,
-		lastSeen:     now,
+		LastSeen:     now,
 	}
 	h.mu.Lock()
 	h.sessions[id] = s
@@ -238,7 +238,7 @@ func TestRecordingHub_SweepIdleSessions(t *testing.T) {
 	// 把 lastSeen 拨回很久之前
 	h.mu.Lock()
 	if s, ok := h.sessions["s-6"]; ok {
-		s.lastSeen = time.Now().Add(-time.Hour)
+		s.LastSeen = time.Now().Add(-time.Hour)
 	}
 	h.mu.Unlock()
 

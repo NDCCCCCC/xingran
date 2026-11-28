@@ -269,12 +269,10 @@ export function RecordingPanel({ taskId, targetUrl, onFinish }: RecordingPanelPr
   }, [message, stopping]);
 
   const handleCanvasClick = useCallback(
-    (command: { x?: number; y?: number }) => {
+    (pos: { x: number; y: number }) => {
       const id = sessionRef.current;
       if (!id || !hasFrame) return;
-      const x = typeof command.x === "number" ? command.x : 0;
-      const y = typeof command.y === "number" ? command.y : 0;
-      void pickElement(id, x, y).catch((error) => {
+      void pickElement(id, pos.x, pos.y).catch((error) => {
         message.error((error as { message?: string })?.message || "拾取元素失败");
       });
     },
@@ -369,8 +367,10 @@ export function RecordingPanel({ taskId, targetUrl, onFinish }: RecordingPanelPr
             frame={frame}
             // 录制画面**只可看**：操作注入走「员工操作真实页面」而不是画布点击
             //（员工在自己的电脑上正常操作，录制器采集真实事件）。
+            // 但元素拾取需要知道「点在哪」→ 走 onCanvasClick（不受 isController 门控）。
             isController={false}
-            onInput={handleCanvasClick}
+            onInput={() => undefined}
+            onCanvasClick={handleCanvasClick}
             height={520}
           />
         )}
