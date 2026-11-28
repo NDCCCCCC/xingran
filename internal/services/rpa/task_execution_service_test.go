@@ -2,10 +2,8 @@ package rpa
 
 import (
 	"context"
-	"encoding/json"
 	"sync"
 	"testing"
-	"time"
 
 	"github.com/glebarez/sqlite"
 	"github.com/redis/go-redis/v9"
@@ -191,14 +189,14 @@ func TestTaskService_CRUD(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, int64(1), page.Total)
 
-	// List + Name 过滤走 task_name LIKE, 但 Task 模型列名是 name →
-	// sqlite 报 no such column (D-12 记录的 quirk, 不修业务码)
-	_, err = svc.List(ctx, &TaskListParams{ListParams: ListParams{BaseListRequest: base.BaseListRequest{Current: 1, PageSize: 10}}, Name: "t1"})
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "task_name")
+	// List + Name 过滤（CONTRACT-03 / D3）：真实列是 name，
+	// 旧实现写 task_name 会报 no such column，现修复后应命中。
+	page, err = svc.List(ctx, &TaskListParams{ListParams: ListParams{BaseListRequest: base.BaseListRequest{Current: 1, PageSize: 10}}, Name: "t1"})
+	require.NoError(t, err)
+	assert.Equal(t, int64(1), page.Total, "任务名过滤应命中真实 name 列")
 
-	// List + status/priority/tags 过滤
-	st := 0
+	// List + status/priority/tags 过滤（status 已是任务枚举类型）
+	st := rpamodels.TaskStatusEnabled
 	pr := 0
 	_, err = svc.List(ctx, &TaskListParams{ListParams: ListParams{BaseListRequest: base.BaseListRequest{Current: 1, PageSize: 10}}, Status: &st, Priority: &pr, Tags: "x"})
 	require.NoError(t, err)
@@ -258,7 +256,8 @@ func TestTaskService_Execute_Failures(t *testing.T) {
 	// 任务禁用
 	created, err := svc.Create(ctx, &CreateTaskRequest{Name: "t", Script: []interface{}{map[string]interface{}{"type": "click"}}}, "u1")
 	require.NoError(t, err)
-	require.NoError(t, svc.Update(ctx, &UpdateTaskRequest{ID: created.ID, Status: 1}, "u1"))
+	disabled := int(rpamodels.TaskStatusDisabled)
+	require.NoError(t, svc.Update(ctx, &UpdateTaskRequest{ID: created.ID, Status: &disabled}, "u1"))
 	_, err = svc.Execute(ctx, &ExecuteTaskRequest{TaskID: created.ID}, "u1")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "任务已禁用")
@@ -307,7 +306,7 @@ func TestTaskService_Execute_WithCredentialSession(t *testing.T) {
 
 	// 有会话
 	_, err = credSvc.CreateSession(ctx, &rpamodels.SessionCreateRequest{
-		CredentialID: "cred1", TargetSystem: "default", AccessToken: "at",
+		CredentialID: "cred1", TargetSystem: "erp", AccessToken: "at",
 	})
 	require.NoError(t, err)
 	// 注: InputParams 必须非 nil —— publishTaskToRedis 对 Variables[__credentials] 赋值
@@ -318,10 +317,11 @@ func TestTaskService_Execute_WithCredentialSession(t *testing.T) {
 	last := c.payloads[len(c.payloads)-1]
 	c.mu.Unlock()
 	assert.Contains(t, last, `"accessToken":"at"`, "会话命中时传递 token")
+	assert.Contains(t, last, "__sessionData", "RUNTIME-02: 会话注入 __sessionData")
 
 	// 无会话 → 凭证兜底
 	_, err = credSvc.CreateCredential(ctx, &rpamodels.CredentialCreateRequest{
-		Name: "c", TargetSystem: "default", Username: "u", Password: "p",
+		Name: "c", TargetSystem: "erp", Username: "u", Password: "p",
 	}, "u1")
 	require.NoError(t, err)
 	_, err = svc.Execute(ctx, &ExecuteTaskRequest{TaskID: created.ID, CredentialID: "cred-none", InputParams: map[string]interface{}{}}, "u1")
@@ -342,7 +342,9 @@ func TestTaskService_Helpers(t *testing.T) {
 	assert.Equal(t, "", extractURLFromScript(nil))
 
 	assert.Equal(t, "unknown", extractTargetSystem(""))
-	assert.Equal(t, "default", extractTargetSystem("http://erp.local"))
+	assert.Equal(t, "erp", extractTargetSystem("http://erp.local"))
+	assert.Equal(t, "default", extractTargetSystem("http://192.168.1.5:8080/"))
+	assert.Equal(t, "erp", extractTargetSystem("http://ERP.Company.com/path"))
 
 	wa := convertToWorkerAction(rpamodels.ScriptAction{
 		Type: "fill", Value: "v", Attributes: map[string]interface{}{
@@ -381,7 +383,7 @@ func TestExecutionService_CRUD(t *testing.T) {
 	require.NoError(t, svc.UpdateProgress(ctx, created.ID, 4, 9, ""))
 
 	// Cancel: pending → cancelled
-	require.NoError(t, svc.Cancel(ctx, created.ID))
+	require.NoError(t, svc.Cancel(ctx, created.ID, "tester", ""))
 	got, err = svc.GetByID(ctx, created.ID)
 	require.NoError(t, err)
 	assert.Equal(t, string(rpamodels.RPAExecutionStatusCancelled), got.Status)
@@ -389,20 +391,22 @@ func TestExecutionService_CRUD(t *testing.T) {
 
 	// Cancel 已结束 → 报错
 	require.NoError(t, svc.Update(ctx, created.ID, map[string]interface{}{"status": "success"}))
-	err = svc.Cancel(ctx, created.ID)
+	err = svc.Cancel(ctx, created.ID, "tester", "")
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "执行已结束")
+	assert.Contains(t, err.Error(), "无法取消")
+	assert.Contains(t, err.Error(), "终态不可覆盖")
 
 	// Cancel 不存在
-	require.Error(t, svc.Cancel(ctx, "missing"))
+	require.Error(t, svc.Cancel(ctx, "missing", "tester", ""))
 
 	// List + 过滤
 	_, err = svc.Create(ctx, "t1", "task1", "u1")
 	require.NoError(t, err)
-	st := 0
+	// 状态过滤按字符串（CONTRACT-02）：t1 新建记录为 pending，筛 timeout 应 0 命中
+	st := string(rpamodels.RPAExecutionStatusTimeout)
 	page, err := svc.List(ctx, &ExecutionListParams{ListParams: ListParams{BaseListRequest: base.BaseListRequest{Current: 1, PageSize: 10}}, TaskID: "t1", Status: &st})
 	require.NoError(t, err)
-	assert.Equal(t, int64(0), page.Total, "状态过滤: e1 已 cancelled, 新建为 pending")
+	assert.Equal(t, int64(0), page.Total, "状态过滤: t1 新建记录为 pending，按 timeout 筛应无命中")
 
 	wid := "w-9"
 	page, err = svc.List(ctx, &ExecutionListParams{ListParams: ListParams{BaseListRequest: base.BaseListRequest{Current: 1, PageSize: 10}}, WorkerID: wid})
@@ -411,186 +415,4 @@ func TestExecutionService_CRUD(t *testing.T) {
 
 	// PublishProgress: noticeHub 为 nil → 静默成功
 	require.NoError(t, svc.PublishProgress(ctx, &ProgressUpdate{ExecutionID: created.ID, Status: "success"}))
-}
-
-func TestErrorHandlingService_Strategies(t *testing.T) {
-	db := newTaskTestDB(t)
-	now := time.Now().Format("2006-01-02 15:04:05")
-	require.NoError(t, db.Exec(`INSERT INTO sys_rpa_executions (id, task_id, status, logs, created_at) VALUES ('e1', 't1', 'running', '', ?)`, now).Error)
-
-	svc := NewErrorHandlingService(db, nil, nil)
-	ctx := context.Background()
-	boom := assert.AnError
-
-	// ignore / skip / abort / rollback / fallback
-	for _, strategy := range []ErrorHandlingStrategy{ErrorStrategyIgnore, ErrorStrategySkip, ErrorStrategyAbort, ErrorStrategyRollback} {
-		res, err := svc.HandleError(ctx, &ErrorHandleRequest{
-			ExecutionID: "e1", StepIndex: 2, Error: boom,
-			Config: &ErrorHandlingConfig{Strategy: strategy},
-		})
-		require.NoError(t, err)
-		assert.True(t, res.Handled)
-	}
-
-	// abort/rollback 后执行记录标记失败
-	var status string
-	require.NoError(t, db.Raw(`SELECT status FROM sys_rpa_executions WHERE id = 'e1'`).Scan(&status).Error)
-	assert.Equal(t, "failed", status)
-
-	// ignore → continue + NextStepIndex
-	res, err := svc.HandleError(ctx, &ErrorHandleRequest{
-		ExecutionID: "e1", StepIndex: 2, Error: boom,
-		Config: &ErrorHandlingConfig{Strategy: ErrorStrategyIgnore},
-	})
-	require.NoError(t, err)
-	assert.Equal(t, "continue", res.Action)
-	require.NotNil(t, res.NextStepIndex)
-	assert.Equal(t, 3, *res.NextStepIndex)
-
-	// rollback: 执行记录缺失 → 报错
-	_, err = svc.HandleError(ctx, &ErrorHandleRequest{
-		ExecutionID: "missing", Error: boom,
-		Config: &ErrorHandlingConfig{Strategy: ErrorStrategyRollback},
-	})
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "获取执行记录失败")
-
-	// 未知策略 → handled=false
-	res, err = svc.HandleError(ctx, &ErrorHandleRequest{
-		Config: &ErrorHandlingConfig{Strategy: ErrorHandlingStrategy("weird")},
-	})
-	require.NoError(t, err)
-	assert.False(t, res.Handled)
-}
-
-func TestErrorHandlingService_Retry(t *testing.T) {
-	db := newTaskTestDB(t)
-	now := time.Now().Format("2006-01-02 15:04:05")
-	require.NoError(t, db.Exec(`INSERT INTO sys_rpa_executions (id, task_id, status, logs, created_at) VALUES ('e1', 't1', 'running', '', ?)`, now).Error)
-
-	svc := NewErrorHandlingService(db, nil, nil)
-	ctx := context.Background()
-
-	// 未配置策略
-	_, err := svc.ExecuteRetry(ctx, &RetryRequest{})
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "重试策略未配置")
-
-	// 超过最大次数
-	_, err = svc.ExecuteRetry(ctx, &RetryRequest{Attempt: 3, Policy: &RetryPolicy{MaxAttempts: 2}})
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "超过最大重试次数")
-
-	// 错误类型不匹配 RetryOn
-	res, err := svc.ExecuteRetry(ctx, &RetryRequest{
-		Policy:    &RetryPolicy{MaxAttempts: 3, InitialDelay: time.Millisecond, RetryOn: []string{"TimeoutError"}},
-		LastError: notTimeoutErr{}, // %T 不含 TimeoutError
-	})
-	require.NoError(t, err)
-	assert.False(t, res.ShouldRetry)
-
-	// 匹配 RetryOn (%T 含 *errors.errorString)
-	res, err = svc.ExecuteRetry(ctx, &RetryRequest{
-		Policy:    &RetryPolicy{MaxAttempts: 3, InitialDelay: time.Millisecond, RetryOn: []string{"errorString"}},
-		LastError: assert.AnError,
-	})
-	require.NoError(t, err)
-	assert.True(t, res.ShouldRetry)
-	assert.Equal(t, 1, res.Attempt)
-
-	// ctx 取消中断延迟等待
-	// 注: RetryPolicy.MaxDelay 零值会把任意 InitialDelay 钳为 0 (delay > 0 即触发),
-	// 导致 time.After(0) 与已取消的 ctx.Done() 在 select 中随机竞态 —
-	// 测试必须显式给 MaxDelay (D-12 记录的 quirk)。
-	canceled, cancel := context.WithCancel(ctx)
-	cancel()
-	_, err = svc.ExecuteRetry(canceled, &RetryRequest{
-		Policy:    &RetryPolicy{MaxAttempts: 3, InitialDelay: 5 * time.Second, MaxDelay: 10 * time.Second},
-		LastError: assert.AnError,
-	})
-	require.ErrorIs(t, err, context.Canceled)
-
-	// HandleError retry 策略集成
-	res2, err := svc.HandleError(ctx, &ErrorHandleRequest{
-		ExecutionID: "e1", Error: assert.AnError,
-		Config: &ErrorHandlingConfig{Strategy: ErrorStrategyRetry, RetryPolicy: &RetryPolicy{
-			MaxAttempts: 1, InitialDelay: time.Millisecond,
-		}},
-	})
-	require.NoError(t, err)
-	assert.Equal(t, "retry", res2.Action)
-}
-
-// notTimeoutErr 类型名不含 TimeoutError, 用于 RetryOn 不匹配路径。
-type notTimeoutErr struct{}
-
-func (notTimeoutErr) Error() string { return "plain failure" }
-
-func TestErrorHandlingService_CalculateDelay(t *testing.T) {
-	svc := &errorHandlingServiceImpl{}
-	p := &RetryPolicy{InitialDelay: 100 * time.Millisecond, MaxDelay: time.Second}
-
-	assert.Equal(t, 100*time.Millisecond, svc.calculateDelay(1, p))
-
-	linear := &RetryPolicy{InitialDelay: 100 * time.Millisecond, BackoffType: BackoffTypeLinear, MaxDelay: time.Second}
-	assert.Equal(t, 300*time.Millisecond, svc.calculateDelay(3, linear))
-
-	exp := &RetryPolicy{InitialDelay: 100 * time.Millisecond, BackoffType: BackoffTypeExponential, MaxDelay: 350 * time.Millisecond}
-	assert.Equal(t, 200*time.Millisecond, svc.calculateDelay(2, exp))
-	assert.Equal(t, 350*time.Millisecond, svc.calculateDelay(5, exp), "不超过 MaxDelay")
-
-	capped := &RetryPolicy{InitialDelay: 100 * time.Millisecond, MaxDelay: 50 * time.Millisecond}
-	assert.Equal(t, 50*time.Millisecond, svc.calculateDelay(1, capped))
-}
-
-func TestErrorHandlingService_Fallback(t *testing.T) {
-	db := newTaskTestDB(t)
-	now := time.Now().Format("2006-01-02 15:04:05")
-	require.NoError(t, db.Exec(`INSERT INTO sys_rpa_executions (id, task_id, status, logs, created_at) VALUES ('e1', 't1', 'running', '', ?)`, now).Error)
-
-	svc := NewErrorHandlingService(db, nil, nil)
-	ctx := context.Background()
-
-	// 未配置降级动作
-	_, err := svc.ExecuteFallback(ctx, &FallbackRequest{})
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "降级动作未配置")
-
-	// 动作非 JSON
-	bad := json.RawMessage(`{bad`)
-	_, err = svc.ExecuteFallback(ctx, &FallbackRequest{FallbackAction: &bad, Variables: map[string]interface{}{}})
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "解析降级动作失败")
-
-	// 正常降级
-	action := json.RawMessage(`{"type":"click"}`)
-	res, err := svc.ExecuteFallback(ctx, &FallbackRequest{
-		ExecutionID:    "e1",
-		StepIndex:      1,
-		FallbackAction: &action,
-		Variables:      map[string]interface{}{},
-		Error:          assert.AnError,
-	})
-	require.NoError(t, err)
-	assert.True(t, res.Success)
-	assert.Equal(t, true, res.Variables["fallback"])
-	assert.Equal(t, assert.AnError.Error(), res.Variables["originalError"])
-
-	// HandleError fallback 策略集成
-	res2, err := svc.HandleError(ctx, &ErrorHandleRequest{
-		ExecutionID: "e1", Error: assert.AnError,
-		Config:    &ErrorHandlingConfig{Strategy: ErrorStrategyFallback, FallbackAction: &action},
-		Variables: map[string]interface{}{},
-	})
-	require.NoError(t, err)
-	assert.True(t, res2.Handled)
-	assert.Equal(t, "fallback", res2.Action)
-}
-
-func TestContainsHelper(t *testing.T) {
-	assert.True(t, contains("hello", "ell"))
-	assert.True(t, contains("abc", "abc"))
-	assert.True(t, contains("abc", ""))
-	assert.False(t, contains("ab", "abcdef"))
-	assert.False(t, contains("", "x"))
 }

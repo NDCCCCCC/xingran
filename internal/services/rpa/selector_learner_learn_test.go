@@ -25,26 +25,28 @@ import (
 	rpamodels "github.com/xingran-next/xingran-go-backend/internal/models/rpa"
 )
 
+// setupLearnTestDB CONTRACT-04（D4）：必须走**真实 AutoMigrate**建表，
+// 不再手写 CREATE TABLE 掩盖 schema 缺陷。
+//
+// 历史掩盖：这两个模型缺 TableName()（推导成 selector_success_records），
+// ID 又带 PG-only 的 default:gen_random_uuid()（sqlite 建表语法错误），
+// 测试于是手写同名表让用例变绿 —— 真实运行期仍然 "no such table"。
+// 现在模型已补 TableName 指向 sys_rpa_selector_success/_failure，且 ID 由
+// BeforeCreate 应用层填充，故 AutoMigrate 能直接建出真实表。
 func setupLearnTestDB(t *testing.T) *gorm.DB {
 	t.Helper()
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	require.NoError(t, err)
-	require.NoError(t, db.Exec(`CREATE TABLE sys_rpa_executions (
-		id TEXT PRIMARY KEY, created_at DATETIME, updated_at DATETIME, deleted_at DATETIME,
-		task_id TEXT NOT NULL, task_name TEXT, worker_id TEXT, worker_name TEXT,
-		status TEXT NOT NULL DEFAULT 'pending', start_time DATETIME, end_time DATETIME,
-		duration INTEGER, progress_current INTEGER DEFAULT 0, progress_total INTEGER DEFAULT 0,
-		screenshots TEXT DEFAULT '[]', logs TEXT, error_message TEXT,
-		retry_count INTEGER DEFAULT 0, triggered_by TEXT, trigger_type TEXT)`).Error)
-	// selector_*_records 模型 ID 带 gen_random_uuid() default（sqlite 不接受）→ 手写等价表
-	require.NoError(t, db.Exec(`CREATE TABLE selector_success_records (
-		id TEXT PRIMARY KEY, page_url TEXT, element_id TEXT, selector TEXT,
-		selector_type TEXT, success_count INTEGER DEFAULT 1, avg_duration INTEGER DEFAULT 0,
-		last_used_at DATETIME, created_at DATETIME, metadata TEXT)`).Error)
-	require.NoError(t, db.Exec(`CREATE TABLE selector_failure_records (
-		id TEXT PRIMARY KEY, page_url TEXT, element_id TEXT, selector TEXT,
-		error_type TEXT, error_message TEXT, failure_count INTEGER DEFAULT 1,
-		created_at DATETIME, resolved_at DATETIME, resolved_with TEXT)`).Error)
+	require.NoError(t, db.AutoMigrate(
+		&rpamodels.Execution{},
+		&SelectorSuccessRecord{},
+		&SelectorFailureRecord{},
+	), "真实 AutoMigrate 必须能建出 sys_rpa_executions + 两张选择器表（禁止手写 DDL 掩盖）")
+	// 明确断言表名指向真实 sys_rpa_* 前缀表（不是 GORM 推导的 selector_*_records）
+	require.True(t, db.Migrator().HasTable(&SelectorSuccessRecord{}), "sys_rpa_selector_success 应存在")
+	require.True(t, db.Migrator().HasTable(&SelectorFailureRecord{}), "sys_rpa_selector_failure 应存在")
+	require.Equal(t, "sys_rpa_selector_success", (&SelectorSuccessRecord{}).TableName())
+	require.Equal(t, "sys_rpa_selector_failure", (&SelectorFailureRecord{}).TableName())
 	return db
 }
 

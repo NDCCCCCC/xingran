@@ -31,6 +31,8 @@ import {
 } from "@ant-design/icons";
 import type { Execution, ExecutionLog } from "@/types/rpa";
 import { renderExecutionStatusTag } from "../constants";
+// W7 / UI-FIX-01：路由常量（唯一事实来源，见 ../routes.ts 头注释）
+import { rpaLiveUrl } from "../routes";
 import { post } from "@/lib/api";
 import { getAuthHeaders } from "@/utils/authHelpers";
 
@@ -322,6 +324,26 @@ export function ExecutionDetailModal({ open, execution, onClose }: ExecutionDeta
           disabled={screenshots.length === 0 && !execution?.logs}
         >
           下载执行产物
+        </Button>,
+        // Phase 155 / LIVEVIEW-04：实时画面入口（归属协议 §9）。
+        // 目标页由 migration_255 的 sys_menu 播种（component=pages/operations/rpa/live/index）。
+        // ⚠ 真实路由是 `vdi/rpa/live`，不是 `operations/rpa/live`：RPA 管理菜单的父级是
+        // 「虚拟机」目录（path=vdi, menu_catalog_seed.sql:213），中间层 RPA 管理 path=rpa
+        // （:193），本页 path=live ⇒ RouteGenerator.resolvePath 逐级拼接得 vdi/rpa/live。
+        // 页面从 location.search 读 ?executionId= 直接定位到该执行。
+        // W7 / UI-FIX-01：裸字符串已收敛到 `../routes` 的 RPA_ROUTES（唯一事实来源）。
+        // 这里刻意只做「同源整页跳转」：只允许改本 footer，不新增页面副作用。
+        <Button
+          key="live"
+          type="primary"
+          onClick={() => {
+            if (!execution?.id) return;
+            onClose();
+            window.location.assign(rpaLiveUrl(execution.id));
+          }}
+          disabled={!execution?.id}
+        >
+          实时画面
         </Button>,
         <Button key="close" onClick={onClose}>
           关闭

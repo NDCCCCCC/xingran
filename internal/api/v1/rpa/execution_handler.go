@@ -2,6 +2,7 @@ package rpa
 
 import (
 	"archive/zip"
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -14,6 +15,7 @@ import (
 	"github.com/xingran-next/xingran-go-backend/internal/core"
 	"github.com/xingran-next/xingran-go-backend/internal/services/rpa"
 	"github.com/xingran-next/xingran-go-backend/internal/utils/operlog"
+	"github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"github.com/xingran-next/xingran-go-backend/pkg/response"
 )
 
@@ -53,6 +55,10 @@ func (h *ExecutionHandler) List(c *gin.Context) {
 	if !bindAndValidate(c, &params) {
 		return
 	}
+	if !validateListParams(c, params.Validate()) {
+		return
+	}
+	params.Status = normalizeOptionalStringFilter(params.Status)
 
 	setPaginationDefaults(&params.Current, &params.PageSize)
 
@@ -105,12 +111,14 @@ func (h *ExecutionHandler) GetByID(c *gin.Context) {
 	success(c, execution)
 }
 
-// Cancel 取消执行
+// Cancel 取消执行（RUNTIME-03：DB 终态 + Redis 取消指令双通道 + 审计留痕）
 // @Summary 取消RPA执行
-// @Description 取消执行中的RPA任务
+// @Description 取消执行中的RPA任务（可选 body.reason 记录取消原因并下发 Worker）
 // @Tags RPA管理
+// @Accept json
 // @Produce json
 // @Param id path string true "执行ID"
+// @Param request body object false "取消原因（可选）"
 // @Success 200 {object} response.Response
 // @Failure 500 {object} response.Response
 // @Router /rpa/executions/{id}/cancel [post]
@@ -120,8 +128,23 @@ func (h *ExecutionHandler) Cancel(c *gin.Context) {
 		return
 	}
 
-	if handleError(c, h.executionService.Cancel(c.Request.Context(), id), http.StatusInternalServerError, "取消失败") {
+	// 取消原因（可选 body）；空 body 合法
+	var req struct {
+		Reason string `json:"reason"`
+	}
+	_ = c.ShouldBindJSON(&req)
+
+	operator := currentUserID(c)
+	if err := h.executionService.Cancel(c.Request.Context(), id, operator, req.Reason); handleError(c, err, http.StatusInternalServerError, "取消失败") {
 		return
+	}
+
+	// RUNTIME-03：向 Worker 发布取消指令（尽力而为 —— DB 终态已落，
+	// Redis 不可用时仅告警，不回滚终态）。
+	if h.core != nil && h.core.Cache != nil {
+		if err := rpa.PublishExecutionCancel(c.Request.Context(), h.core.Cache, id, operator, req.Reason); err != nil {
+			logger.Warnf("取消指令发布失败（DB 终态已落）: execution=%s, error=%v", id, err)
+		}
 	}
 
 	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "RPA执行", operlog.OperTypeStatus)
@@ -247,8 +270,16 @@ func (h *ExecutionHandler) SubmitHumanIntervention(c *gin.Context) {
 	}
 
 	workerID := c.Query("workerId")
-	if workerID == "" {
-		workerID = "unknown"
+	// 执行 ID：路径参数 :id 优先，回落请求体 executionId
+	id := getIDParam(c)
+	if id == "" {
+		id = req.ExecutionID
+	}
+
+	// Phase 153 / RUNTIME-04：workerId 兜底 —— 前端未携带时按执行归属反查
+	// Worker 业务 ID（RUNTIME-01 回写的 uuid → sys_rpa_workers.worker_id）。
+	if workerID == "" || workerID == "unknown" {
+		workerID = h.resolveWorkerBusinessID(c.Request.Context(), id)
 	}
 
 	// 创建人工干预事件
@@ -262,14 +293,51 @@ func (h *ExecutionHandler) SubmitHumanIntervention(c *gin.Context) {
 		_ = err // 记录日志但不影响响应
 	}
 
+	// Phase 153 / RUNTIME-04（归属协议第 3 条锁定落点）：publish 到
+	// worker:human-input:{workerId}:{executionId}，复用 worker 端
+	// subscribeForHumanInput 订阅端。h.core.Cache 直达，不经 excel_service。
+	// publish 失败必须让前端知道（干预未到达 Worker，pause 将超时）。
+	if h.core == nil || h.core.Cache == nil {
+		response.Error(c, http.StatusInternalServerError, "人工干预通道未配置（cache 未注入），干预无法下发 Worker")
+		return
+	}
+	if err := rpa.PublishHumanIntervention(c.Request.Context(), h.core.Cache, workerID, id, map[string]interface{}{
+		"action":      req.Action, // resume | skip | abort
+		"input":       req.Input,
+		"reason":      req.Reason,
+		"executionId": id,
+		"operator":    currentUserID(c),
+	}); handleError(c, err, http.StatusInternalServerError, "人工干预下发失败") {
+		return
+	}
+
 	operlog.RecordWithBody(c, h.core.OperLogService, h.core.GetDB(), "RPA执行", operlog.OperTypeOther)
 
 	success(c, gin.H{
-		"eventId": event.ID,
-		"status":  "submitted",
-		"message": "人工输入已提交",
-		"action":  req.Action,
+		"eventId":  event.ID,
+		"status":   "submitted",
+		"message":  "人工输入已提交",
+		"action":   req.Action,
+		"workerId": workerID,
 	})
+}
+
+// resolveWorkerBusinessID 按执行归属 uuid 反查 Worker 业务 ID（干预频道键）。
+// 反查失败返回空串（publish 时由错误路径兜底）。
+func (h *ExecutionHandler) resolveWorkerBusinessID(ctx context.Context, executionID string) string {
+	execution, err := h.executionService.GetByID(ctx, executionID)
+	if err != nil || execution.WorkerID == nil || *execution.WorkerID == "" {
+		return "unknown"
+	}
+	var worker struct{ WorkerID string }
+	if err := h.core.GetDB().WithContext(ctx).
+		Table("sys_rpa_workers").
+		Select("worker_id").
+		Where("id = ?", *execution.WorkerID).
+		Scan(&worker).Error; err != nil || worker.WorkerID == "" {
+		return "unknown"
+	}
+	return worker.WorkerID
 }
 
 // DownloadArtifacts 下载执行产物（截图和日志）为 ZIP 文件

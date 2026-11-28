@@ -4,11 +4,12 @@
 
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import type { FC } from "react";
-import { Table, Button, Space, Form, Card, Layout } from "antd";
+import { Table, Button, Space, Form, Card, Layout, Modal, App } from "antd";
 import { SearchOutlined, ReloadOutlined } from "@ant-design/icons";
 import type { Execution } from "@/types/rpa";
 import type { PageResponse } from "@/types/base";
 import { useTableManager } from "@/hooks/useTableManager";
+import { useRPAProgress } from "@/hooks/useRPAProgress";
 import { useServerSort } from "@/hooks/useServerSort";
 import { createSorterMeta } from "@/utils/tableHelpers";
 import { usePagination } from "@/hooks/usePagination";
@@ -18,12 +19,13 @@ import { EXECUTION_STATUS_OPTIONS } from "../constants";
 import { post } from "@/lib/api";
 // Phase 71 (W3)：裸 Input/Select → 契约组件。
 // 执行状态为固定枚举（业务禁搜）→ children 改写 options + showSearch={false}。
-import { AppInput, AppSelect } from "@/components/ui";
+import { AppInput, AppSelect, AppTextArea } from "@/components/ui";
 import { FilterBar, StatCards } from "@/components/shared";
 
 const { Content } = Layout;
 
 const ExecutionManagement: FC = () => {
+  const { message } = App.useApp();
   const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
 
   // 统计数据(专用 COUNT 端点,不受分页/筛选影响,不依赖当前页列表)
@@ -105,11 +107,15 @@ const ExecutionManagement: FC = () => {
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [selectedExecution, setSelectedExecution] = useState<Execution | null>(null);
 
-  // 仅在有 running 任务时启用轮询
+  // CONTRACT-05（D16）：执行页不再 setInterval(5000) 轮询 running。
+  // 改为订阅全局 WebSocket 的 RPA 进度事件（useRPAProgress → noticeStore
+  // → NotificationBell 唯一连接），消息到达时刷新当前页与统计。
+  //
+  // 保留一个**低频**兜底刷新（30s）：WS 断线期间列表不能完全静默过期。
+  // 这与「轮询驱动实时进度」是两件事 —— 实时性由 WS 提供，兜底只防断线。
   const executionsRef = useRef<Execution[]>([]);
-  const hasRunningRef = useRef(false);
 
-  // 保持 ref 与 state 同步
+  // 保持 ref 与 state 同步（WS 回调里需要判断当前页是否有运行中任务）
   useEffect(() => {
     executionsRef.current = executions;
   }, [executions]);
@@ -118,17 +124,26 @@ const ExecutionManagement: FC = () => {
     loadExecutions();
   }, [loadExecutions]);
 
+  // WebSocket 实时进度：任一执行有进度/终态事件 → 刷新当前页 + 统计
+  const handleRealtimeProgress = useCallback(() => {
+    loadExecutions();
+  }, [loadExecutions]);
+
+  useRPAProgress({
+    onProgress: handleRealtimeProgress,
+    onCompleted: handleRealtimeProgress,
+    onFailed: handleRealtimeProgress,
+  });
+
   useEffect(() => {
     loadExecutions();
+    // WS 断线兜底：仅当本页存在 running 任务时才用 30s 低频对账，
+    // 与旧 5s 轮询区分（旧实现是唯一数据来源，现在只是兜底）。
     const interval = setInterval(() => {
-      // 有 running 状态才继续轮询
       if (executionsRef.current.some((e) => e.status === "running")) {
-        hasRunningRef.current = true;
         loadExecutions();
-      } else {
-        hasRunningRef.current = false;
       }
-    }, 5000);
+    }, 30000);
     return () => clearInterval(interval);
   }, [loadExecutions]);
 
@@ -137,14 +152,55 @@ const ExecutionManagement: FC = () => {
     setDetailModalVisible(true);
   }, []);
 
+  // Phase 153 / RUNTIME-03：行内取消入口（归属协议第 4 条 —— 落本 handler，
+  // 不进 ExecutionDetailModal footer）。二次确认 + 原因留痕（审计：谁/何时/原因）。
+  const handleCancelExecution = useCallback(
+    (record: Execution) => {
+      let reason = "";
+      // 非删除类确认（取消执行 ≠ 删除数据，不适用 ConfirmDelete 的删除文案模板）。
+      // 按 Phase 65 契约允许的出口：显式豁免并注明原因。
+      // eslint-disable-next-line no-restricted-syntax -- 非删除类确认：取消执行是运行时中断，不是数据删除，ConfirmDelete 固定「删除后不可恢复」文案不适用
+      Modal.confirm({
+        title: "确认取消执行",
+        content: (
+          <div>
+            <p>确定要取消任务「{record.taskName}」的执行吗？Worker 将在下一个动作边界停止。</p>
+            <AppTextArea
+              placeholder="取消原因（将记入审计日志）"
+              rows={2}
+              onChange={(e) => {
+                reason = e.target.value;
+              }}
+            />
+          </div>
+        ),
+        okText: "确认取消",
+        okButtonProps: { danger: true },
+        cancelText: "返回",
+        onOk: async () => {
+          try {
+            await post(`/rpa/executions/${record.id}/cancel`, { reason });
+            message.success("取消指令已下发，执行将在下一个动作边界停止");
+            loadExecutions();
+          } catch (_error) {
+            // 错误已在 errorHandler 中处理
+          }
+        },
+      });
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message/loadExecutions 由 hooks 稳定提供
+    [loadExecutions]
+  );
+
   const columns = useMemo(
     () =>
       getExecutionColumns({
         handleViewDetail,
+        handleCancel: handleCancelExecution,
         getSortOrder: (field) =>
           orderByColumn === field ? ((execSortOrder ?? null) as "ascend" | "descend" | null) : null,
       }),
-    [handleViewDetail, orderByColumn, execSortOrder]
+    [handleViewDetail, handleCancelExecution, orderByColumn, execSortOrder]
   );
 
   return (

@@ -79,6 +79,7 @@ const EXPECTED_FILES = [
   "api/macHeatmapApi.ts",
   "api/networkApi.ts",
   "assetApi.ts",
+  "brandingApi.ts", // 站点品牌配置 API（4 个 plain-literal URL 函数，无 CRUD 后缀，warning 档登记 0）
   "columnConfigApi.ts",
   "dbBackupApi.ts",
   "defaultThemeApi.ts",
@@ -122,6 +123,7 @@ const WARNING_WHITELIST: Record<string, number> = {
   "api/macHeatmapApi": 0, // 单函数 plain-literal URL,无 CRUD 后缀模板形状
   adDriftAlertApi: 0, // v1.54 Phase 144 ALRT-03：5 个 POST /system/ad-drift-alert/* 端点，plain-literal URL 无 CRUD 后缀，非 createResourceApi 形状
   systemAnchorApi: 0, // v1.54 机构锚点预览：role/post anchor-preview + users/permission-preview，plain-literal URL 无 CRUD 后缀，非 createResourceApi 形状
+  brandingApi: 0, // 站点品牌配置：getPublic/get/update/uploadLogo 4 个函数，plain-literal URL（/system/branding[/update|/logo|/public]）无 CRUD 后缀，非 createResourceApi 形状
 };
 
 interface TemplateHit {

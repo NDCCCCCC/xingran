@@ -1,20 +1,15 @@
 ---
 gsd_state_version: "1.0"
 milestone: v1.56
-milestone_name: v1.56 候选（进行中 / 未正式立项）· B 类中型改动 + 备份恢复与设置页收敛
-current_phase_name: candidate / 未正式立项（无 GSD phase）
-status: v1.56 候选（进行中 / 未正式立项）
-stopped_at: v1.56 候选进行中（CHANGELOG [Unreleased] 已登记备份恢复 / 设置页收敛；v156-MILESTONE-DRAFT.md 为草案、尚未跑 /gsd-new-milestone）；下一步按 notes/SHIPPED-DEFINITION.md 补齐真实环境验收证据后正式立项
-last_updated: "2026-11-12T10:22:14.000Z"
-last_activity: 2026-11-12
-last_activity_desc: 统一当前状态口径为 v1.56 候选（进行中）；修 frontmatter / 正文标题 / stopped_at 三处矛盾；79 条人工验证全部「已排期·待执行」保持 0 勾选 / 0 已完成
-state_head: "0bf29976a2b316e7be4b66be2ff961961227dfd2"
-# 下列 progress 为 v1.55（已收档）的快照，非 v1.56 候选进度；v1.56 候选尚未正式立项、无 phase
+milestone_name: RPA 员工自助自动化
+status: code-complete · verification-pending
+last_updated: "2026-11-25T12:40:00.000Z"
+last_activity: 2026-11-25
 progress:
   total_phases: 7
   completed_phases: 7
-  total_plans: 8
-  completed_plans: 8
+  total_plans: 0
+  completed_plans: 0
   percent: 100
 ---
 
@@ -27,14 +22,20 @@ progress:
 
 **Project**: RuoYi-Next 运维管理系统
 **Created**: 2026-04-16
-**Status**: v1.56 候选（进行中 / 未正式立项）— `CHANGELOG.md` `## [Unreleased] — v1.56 候选` 已登记「数据库全量备份与恢复」「系统设置页收敛与低密度页面 Tab 化」；`.planning/quick/261110-161-*/v156-MILESTONE-DRAFT.md` 为候选草案，尚未跑 `/gsd-new-milestone`、未重建 REQUIREMENTS / ROADMAP phase。上一里程碑 v1.55 已于 2026-11-09 SHIPPED & ARCHIVED（完整收档快照见 `.planning/MILESTONES.md`）。按 [`.planning/notes/SHIPPED-DEFINITION.md`](notes/SHIPPED-DEFINITION.md)：当前仅可标 **code-complete·verification-pending**，79 条人工验证 0 勾选、无真实环境验收证据前不得标 SHIPPED
-**Current Milestone**: **v1.56 候选（进行中 / 未正式立项）**
-- **口径来源**：`CHANGELOG.md` `## [Unreleased] — v1.56 候选` + `.planning/quick/261110-161-*/v156-MILESTONE-DRAFT.md`（draft，未跑 `/gsd-new-milestone`）；与 `state.json` / `MILESTONES.md` 顶部 / `ROADMAP.md` 当前段同步。
-- **候选期内已落地代码（非收档）**：数据库全量备份导出/导入恢复（PR #83）、系统设置页收敛与低密度页面 Tab 化（PR #84）、菜单与权限迁移 241/242/243 + 补强 248/249、B 类 quick（261110-161 / f5g / jci）；均为候选期内已落地代码，**未取得真实环境 UAT 证据**。
-- **SHIPPED 判定**：见 [`.planning/notes/SHIPPED-DEFINITION.md`](notes/SHIPPED-DEFINITION.md) —— 代码绿 + 关键 UAT 通过 + 对外文档同步三者齐备才允许标 SHIPPED；当前无 UAT 证据，只能标 `code-complete·verification-pending`。
-- **验证状态**：[`.planning/notes/261108-human-verification-tracker.md`](notes/261108-human-verification-tracker.md) 79 条全部「已排期·待执行」，**0 勾选 / 0 已完成**；三桶排期与解锁路径见 [`.planning/notes/UAT-EXECUTION-PLAN.md`](notes/UAT-EXECUTION-PLAN.md)，真机端口写 UAT（29 条现场真机债，tracker §六）排第一。本环境无生产 PG 写授权、无真机，只能排期不能执行。
+**Status**: v1.56 RPA 员工自助自动化 — **code-complete · verification-pending 2026-11-25**（7/7 Phase 执行完毕，31 REQ 全部交付，**未 SHIPPED**；真实环境 UAT 待办见 `.planning/phases/158-cleanup/158-SUMMARY.md` §6 共 9 项 + FLEET UAT 3 项 + LIVEVIEW 遗留 5 项）
+**Current Milestone**: **v1.56 RPA 员工自助自动化 (Self-Service RPA for General Staff)**
+- **口径来源**：`.planning/REQUIREMENTS.md`（31 REQ + D1-D20 审计实证）｜`.planning/ROADMAP.md`（Phases 152-158）｜`.planning/notes/261123-rpa-worker-capacity-model.md`（承载模型）。
+- **三条用户方向**：员工可用性（NOCODE + CONTRACT）｜无头浏览器可视化与接管（LIVEVIEW）｜VDI 承载模型（FLEET）。
+- **修复先于新增**：Phase 152 先修 4 类必然失败路径（凭证 panic / 状态筛选 400 / 任务名 500 / 选择器表 500），否则新功能无法验收。
+- **承载模型结论**：一 VM 一 Worker 容器 + 1 Chromium + N page；扩容粒度 VM 不是容器；数字由 FLEET-03 实测回填。
+- **并行性已实证裁决（2026-11-23）**：W1 `152 ∥ 154` → W2 `153 ∥ 157` → W3 155 → W4 156 → W5 158；硬冲突 = worker 侧 `154×155` + 前端 `153×155`（Modal footer 同数组）；7 条归属协议见 `.planning/notes/261123-v156-phase-parallelism.md`。
+- **并入项**：上一「v1.56 候选」（备份恢复 / 设置页收敛 / 菜单权限迁移 + quick 261110-161/f5g/jci）作为已落地代码载入，缺 UAT 证据不追认、不标 SHIPPED。
+- **SHIPPED 判定**：见 [`.planning/notes/SHIPPED-DEFINITION.md`](notes/SHIPPED-DEFINITION.md) —— 代码绿 + 关键 UAT 通过 + 对外文档同步三者齐备才允许标 SHIPPED。
+- **验证状态**：[`.planning/notes/261108-human-verification-tracker.md`](notes/261108-human-verification-tracker.md) 79 条保持「已排期·待执行」，**0 勾选**；本环境无生产 PG 写授权、无真机 VDI，FLEET-03 只能登记 UAT 待办。
 
-**Last activity**: 2026-11-09
+**Last activity**: 2026-11-25
+**Prior activity**: 2026-11-25 - v1.56 code-complete：7 Phase（152-158）全部执行完毕，31 REQ 全部交付。波次：W1 152∥154 → W2 153∥157 → W3 155 → W4 156 → W5 158（每波 Lead 合并 + 全量闸门）。闸门终态全绿（go build ×2 / RPA+config+vdi+scheduler 测试 / worker 全包 / tsc / RPA vitest）。**状态口径 = code-complete · verification-pending，不标 SHIPPED**（无生产 PG / 无真机 VDI，UAT 证据未落盘；158-SUMMARY §6 登记 9 项 + FLEET 3 项 + LIVEVIEW 5 项遗留）。收尾修正 1 项：158 误判「vdi 审计测试既有失败」实为 155 修复后测试反向固化已修复 bug，已改写并提交 d4147207
+**Prior activity**: 2026-11-23 - v1.56 INITIATED：RPA 员工自助自动化（Phases 152-158 / 31 REQ）；三条用户方向落点 = NOCODE+CONTRACT（员工可用性）/ LIVEVIEW（无头可视化与接管）/ FLEET（VDI 承载模型）；承载模型结论「一 VM 一容器一 Chromium 多 page」；基于 20 条审计缺陷 D1-D20 的实证立项
 **Prior activity**: 2026-11-09 - v1.55 SHIPPED：W1（145 AUDIT / 146 CRYPTO / 147 CACHE）+ W2（148 DIALECT / 149 SCOPE / 150 侧信道 A）并行 + W3（151 统一 ScopedDB，单独执行）；3 波共 7 个 gsd-planner + 2 个 plan-checker + 7 个 gsd-executor + Lead 集成；全量回归闸门全绿（go build / go test ./... / tsc / lint:ci ALL PASS / 全量 vitest / check-route-registry 713 零漂移）；79 条人工验证跟踪表保持 0 勾选、验证类残余不伪造闭环
 **Prior activity**: 2026-11-09 - v1.55 INITIATED：6 项 LOCKED 残余从根源根治（深度根因报告 + 5 项决策拍板 + 24 REQ 草案）；跳过领域研究；FUTURE-01 随 ① 关闭；79 条人工验证跟踪表保持 0 勾选
 **Prior activity**: 2026-11-09 - v1.54 SHIPPED：4 项真实代码缺口全部清偿（发现设备真实导入 / 批量物理参数 + 型号级能力矩阵 / 告警前端+WS+webhook 收口），W1 4 个并行 executor + Lead 集成；`go build ./...` / `go test ./...` / `tsc` / `lint:ci ALL PASS` / 全量 vitest 全绿；权限三方逐字一致、migration 238 两处注册；验证类残余不伪造闭环
@@ -115,11 +116,10 @@ progress:
 
 ## Current Position
 
-Milestone: v1.56 候选（进行中 / 未正式立项）
-Phase: 未正式立项（candidate，无 GSD phase 编号；候选草案 phase 152-155 见 `v156-MILESTONE-DRAFT.md`）
+Phase: 152-158 全部完成（7/7）
 Plan: —
-Status: code-complete·verification-pending（代码候选已落地，关键 UAT / 真实环境验收证据缺失；见 `notes/SHIPPED-DEFINITION.md`）
-Last activity: 2026-11-12 — 当前状态口径统一为 v1.56 候选（进行中）；79 条人工验证完成排期、保持 0 勾选 / 0 已完成
+Status: v1.56 code-complete · verification-pending；下一步 = UAT 清偿（158-SUMMARY §6）或 /gsd-ship 评估
+Last activity: 2026-11-25 — 7 Phase 交付 + vdi 测试反向固化修正（d4147207）
 
 ## 历史归档（v1.25 及更早，已 SHIPPED / ARCHIVED；以下为非当前状态，仅供追溯）
 

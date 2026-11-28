@@ -10,6 +10,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
+
+	"github.com/xingran-next/xingran-go-backend/internal/models/rpa"
 )
 
 // =====================================================================
@@ -30,14 +32,22 @@ func TestAuditService_RecordOperation(t *testing.T) {
 	db := newVDITestDB(t)
 	svc := NewAuditService(db)
 
-	// QUIRK: AuditLog.OldValue/NewValue 是 map[string]interface{}，sqlite 驱动无法绑定
-	// （PG 下由 pgx 原生编码为 jsonb）→ RecordOperation 在 sqlite 恒报错。
+	// v1.56 Phase 155 修复：AuditLog.OldValue/NewValue 补 serializer:json +
+	// id BeforeCreate UUID，sqlite 与 PG 行为一致（此前 sqlite 恒报错，
+	// 旧测试把该已修复 bug 固化成了断言，2026-11-25 修正为断言成功落库）。
 	err := svc.RecordOperation(context.Background(), &AuditRequest{
 		VMID: "vm-1", Operation: OpVMStart, Status: OpStatusSuccess,
 		OperatorID: "u1", OperatorName: "alice", OperatorIP: "1.2.3.4",
+		OldValue: map[string]interface{}{"power": "off"},
+		NewValue: map[string]interface{}{"power": "on"},
 	})
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "数据库操作失败")
+	require.NoError(t, err)
+
+	var count int64
+	require.NoError(t, db.Model(&rpa.AuditLog{}).
+		Where("resource_type = ? AND resource_id = ? AND action = ?", "vdi", "vm-1", OpVMStart).
+		Count(&count).Error)
+	assert.EqualValues(t, 1, count)
 }
 
 func TestAuditService_QueryLogs(t *testing.T) {

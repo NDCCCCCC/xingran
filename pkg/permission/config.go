@@ -158,6 +158,14 @@ const (
 
 	RpaAiUse PermissionCode = "rpa:ai:use"
 
+	// Phase 158 / CLEANUP-02：RPA 定时调度（sys_rpa_schedules）权限码。
+	// 该表此前零服务零 API（D18），本 phase 补齐 CRUD + 调度触发，故新增 4 码；
+	// 播种见 migration_257（rpa 调度 F 型按钮，双方言幂等）。
+	RpaScheduleList   PermissionCode = "ops:rpa:schedule:list"
+	RpaScheduleAdd    PermissionCode = "ops:rpa:schedule:add"
+	RpaScheduleEdit   PermissionCode = "ops:rpa:schedule:edit"
+	RpaScheduleRemove PermissionCode = "ops:rpa:schedule:remove"
+
 	// 日志管理权限
 	OperLogList   PermissionCode = "monitor:operlog:list"
 	OperLogView   PermissionCode = "monitor:operlog:view"
@@ -606,6 +614,12 @@ func GetRoutePermissions() []RoutePermission {
 		{"/system/configs", "POST", ConfigAdd, "新增参数配置"},
 		{"/system/configs/:id/update", "POST", ConfigEdit, "编辑参数配置"},
 		{"/system/configs/:id/delete", "POST", ConfigRemove, "删除参数配置"},
+
+		// 站点品牌配置（系统设置-站点品牌 tab）：写端点登记 strict config:edit。
+		// 读端点（GET /system/branding）不登记，由读组 ANY-of config:list/view 放行；
+		// 公开端点（GET /system/branding/public、GET /system/branding/logo）免认证，不登记。
+		{"/system/branding/update", "POST", ConfigEdit, "更新站点品牌配置"},
+		{"/system/branding/logo", "POST", ConfigEdit, "上传站点 Logo"},
 
 		// 全库备份与恢复（quick 261110-tbq）；读端点不登记（由读组 ANY-of 放行）。
 		{"/system/db-backup/export", "POST", SystemBackupExport, "触发全库备份导出"},

@@ -25,6 +25,9 @@ type SelectorEvent struct {
 	DurationMs   int64  `json:"durationMs,omitempty"`   // success 事件：查找耗时（毫秒）
 	ErrorType    string `json:"errorType,omitempty"`    // failed：timeout|not_found|multiple_matches
 	ErrorMessage string `json:"errorMessage,omitempty"` // failed：原始错误
+	// Tier Phase 154 / ENGINE-03：命中层级（data-testid/role+name/...）。
+	// 契约 §2 未定义该字段（向后兼容：旧消费方忽略未知键）。
+	Tier string `json:"tier,omitempty"`
 }
 
 // SelectorEventCollector 选择器事件累积器（单执行单 goroutine，零锁设计；
@@ -68,6 +71,34 @@ func (c *SelectorEventCollector) Record(selector string, start time.Time, err er
 		ElementID:    elementIDFromSelector(selector, c.elementSeq),
 		Selector:     selector,
 		SelectorType: classifySelector(selector),
+	}
+	if err != nil {
+		ev.Success = false
+		ev.DurationMs = time.Since(start).Milliseconds()
+		ev.ErrorType = classifySelectorError(err, start)
+		ev.ErrorMessage = err.Error()
+	} else {
+		ev.Success = true
+		ev.DurationMs = time.Since(start).Milliseconds()
+	}
+	c.events = append(c.events, ev)
+}
+
+// RecordWithTier 记录阶梯定位结果并附命中层级（ENGINE-03）。
+func (c *SelectorEventCollector) RecordWithTier(selector, tier string, start time.Time, err error) {
+	if c == nil || selector == "" {
+		return
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	c.elementSeq++
+	ev := SelectorEvent{
+		PageURL:      c.lastURL,
+		ElementID:    elementIDFromSelector(selector, c.elementSeq),
+		Selector:     selector,
+		SelectorType: classifySelector(selector),
+		Tier:         tier,
 	}
 	if err != nil {
 		ev.Success = false

@@ -1,12 +1,15 @@
 package browser
 
 import (
+	"context"
 	"errors"
 	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
 
+	"github.com/go-rod/rod"
+	"github.com/go-rod/rod/lib/proto"
 	"github.com/xingran-next/rpa-worker/internal/logger"
 )
 
@@ -49,6 +52,24 @@ func (s *stubPage) GetAttribute(string, string) (string, error) { return "", nil
 func (s *stubPage) ScrollDown(int) error                        { return nil }
 func (s *stubPage) ScrollUp(int) error                          { return nil }
 func (s *stubPage) ScrollToElement(string) error                { return nil }
+
+// ===== Phase 154 / ENGINE-01 Page 接口新增成员（轻量兜底，仅够编译）=====
+func (s *stubPage) RawPage() *rod.Page                                             { return nil }
+func (s *stubPage) ContextPage() *rod.Page                                         { return nil }
+func (s *stubPage) Browser() *rod.Browser                                          { return nil }
+func (s *stubPage) Closed() bool                                                   { return false }
+func (s *stubPage) Reset()                                                         {}
+func (s *stubPage) Upload(string, []string) error                                  { return nil }
+func (s *stubPage) Hover(string) error                                             { return nil }
+func (s *stubPage) ClickWith(string, proto.InputMouseButton, int) error            { return nil }
+func (s *stubPage) Drag(string, string) error                                      { return nil }
+func (s *stubPage) PressKeys(string) error                                         { return nil }
+func (s *stubPage) SwitchTab(int) error                                            { return nil }
+func (s *stubPage) EnterFrame(string) error                                        { return nil }
+func (s *stubPage) ExitFrame() error                                               { return nil }
+func (s *stubPage) ScrollInElement(string, int, int) error                         { return nil }
+func (s *stubPage) Download(context.Context, string, func() error) (string, error) { return "", nil }
+func (s *stubPage) CloseCurrentTab() error                                         { return nil }
 
 // withFastPoll 把轮询间隔临时缩短，避免超时用例真的等 100ms。
 func withFastPoll(t *testing.T, d time.Duration) {

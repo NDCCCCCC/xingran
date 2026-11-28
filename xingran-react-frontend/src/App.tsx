@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { BrowserRouter as Router } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useMenuStore } from "@/store/menuStore";
+import { useBrandStore } from "@/store/brandStore";
 import { routeConfigManager } from "@/router/routeConfigManager";
 import { ThemeProvider } from "@/design-system/components/ThemeProvider";
 import LayoutProvider from "@/design-system/components/LayoutProvider";
@@ -25,6 +26,18 @@ const queryClient = new QueryClient({
 
 function App() {
   const allMenus = useMenuStore((s) => s.allMenus);
+  const siteName = useBrandStore((s) => s.config.siteName);
+  const fetchPublic = useBrandStore((s) => s.fetchPublic);
+
+  // 站点品牌：启动时拉一次免认证公开端点（后端缓存 5 分钟；失败回退 DEFAULT_BRANDING）
+  useEffect(() => {
+    void fetchPublic();
+  }, [fetchPublic]);
+
+  // document.title 随站点名称动态覆盖 index.html 静态标题
+  useEffect(() => {
+    document.title = siteName;
+  }, [siteName]);
 
   // 初始化路由配置管理器
   // 只在菜单数量变化时重新初始化，避免循环渲染

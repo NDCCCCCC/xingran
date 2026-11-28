@@ -1,0 +1,741 @@
+[
+  {
+    "id": "a0a6fc75-f6ed-49b2-b739-b1b8a6ba6be5",
+    "name": "百度搜索结果提取测试",
+    "createdAt": "2026-03-10T14:30:34.214685Z",
+    "aliasType": "goto",
+    "script": [
+      {
+        "id": "step1",
+        "params": {
+          "waitUntil": "networkidle"
+        },
+        "retry": 2,
+        "selector": "",
+        "timeout": 15000,
+        "type": "goto",
+        "value": "https://www.baidu.com"
+      },
+      {
+        "id": "step2",
+        "params": {
+          "clear": true,
+          "delay": 100
+        },
+        "retry": 1,
+        "selector": "#kw",
+        "timeout": 5000,
+        "type": "fill",
+        "value": "RPA自动化测试"
+      },
+      {
+        "id": "step3",
+        "params": {
+          "waitAfter": 2000
+        },
+        "retry": 1,
+        "selector": "#su",
+        "timeout": 5000,
+        "type": "click",
+        "value": ""
+      },
+      {
+        "id": "step4",
+        "params": {
+          "condition": "visible",
+          "timeout": 8000
+        },
+        "retry": 0,
+        "selector": ".result",
+        "timeout": 10000,
+        "type": "wait",
+        "value": ""
+      },
+      {
+        "id": "step5",
+        "params": {
+          "name": "搜索结果页面"
+        },
+        "retry": 0,
+        "selector": "",
+        "timeout": 3000,
+        "type": "screenshot",
+        "value": ""
+      },
+      {
+        "id": "step6",
+        "params": {
+          "extractType": "multiple",
+          "fields": [
+            {
+              "attribute": "text",
+              "name": "title",
+              "selector": "h3"
+            },
+            {
+              "attribute": "href",
+              "name": "link",
+              "selector": "a"
+            }
+          ],
+          "maxItems": 5,
+          "outputVariable": "searchResults"
+        },
+        "retry": 0,
+        "selector": ".result",
+        "timeout": 5000,
+        "type": "extract",
+        "value": ""
+      },
+      {
+        "id": "step7",
+        "params": {
+          "code": "console.log('提取到', searchResults.length, '条结果');",
+          "variables": {
+            "searchResults": "{{searchResults}}"
+          }
+        },
+        "retry": 0,
+        "selector": "",
+        "timeout": 3000,
+        "type": "script",
+        "value": ""
+      },
+      {
+        "id": "step8",
+        "params": {
+          "name": "任务完成"
+        },
+        "retry": 0,
+        "selector": "",
+        "timeout": 3000,
+        "type": "screenshot",
+        "value": ""
+      }
+    ]
+  },
+  {
+    "id": "0b9e835c-4bb7-4bac-9140-50ee9aa34eb0",
+    "name": "多字段表单填写测试",
+    "createdAt": "2026-03-10T14:30:34.221588Z",
+    "aliasType": "goto",
+    "script": [
+      {
+        "id": "step1",
+        "params": {
+          "waitUntil": "networkidle"
+        },
+        "retry": 2,
+        "selector": "",
+        "timeout": 15000,
+        "type": "goto",
+        "value": "https://github.com/signup"
+      },
+      {
+        "id": "step2",
+        "params": {
+          "condition": "visible"
+        },
+        "retry": 0,
+        "selector": "input[name='email']",
+        "timeout": 10000,
+        "type": "wait",
+        "value": ""
+      },
+      {
+        "id": "step3",
+        "params": {
+          "name": "注册页面加载完成"
+        },
+        "retry": 0,
+        "selector": "",
+        "timeout": 3000,
+        "type": "screenshot",
+        "value": ""
+      },
+      {
+        "id": "step4",
+        "params": {
+          "clear": true,
+          "delay": 100
+        },
+        "retry": 1,
+        "selector": "input[name='email']",
+        "timeout": 5000,
+        "type": "fill",
+        "value": "test@example.com"
+      },
+      {
+        "id": "step5",
+        "params": {
+          "clear": true,
+          "delay": 100
+        },
+        "retry": 1,
+        "selector": "input[name='password']",
+        "timeout": 5000,
+        "type": "fill",
+        "value": "TestPassword123!"
+      },
+      {
+        "id": "step6",
+        "params": {
+          "clear": true,
+          "delay": 100
+        },
+        "retry": 1,
+        "selector": "input[name='login']",
+        "timeout": 5000,
+        "type": "fill",
+        "value": "testuser2024"
+      },
+      {
+        "id": "step7",
+        "params": {
+          "condition": "visible",
+          "timeout": 3000
+        },
+        "retry": 0,
+        "selector": "button[type='submit']",
+        "timeout": 5000,
+        "type": "wait",
+        "value": ""
+      },
+      {
+        "id": "step8",
+        "params": {
+          "name": "表单填写完成"
+        },
+        "retry": 0,
+        "selector": "",
+        "timeout": 3000,
+        "type": "screenshot",
+        "value": ""
+      },
+      {
+        "id": "step9",
+        "params": {
+          "code": "\n                    console.log('=== 表单填写测试完成 ===');\n                    console.log('邮箱: test@example.com');\n                    console.log('用户名: testuser2024');\n                    console.log('注意: 未实际提交表单，仅测试填写功能');\n                "
+        },
+        "retry": 0,
+        "selector": "",
+        "timeout": 3000,
+        "type": "script",
+        "value": ""
+      },
+      {
+        "id": "step10",
+        "params": {
+          "name": "测试完成"
+        },
+        "retry": 0,
+        "selector": "",
+        "timeout": 3000,
+        "type": "screenshot",
+        "value": ""
+      }
+    ]
+  },
+  {
+    "id": "bee8f1a3-8641-4994-b4fd-ea50fd5f36e6",
+    "name": "循环批量搜索测试",
+    "createdAt": "2026-03-10T14:30:34.227399Z",
+    "aliasType": "goto",
+    "script": [
+      {
+        "id": "step1",
+        "params": {
+          "waitUntil": "networkidle"
+        },
+        "retry": 2,
+        "selector": "",
+        "timeout": 15000,
+        "type": "goto",
+        "value": "https://www.baidu.com"
+      },
+      {
+        "id": "step2",
+        "params": {
+          "name": "初始页面"
+        },
+        "retry": 0,
+        "selector": "",
+        "timeout": 3000,
+        "type": "screenshot",
+        "value": ""
+      },
+      {
+        "id": "step3",
+        "params": {
+          "actions": [
+            {
+              "params": {
+                "clear": true
+              },
+              "selector": "#kw",
+              "type": "fill",
+              "value": "{{item.keyword}}"
+            },
+            {
+              "selector": "#su",
+              "type": "click",
+              "value": ""
+            },
+            {
+              "params": {
+                "condition": "visible",
+                "timeout": 5000
+              },
+              "selector": ".result",
+              "type": "wait",
+              "value": ""
+            },
+            {
+              "params": {
+                "name": "搜索_{{item.keyword}}"
+              },
+              "selector": "",
+              "type": "screenshot",
+              "value": ""
+            },
+            {
+              "params": {
+                "code": "console.log('已完成搜索:', '{{item.keyword}}');"
+              },
+              "selector": "",
+              "type": "script",
+              "value": ""
+            }
+          ],
+          "dataSource": [
+            {
+              "keyword": "RPA自动化"
+            },
+            {
+              "keyword": "Python爬虫"
+            },
+            {
+              "keyword": "Golang开发"
+            }
+          ],
+          "itemName": "item"
+        },
+        "retry": 0,
+        "selector": "",
+        "timeout": 30000,
+        "type": "loop",
+        "value": ""
+      },
+      {
+        "id": "step4",
+        "params": {
+          "name": "批量搜索完成"
+        },
+        "retry": 0,
+        "selector": "",
+        "timeout": 3000,
+        "type": "screenshot",
+        "value": ""
+      }
+    ]
+  },
+  {
+    "id": "26a2e233-6e6c-4520-8a3d-7586b9cb2cc2",
+    "name": "条件判断与分支测试",
+    "createdAt": "2026-03-10T14:30:34.232106Z",
+    "aliasType": "goto",
+    "script": [
+      {
+        "id": "step1",
+        "params": {
+          "waitUntil": "networkidle"
+        },
+        "retry": 2,
+        "selector": "",
+        "timeout": 15000,
+        "type": "goto",
+        "value": "https://www.baidu.com"
+      },
+      {
+        "id": "step2",
+        "params": {
+          "name": "页面加载完成"
+        },
+        "retry": 0,
+        "selector": "",
+        "timeout": 3000,
+        "type": "screenshot",
+        "value": ""
+      },
+      {
+        "id": "step3",
+        "params": {
+          "condition": "exists",
+          "falseActions": [
+            {
+              "params": {
+                "code": "console.log('搜索框不存在，执行备用方案');"
+              },
+              "selector": "",
+              "type": "script",
+              "value": ""
+            },
+            {
+              "params": {
+                "name": "搜索框不存在分支"
+              },
+              "selector": "",
+              "type": "screenshot",
+              "value": ""
+            }
+          ],
+          "trueActions": [
+            {
+              "params": {
+                "clear": true
+              },
+              "selector": "#kw",
+              "type": "fill",
+              "value": "搜索框存在，执行搜索"
+            },
+            {
+              "params": {
+                "name": "搜索框存在分支"
+              },
+              "selector": "",
+              "type": "screenshot",
+              "value": ""
+            }
+          ]
+        },
+        "retry": 0,
+        "selector": "#kw",
+        "timeout": 10000,
+        "type": "condition",
+        "value": ""
+      },
+      {
+        "id": "step4",
+        "params": {
+          "delay": 2000
+        },
+        "retry": 0,
+        "selector": "",
+        "timeout": 3000,
+        "type": "wait",
+        "value": ""
+      },
+      {
+        "id": "step5",
+        "params": {
+          "name": "条件判断测试完成"
+        },
+        "retry": 0,
+        "selector": "",
+        "timeout": 3000,
+        "type": "screenshot",
+        "value": ""
+      }
+    ]
+  },
+  {
+    "id": "583ff33a-f958-4612-86b0-2eb2d33dd5f8",
+    "name": "页面导航与滚动测试",
+    "createdAt": "2026-03-10T14:30:34.238288Z",
+    "aliasType": "goto",
+    "script": [
+      {
+        "id": "step1",
+        "params": {
+          "waitUntil": "networkidle"
+        },
+        "retry": 2,
+        "selector": "",
+        "timeout": 15000,
+        "type": "goto",
+        "value": "https://www.baidu.com"
+      },
+      {
+        "id": "step2",
+        "params": {
+          "name": "首页"
+        },
+        "retry": 0,
+        "selector": "",
+        "timeout": 3000,
+        "type": "screenshot",
+        "value": ""
+      },
+      {
+        "id": "step3",
+        "params": {
+          "clear": true
+        },
+        "retry": 1,
+        "selector": "#kw",
+        "timeout": 5000,
+        "type": "fill",
+        "value": "Python编程"
+      },
+      {
+        "id": "step4",
+        "params": {},
+        "retry": 1,
+        "selector": "#su",
+        "timeout": 5000,
+        "type": "click",
+        "value": ""
+      },
+      {
+        "id": "step5",
+        "params": {
+          "condition": "visible"
+        },
+        "retry": 0,
+        "selector": ".result",
+        "timeout": 10000,
+        "type": "wait",
+        "value": ""
+      },
+      {
+        "id": "step6",
+        "params": {
+          "delay": 1000,
+          "direction": "down",
+          "distance": 500
+        },
+        "retry": 0,
+        "selector": "",
+        "timeout": 5000,
+        "type": "scroll",
+        "value": ""
+      },
+      {
+        "id": "step7",
+        "params": {
+          "name": "滚动后页面"
+        },
+        "retry": 0,
+        "selector": "",
+        "timeout": 3000,
+        "type": "screenshot",
+        "value": ""
+      },
+      {
+        "id": "step8",
+        "params": {
+          "delay": 1000
+        },
+        "retry": 0,
+        "selector": ".result:first-child a",
+        "timeout": 5000,
+        "type": "hover",
+        "value": ""
+      },
+      {
+        "id": "step9",
+        "params": {
+          "name": "悬停效果"
+        },
+        "retry": 0,
+        "selector": "",
+        "timeout": 3000,
+        "type": "screenshot",
+        "value": ""
+      },
+      {
+        "id": "step10",
+        "params": {
+          "code": "\n                    console.log('=== 导航测试完成 ===');\n                    console.log('已测试: 导航、搜索、滚动、悬停');\n                "
+        },
+        "retry": 0,
+        "selector": "",
+        "timeout": 3000,
+        "type": "script",
+        "value": ""
+      },
+      {
+        "id": "step11",
+        "params": {
+          "name": "测试完成"
+        },
+        "retry": 0,
+        "selector": "",
+        "timeout": 3000,
+        "type": "screenshot",
+        "value": ""
+      }
+    ]
+  },
+  {
+    "id": "91df86ab-3691-4655-8e19-2e6bc52efc0c",
+    "name": "综合端到端业务流程测试",
+    "createdAt": "2026-03-10T14:30:34.244835Z",
+    "aliasType": "goto",
+    "script": [
+      {
+        "id": "init",
+        "params": {
+          "waitUntil": "networkidle"
+        },
+        "retry": 2,
+        "selector": "",
+        "timeout": 15000,
+        "type": "goto",
+        "value": "https://www.baidu.com"
+      },
+      {
+        "id": "check_page",
+        "params": {
+          "name": "01_页面初始化"
+        },
+        "retry": 0,
+        "selector": "",
+        "timeout": 3000,
+        "type": "screenshot",
+        "value": ""
+      },
+      {
+        "id": "search_check",
+        "params": {
+          "condition": "exists",
+          "falseActions": [
+            {
+              "params": {
+                "code": "console.log('✗ 搜索框不存在，跳过搜索');"
+              },
+              "selector": "",
+              "type": "script",
+              "value": ""
+            }
+          ],
+          "trueActions": [
+            {
+              "params": {
+                "code": "console.log('✓ 搜索框存在');"
+              },
+              "selector": "",
+              "type": "script",
+              "value": ""
+            }
+          ]
+        },
+        "retry": 0,
+        "selector": "#kw",
+        "timeout": 5000,
+        "type": "condition",
+        "value": ""
+      },
+      {
+        "id": "batch_search",
+        "params": {
+          "actions": [
+            {
+              "params": {
+                "clear": true,
+                "delay": 100
+              },
+              "selector": "#kw",
+              "type": "fill",
+              "value": "{{searchItem.keyword}}"
+            },
+            {
+              "params": {
+                "name": "02_搜索_{{searchItem.keyword}}_填写"
+              },
+              "selector": "",
+              "type": "screenshot",
+              "value": ""
+            },
+            {
+              "params": {},
+              "selector": "#su",
+              "type": "click",
+              "value": ""
+            },
+            {
+              "params": {
+                "condition": "visible",
+                "timeout": 6000
+              },
+              "selector": ".result",
+              "type": "wait",
+              "value": ""
+            },
+            {
+              "params": {
+                "name": "03_搜索_{{searchItem.keyword}}_结果"
+              },
+              "selector": "",
+              "type": "screenshot",
+              "value": ""
+            },
+            {
+              "params": {
+                "extractType": "multiple",
+                "fields": [
+                  {
+                    "attribute": "text",
+                    "name": "title",
+                    "selector": "h3"
+                  }
+                ],
+                "maxItems": 3,
+                "outputVariable": "results_{{searchItem.keyword}}"
+              },
+              "selector": ".result",
+              "type": "extract",
+              "value": ""
+            },
+            {
+              "params": {
+                "code": "console.log('提取到 {{searchItem.keyword}} 的结果:', results_{{searchItem.keyword}}?.length || 0);"
+              },
+              "selector": "",
+              "type": "script",
+              "value": ""
+            }
+          ],
+          "dataSource": [
+            {
+              "expected": "RPA相关结果",
+              "keyword": "RPA"
+            },
+            {
+              "expected": "自动化相关结果",
+              "keyword": "自动化"
+            }
+          ],
+          "itemName": "searchItem"
+        },
+        "retry": 0,
+        "selector": "",
+        "timeout": 60000,
+        "type": "loop",
+        "value": ""
+      },
+      {
+        "id": "final_screenshot",
+        "params": {
+          "name": "04_测试完成"
+        },
+        "retry": 0,
+        "selector": "",
+        "timeout": 3000,
+        "type": "screenshot",
+        "value": ""
+      },
+      {
+        "id": "summary",
+        "params": {
+          "code": "\n                    console.log('');\n                    console.log('='.repeat(50));\n                    console.log('综合测试完成');\n                    console.log('已测试功能:');\n                    console.log('  ✓ 页面导航');\n                    console.log('  ✓ 条件判断');\n                    console.log('  ✓ 循环批量操作');\n                    console.log('  ✓ 表单填写');\n                    console.log('  ✓ 元素点击');\n                    console.log('  ✓ 数据提取');\n                    console.log('  ✓ 截图记录');\n                    console.log('='.repeat(50));\n                "
+        },
+        "retry": 0,
+        "selector": "",
+        "timeout": 3000,
+        "type": "script",
+        "value": ""
+      }
+    ]
+  }
+]

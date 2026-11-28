@@ -9,7 +9,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] — v1.56 候选
 
+> **里程碑状态口径（依 `.planning/notes/SHIPPED-DEFINITION.md`）**：v1.56 为
+> `code-complete · verification-pending` —— 代码闸门（build / test / tsc / 路由与权限码零漂移）
+> 已自证，**真实环境 UAT 证据尚未落盘**，故不得标 SHIPPED。以下 7 个 Phase 的能力均为
+> 「代码已落地」，其中标注「本机真跑」的为自动化用例在本机实际跑通的部分。
+
 ### Added
+
+**v1.56 里程碑交付总览（Phase 152–158，7 Phase / 31 REQ / 100% 映射）**
+
+- **Phase 152 · CONTRACT（P0 契约修复）**：凭证 CRUD 注入 `core.SM4Cipher`（此前必然 500）；任务/执行/Worker 状态枚举与前端同构（非法枚举 400 而非静默过滤空列表）；任务名列名纠正 `task_name` → `name`；选择器学习两表补 `TableName` 并补齐 sqlite 侧注册；handler 契约用例改走 httptest + 真实 sqlite 真表（CI 硬门禁）
+- **Phase 153 · RUNTIME（执行闭环）**：取消指令与人工干预经 Redis Pub/Sub 下发（`execution:cancel:{id}` / `worker:human-input:{workerID}:{execID}`）；新增 `paused` 执行状态与状态机；人工干预事件真落库（`sys_rpa_human_interventions`）
+- **Phase 154 · ENGINE（执行引擎）**：1 Chrome + N page 承载模型、动作全集、选择器阶梯、变量作用域（`rpa-worker/internal/executor/`）
+- **Phase 155 · LIVEVIEW（无头可视化与人工接管）**：Worker 帧上行通道、Live 画布与 HUD、人工接管入口、审计留痕（`sys_rpa_audit_logs`）
+- **Phase 156 · NOCODE（零门槛）**：浏览器插件录制/拾取器、AI 能力降级、三步任务向导页面（前端只走 `sys_menu` seed 注册，migration 256）
+- **Phase 157 · FLEET（承载与 VDI 编排）**：扩缩容 provider 化（`container` / `vdivm`）、一 VM 一容器落地、容量矩阵实测
+- **Phase 158 · CLEANUP（收尾真相化）**：见下方 Added 与 Changed 两段的专项条目
+
+**Phase 158 / CLEANUP-01：假数据与假配置清零**
+
+- 批量执行报告真落库：新增 `sys_rpa_batch_item_reports`（逐项粒度，migration 257 建表 + sqlite AutoMigrate + dbprovision 注册）；`GetBatchExecutionReport` 改为按项聚合真统计，**无数据返回空统计**（此前恒返回硬编码 `total=100 / success=95 / failed=5`）；`CreateBatchExecutionReport` / `UpdateBatchItemReport` 由空壳存根改为真写真改
+- 自动扩缩容配置真持久化：落库键 `sys_config.config_key = sys.rpa.autoscale.config`（读-改-写，含默认值兜底）；`GET /rpa/workers/autoscale/config` 返回落库值、`POST` 后读回一致、**重启后仍生效**（此前 GET 恒为常量、POST 丢弃请求体只回一句「已更新」）
+- 消除 Redis 连接泄漏：删除 `WorkerHandler` 每实例 `redis.NewClient`（PoolSize=10 且从不 Close，路由每次装配泄漏一个连接池）；扩缩容指令改走 `core.Cache` 复用底层客户端（新增 `rpa.PublishScaleCommand`，与取消/人工干预同款断言路径）
+
+**Phase 158 / CLEANUP-02：定时调度闭环（`sys_rpa_schedules` 从「零服务零 API」到端到端）**
+
+- 新增 `internal/services/rpa/schedule_service.go`：CRUD + cron 到期计算（5 位与 6 位表达式均可）+ 立即触发 + `last_run_time`/`next_run_time`/`run_count` 回写 + 启停摘 job
+- 新增 `internal/api/v1/rpa/schedule_handler.go` 与 `SetupScheduleRouter`（7 端点：列表/详情/新增/编辑/删除/立即触发/启停），并在 `rpa_router.go` 的 `SetupRPARouter` 尾部**追加**一行注册（ROADMAP「文件面漏项补登」要求）
+- 调度接线：`internal/scheduler/rpa_schedule_tasks.go` 注册 `rpa_schedule` 任务类型 + 每个启用调度对应一条 cron job（`sys_job.invoke_target = rpa_schedule:{scheduleID}`）；`internal/core/core.go` 在调度器初始化处装配（不随 `RPA.Enabled` 门控，避免「能建调度但永不触发」空档）
+- 触发语义：到点与手动触发**共用同一执行入口** `TaskService.Execute`，执行记录 `trigger_type=schedule`、`triggered_by=scheduler`
+- 权限：新增 4 码 `ops:rpa:schedule:list/add/edit/remove`，后端常量 + 前端 `permissionCodes.ts` + `sys_menu` F 型播种（migration 257）三方一致，写端点逐动作 strict 单码
+- **本机真跑**：sqlite 真库 + 本机 Redis 5.0 + 真 cron 引擎下「建每分钟调度 → 到点真触发」用例通过（生成 `trigger_type=schedule` 的执行记录 + 调度行时间戳回写 + 停用摘 job）
 
 **端口写审计页可读性优化（UUID → 设备名称 / 端口名称）**
 
@@ -41,6 +71,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **隐藏策略边界**：保留菜单行与 `sys_role_menu` 授权行、只改 visible/status，不回收授权，可逆；彻底回收（删除重复行/清理授权）需单独评审。
 
 ### Changed
+
+**Phase 158 / CLEANUP-03：RPA flow 组死代码删除与文档真相化**
+
+- 删除 RPA flow 组死代码共 7 文件 / 2885 行：`internal/api/v1/rpa/flow_handler.go`（287）、`flow_handler_test.go`（455）、`internal/services/rpa/data_mapper.go`（644）、`data_mapper_test.go`（396）、`error_handling.go`（396）、`flow_control.go`（422）、`flow_control_test.go`（285），并在 `task_execution_service_test.go` 清理 4 个仅测该簇的用例（184 行纯删除）。删除前经 `git grep` 取证：4 个构造器（`NewFlowHandler` / `NewDataMapperService` / `NewErrorHandlingService` / `NewFlowControlService`）与 3 个 interface 的**唯一**引用方全在上述待删文件与测试内，零非测试调用方，无豁免项；删除后全仓 1828 个 `.go` 文件零残留命中，`go build ./...` 与相关包 `go test` 全绿
+- 文档真相化：重写 `docs/RPA系统完成状态报告.md` —— 原报告（2025-02-25）仍描述已下线的 flow 组 7 端点并声称「100% 完成 / 可正常启动运行」，与代码严重脱节；新版按代码事实重列 64 条已注册路由、24 个服务文件、11 个 API 文件、v1.56 七个 Phase 的新增能力与落地明细，并按 `SHIPPED-DEFINITION.md` 把整体状态标为 `code-complete · verification-pending`（**未**标 SHIPPED），逐条登记验证待办
+- 路由注册表同步：`scripts/route-registry.json` 重生成（总路由 746 → 753，新增 `/rpa/schedules/*` 7 条）
 
 - `scripts/scan-routes.cjs`（PR #85）：路由扫描前先剥 Go 注释（字符串字面量保护、等长替换保行号），注释掉的废弃路由不再入库 `scripts/route-registry.json`（本次清理 workorder 5 条 + rpa 3 条等共 9 条注释假路由，总路由 724 → 715）
 - 菜单收敛补强与状态一致化（migration 248/249，PR #89）：248 补 `ops:workorder:category:list` 的 `status=0` F 型授权载体（修工单分类 Tab 并入后非超管读接口恒 403），249 把所有未软删的 `duty/pools` C 行归位 `visible=0/status=1`（消除 228 历史激活与存量重复行造成的双入口）；同步修订 228 不再激活值班池、243 批量归位全部重复行并修正隐藏判定注释，`registry.go` 补登记 244-249（清偿 `MissingRecords` 对账欠账）。两者均为幂等、双方言、非阻断迁移，不删菜单行、不回收 `sys_role_menu` 授权。

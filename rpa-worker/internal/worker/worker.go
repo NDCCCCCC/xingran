@@ -7,6 +7,7 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -16,7 +17,9 @@ import (
 	"github.com/xingran-next/rpa-worker/internal/communication"
 	"github.com/xingran-next/rpa-worker/internal/config"
 	"github.com/xingran-next/rpa-worker/internal/executor"
+	"github.com/xingran-next/rpa-worker/internal/liveview"
 	"github.com/xingran-next/rpa-worker/internal/logger"
+	"github.com/xingran-next/rpa-worker/internal/recording"
 	"github.com/xingran-next/rpa-worker/internal/types"
 )
 
@@ -43,9 +46,15 @@ type Worker struct {
 	redisClient      *communication.RedisClient
 	apiClient        *communication.APIClient
 	progressReporter *communication.ProgressReporter
-	browserPool      *browser.Pool
+	browserManager   *browser.Manager
 	engine           *executor.Engine
-	state            WorkerState
+	// liveView Phase 155 / LIVEVIEW-01~05：实时画面会话表（单 Worker 一个，
+	// 内含唯一 janitor goroutine；随 Worker 关闭而关闭）。
+	liveView *liveview.Hub
+	// recordingHub Phase W6 / REC-01：录制与拾取会话表（单 Worker 一个，
+	// 内含唯一 janitor goroutine 兜底回收闲置会话的页面）。
+	recordingHub *recording.Hub
+	state    WorkerState
 	stateMutex       sync.RWMutex
 	currentTasks     int
 	currentTasksMu   sync.Mutex
@@ -54,6 +63,11 @@ type Worker struct {
 	maxConcurrency   int
 	maxConcurrencyMu sync.RWMutex
 	scaleCommandChan chan scaleCommandWrapper
+
+	// activeCancels Phase 153 / RUNTIME-03：运行中执行的取消句柄。
+	// cancelCommandListener 收到 execution:cancel:{id} 后按 id 取消其 ctx。
+	activeCancels   map[string]context.CancelFunc
+	activeCancelsMu sync.Mutex
 
 	// Hybrid mode fields
 	taskSplitter *executor.TaskSplitter
@@ -140,6 +154,7 @@ func New(cfg *config.Config) (*Worker, error) {
 		state:            StateInitializing,
 		maxConcurrency:   initialMaxConcurrency,
 		scaleCommandChan: make(chan scaleCommandWrapper, 10),
+		activeCancels:    make(map[string]context.CancelFunc),
 	}
 	if err := w.initComponents(); err != nil {
 		cancel()
@@ -157,11 +172,43 @@ func (w *Worker) initComponents() error {
 	}
 	w.apiClient = communication.NewAPIClient(&w.config.Backend, w.logger)
 	w.progressReporter = communication.NewProgressReporter(w.apiClient, w.id, w.logger)
-	w.browserPool, err = browser.NewPool(&w.config.Browser, w.logger)
+	// Phase 154 / ENGINE-01：1 Chrome + N page。浏览器侧并发页面数由
+	// 合并后的单一配置驱动（worker.max_concurrency）。
+	w.config.Browser.MaxConcurrency = w.config.Worker.MaxConcurrency
+	w.browserManager, err = browser.NewManager(&w.config.Browser, w.logger)
 	if err != nil {
-		return fmt.Errorf("init browser pool failed: %w", err)
+		return fmt.Errorf("init browser manager failed: %w", err)
 	}
-	w.engine = executor.NewEngine(&w.config.Executor, &w.config.Worker, w.browserPool, w.progressReporter, w.logger, w.redisClient.GetClient())
+	// 旧键兼容告警（ENGINE-01：browser.max_pages 已合并）。
+	for _, warning := range w.config.Warnings {
+		w.logger.Warn(warning)
+	}
+	w.engine = executor.NewEngine(&w.config.Executor, &w.config.Worker, w.browserManager, w.progressReporter, w.logger, w.redisClient.GetClient())
+
+	// Phase 155 / LIVEVIEW-01/02/03/05：实时画面会话表。帧与审计走 APIClient
+	// 的 HTTP 上行（复用既有 communication 出口），下行指令走 Redis PubSub。
+	// 引擎在 Acquire 后 Attach、动作边界走闸门、Release 前 Detach。
+	w.liveView = liveview.NewHub(&w.config.LiveView, w.apiClient, w.apiClient, w.logger)
+	w.engine.SetLiveViewHub(w.liveView)
+	if w.config.LiveView.Enabled {
+		w.logger.Info("liveview hub initialized",
+			logger.Int("max_streams", w.liveView.MaxStreams()),
+			logger.String("default_mode", w.config.LiveView.DefaultMode),
+			logger.Int("max_width", w.config.LiveView.MaxWidth),
+			logger.Int("quality", w.config.LiveView.Quality),
+			logger.Duration("idle_timeout", w.config.LiveView.IdleTimeout))
+	}
+
+	// Phase W6 / REC-01：录制与拾取会话表。上下行与 liveview 分离：
+	//   - 画面帧复用 liveview 帧通道（坐标系与可丢广播共用一套）
+	//   - 会话生命周期走 recording:session:* 独立频道
+	// 上行经 APIClient（HTTP + X-Worker-Token），与 liveview 同款处置。
+	w.recordingHub = recording.NewHub(&w.config.Recording, w.apiClient, w.logger)
+	if w.config.Recording.Enabled {
+		w.logger.Info("recording hub initialized",
+			logger.Int("max_sessions", w.recordingHub.MaxSessions()),
+			logger.Duration("idle_timeout", w.recordingHub.IdleTimeout()))
+	}
 
 	// 初始化任务拆分器（混合模式）
 	if w.config.Worker.HybridMode.Enabled {
@@ -201,6 +248,22 @@ func (w *Worker) Start() error {
 	// Start scale command processor
 	w.wg.Add(1)
 	go w.processScaleCommands()
+
+	// Phase 153 / RUNTIME-03：取消指令监听
+	w.wg.Add(1)
+	go w.cancelCommandListener()
+
+	// Phase 155 / LIVEVIEW：实时画面下行指令监听（watch/stop/input/takeover/...）
+	w.wg.Add(1)
+	go w.liveViewCommandListener()
+
+	// Phase W6 / REC-01：录制会话下行指令监听（start/stop/pick/keepalive/abort）
+	w.wg.Add(1)
+	go w.recordingCommandListener()
+
+	// Phase W6 / REC-01：录制状态周期上报（让前端显示「正在录制」）
+	w.wg.Add(1)
+	go w.recordingPollLoop()
 
 	if w.config.Monitor.HealthEnabled {
 		w.wg.Add(1)
@@ -313,11 +376,12 @@ func (w *Worker) sendHeartbeat() {
 	}
 
 	req := &types.WorkerHeartbeatRequest{
-		WorkerID:      w.id,
-		CurrentTasks:  currentTasks,
-		TotalExecuted: int(w.tasksCompleted),
-		TotalFailed:   int(w.tasksFailed),
-		Status:        status,
+		WorkerID:            w.id,
+		CurrentTasks:        currentTasks,
+		TotalExecuted:       int(w.tasksCompleted),
+		TotalFailed:         int(w.tasksFailed),
+		Status:              status,
+		RunningExecutionIDs: w.runningExecutionIDs(), // RUNTIME-01：心跳补归属
 	}
 	if err := w.apiClient.Heartbeat(w.ctx, req); err != nil {
 		w.logger.Error("heartbeat failed", logger.Err(err))
@@ -397,6 +461,9 @@ func (w *Worker) executeTask(task *types.TaskMessage, messageID string) {
 		logger.String("task_id", task.TaskID))
 
 	ctx, cancel := context.WithTimeout(w.ctx, w.config.Worker.TaskTimeout)
+	// RUNTIME-03：登记取消句柄，cancelCommandListener 可按 executionID 取消
+	w.registerCancel(task.ExecutionID, cancel)
+	defer w.unregisterCancel(task.ExecutionID)
 	defer cancel()
 
 	// 检查是否正在关闭
@@ -532,6 +599,80 @@ func (w *Worker) scaleCommandListener() {
 	}
 }
 
+// registerCancel RUNTIME-03：登记执行取消句柄（executeTask 进入时调用）。
+func (w *Worker) registerCancel(executionID string, cancel context.CancelFunc) {
+	w.activeCancelsMu.Lock()
+	defer w.activeCancelsMu.Unlock()
+	w.activeCancels[executionID] = cancel
+}
+
+// unregisterCancel 注销取消句柄（executeTask 退出时调用）。
+func (w *Worker) unregisterCancel(executionID string) {
+	w.activeCancelsMu.Lock()
+	defer w.activeCancelsMu.Unlock()
+	delete(w.activeCancels, executionID)
+}
+
+// runningExecutionIDs 当前运行中的执行 ID 快照（心跳归属回写用）。
+func (w *Worker) runningExecutionIDs() []string {
+	w.activeCancelsMu.Lock()
+	defer w.activeCancelsMu.Unlock()
+	ids := make([]string, 0, len(w.activeCancels))
+	for id := range w.activeCancels {
+		ids = append(ids, id)
+	}
+	return ids
+}
+
+// cancelCommandListener Phase 153 / RUNTIME-03：订阅 execution:cancel:*，
+// 收到后 cancel 对应执行的 ctx —— 引擎在下一个动作边界停止并以
+// cancelled 终态上报（不会以 success 覆盖）。
+func (w *Worker) cancelCommandListener() {
+	defer w.wg.Done()
+
+	pubsub, err := w.redisClient.SubscribeExecutionCancel(w.ctx)
+	if err != nil {
+		w.logger.Error("subscribe execution cancel failed", logger.Err(err))
+		return
+	}
+	defer pubsub.Close()
+
+	for {
+		select {
+		case <-w.ctx.Done():
+			return
+		case <-w.shutdownSignal:
+			return
+		case msg := <-pubsub.Channel():
+			if msg == nil || msg.Payload == "" {
+				continue
+			}
+			// 频道 execution:cancel:{executionID}
+			executionID := strings.TrimPrefix(msg.Channel, "execution:cancel:")
+			if executionID == "" {
+				continue
+			}
+
+			w.activeCancelsMu.Lock()
+			cancelFn, ok := w.activeCancels[executionID]
+			w.activeCancelsMu.Unlock()
+
+			if !ok {
+				w.logger.Debug("cancel for unknown/finished execution, ignored",
+					logger.String("execution_id", executionID))
+				continue
+			}
+
+			var payload map[string]interface{}
+			_ = json.Unmarshal([]byte(msg.Payload), &payload)
+			w.logger.Warn("execution cancel received, cancelling context",
+				logger.String("execution_id", executionID),
+				logger.String("reason", fmt.Sprintf("%v", payload["reason"])))
+			cancelFn()
+		}
+	}
+}
+
 // processScaleCommands processes scale commands
 func (w *Worker) processScaleCommands() {
 	defer w.wg.Done()
@@ -604,6 +745,11 @@ func (w *Worker) scaleUp(targetConcurrency int, reason string) error {
 
 	oldValue := w.maxConcurrency
 	w.maxConcurrency = targetConcurrency
+	// Phase 154 / ENGINE-01：并发页面数上调必须同步到浏览器管理器，
+	// 否则池容量仍停在旧值，扩容只改了消费循环的计数（空放）。
+	if w.browserManager != nil {
+		w.browserManager.SetCapacity(targetConcurrency)
+	}
 
 	w.logger.Info("scaled up",
 		logger.Int("from", oldValue),
@@ -644,6 +790,9 @@ func (w *Worker) scaleDown(targetConcurrency int, reason string) error {
 
 	oldValue := w.maxConcurrency
 	w.maxConcurrency = targetConcurrency
+	if w.browserManager != nil {
+		w.browserManager.SetCapacity(targetConcurrency)
+	}
 
 	w.logger.Info("scaled down",
 		logger.Int("from", oldValue),
@@ -690,7 +839,16 @@ func (w *Worker) waitForShutdown() {
 // cleanup cleanup resources
 func (w *Worker) cleanup() error {
 	var errs []error
-	if err := w.browserPool.Close(); err != nil {
+	// Phase 155 / LIVEVIEW：先停所有实时画面流（只 stopScreencast，不关 page），
+	// 再由 browserManager.Close 回收 page 与 Chrome（154 生命周期语义不破）。
+	if w.liveView != nil {
+		w.liveView.Close()
+	}
+	// Phase W6 / REC-01：中止全部录制会话（释放它们持有的页面）。
+	if w.recordingHub != nil {
+		w.recordingHub.Close()
+	}
+	if err := w.browserManager.Close(); err != nil {
 		errs = append(errs, err)
 	}
 	if err := w.redisClient.Close(); err != nil {

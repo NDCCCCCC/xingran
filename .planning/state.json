@@ -1,12 +1,12 @@
 {
   "contract": "1.0.0",
   "flavor": "core",
-  "milestone": "v1.56",
+  "milestone": "v1.56 — RPA 员工自助自动化（code-complete · verification-pending）",
   "phases": [],
   "next": {
-    "command": "/gsd-new-milestone",
-    "label": "v1.56 候选（进行中 / 未正式立项）",
-    "reason": "CHANGELOG [Unreleased] 已登记 v1.56 候选（备份恢复 / 设置页收敛）；v156-MILESTONE-DRAFT.md 为草案、尚未跑 /gsd-new-milestone。当前状态口径见 STATE.md frontmatter 与 notes/SHIPPED-DEFINITION.md"
+    "command": "UAT 清偿（158-SUMMARY §6 的 9 项）或 /gsd-ship 评估",
+    "label": "v1.56 收尾",
+    "reason": "7 Phase 全部执行完毕且闸门全绿；真实环境验收证据（生产 PG / 真机 VDI / Worker 集群）未落盘，不满足 SHIPPED 判定"
   },
-  "updated_at": "2026-11-12T10:22:14.000Z"
+  "updated_at": "2026-11-25T12:40:00.000Z"
 }

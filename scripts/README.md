@@ -63,21 +63,17 @@ export DB_NAME=xingran
 
 ## 各子目录说明
 
-### 构建脚本（顶层 + `build/` 子目录）
+### 构建脚本（顶层）
 
-`bat`/`sh` 配对，覆盖 Windows / Linux（macOS 通常也能跑 `.sh`）。`scripts/build/` 下脚本用 `%~dp0..\..`、`scripts/` 顶层脚本用 `%~dp0..` / `dirname/..` 各自上溯到项目根，可从任意 cwd 调用（两者层级不同，不可一概而论）。**产物统一 `out/`**（见上文「构建产物路径」）。
+两个构建入口均产出**前后端一体化** Linux 产物（`-tags=embed`，前端已嵌入，与 CI deploy.yml 同形态），并自动注入/递增版本号（VERSION 机制见 `scripts/build/bump-version.mjs`）。**产物统一 `out/`**（见上文「构建产物路径」）。
 
 ```bash
 # scripts/ 顶层（产物 out/）
-./build-linux.bat [root]     # 内嵌前端 Linux（VITE_BASE 切换）
-./build_linux.sh             # 纯后端 Linux
-./build-embedded.bat         # 内嵌前端 Windows
-./build-embedded.sh          # 内嵌前端 Linux
+./build-linux.bat [root]     # 权威入口：Windows 上构建 Linux（VITE_BASE 切换 /xingran|root）
+./build_linux.sh             # Linux 本机构建（dist 缺失自动补建 + 产物 embed 自检）
 
-# scripts/build/ 子目录（产物 out/）
+# scripts/build/ 子目录
 cd scripts/build
-./build.bat                  # 纯后端 Linux
-./build_and_deploy.bat       # 纯后端 Linux + 部署说明
 ./generate_swagger.bat       # Swagger 生成（Windows）
 ```
 
@@ -136,11 +132,21 @@ go test ./tests/e2e/...
 
 从 `cmd/` 迁入的 13 个一次性 Go CLI（`package main`，仍被 `go build ./...` 覆盖）：`cleanup_port_status`、`diag_4f001_red`、`mac_*`（6 个）、`reset-ad-breaker`、`verify-*`（4 个）。用法：`go run ./scripts/ops/<name>/`。**新增一次性工具一律放这里，不要放 `cmd/`**（`cmd/` 只保留 `main.go` 与 `agent/`）。
 
+**W7.1（2026-11-27）RPA 动作类型工具集**（缺陷 A 取证与根治，均受 `.planning/phases/w7.1-action-alias-and-gate/W7.1-SUMMARY.md` 约束）：
+
+| 目录 | 用途 | 只读? |
+|------|------|-------|
+| `rpa_action_type_census` | 普查 `sys_rpa_tasks.script` 里各动作 `type` 的存量写法（输出 `ALIAS_SET=`），**新增别名前必须先跑它取证** | 只读 |
+| `rpa_goto_task_dump` | 把带别名的任务脚本原样导出到 `out/rpa-goto-tasks.json`（供 UAT 用例喂真引擎，数据不改） | 只读 |
+| `rpa_navigate_task_dump` | 核查 `navigate` 动作的 URL 键位分布（`params.url` vs `value`），决定是否还需键位提升 | 只读 |
+| `rpa_action_alias_migrate` | 对指定库执行 migration 261（复用 `migrations.Migrate261RPActionTypeAliasNormalize`，幂等） | 幂等写 |
+
+
 ### 顶层在用脚本（登记）
 
 | 文件 | 用途 |
 |------|------|
-| `build-embedded.bat/.sh`、`build-linux.bat`、`build_linux.sh` | 本地构建（产物统一 `out/`） |
+| `build-linux.bat`、`build_linux.sh` | 本地构建（前后端一体化 embed，产物统一 `out/`） |
 | `check-route-registry.mjs`、`scan-routes.cjs`、`route-registry.json` | 路由注册表门禁 |
 | `check-frontend-api-urls.mjs`、`frontend-url-exemptions.json` | 前端 API URL ↔ 后端路由交叉校验（读 route-registry.json，消费方 scripts/frontend-url-exemptions.json 为豁免登记，reason 必填） |
 | `check-status-literals.sh` | 状态字面量门禁 |

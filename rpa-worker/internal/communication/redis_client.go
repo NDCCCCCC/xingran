@@ -133,3 +133,49 @@ func (r *RedisClient) Close() error {
 func (r *RedisClient) GetClient() *redis.Client {
 	return r.client
 }
+
+// SubscribeExecutionCancel Phase 153 / RUNTIME-03：订阅取消指令（模式匹配，
+// 后端发布 execution:cancel:{executionID}）。与 scaleCommandListener 同族
+// 的 Pub/Sub 先例。返回 pubsub 由调用方 Close。
+func (r *RedisClient) SubscribeExecutionCancel(ctx context.Context) (*redis.PubSub, error) {
+	pubsub := r.client.PSubscribe(ctx, "execution:cancel:*")
+	if _, err := pubsub.Receive(ctx); err != nil {
+		pubsub.Close()
+		return nil, fmt.Errorf("subscribe execution cancel failed: %w", err)
+	}
+	r.logger.Info("subscribed to execution cancel channel", logger.String("pattern", "execution:cancel:*"))
+	return pubsub, nil
+}
+
+// SubscribeLiveView Phase 155 / LIVEVIEW-01/02：订阅实时画面下行指令
+// （watch/stop/input/takeover/release/mode/keepalive/continue/abort）。
+//
+// 与 SubscribeExecutionCancel 同族：模式订阅一次覆盖所有执行，频道名
+// execution:liveview:{executionId}，调用方从 Channel 反解 executionID。
+func (r *RedisClient) SubscribeLiveView(ctx context.Context) (*redis.PubSub, error) {
+	pubsub := r.client.PSubscribe(ctx, types.LiveViewPattern)
+	if _, err := pubsub.Receive(ctx); err != nil {
+		pubsub.Close()
+		return nil, fmt.Errorf("subscribe liveview failed: %w", err)
+	}
+	r.logger.Info("subscribed to liveview channel", logger.String("pattern", types.LiveViewPattern))
+	return pubsub, nil
+}
+
+// SubscribeRecording Phase W6 / REC-01：订阅录制会话下行指令
+// （start/stop/pick/keepalive/abort）。
+//
+// 与 SubscribeLiveView 同族：模式订阅一次覆盖所有会话，频道名
+// recording:session:{sessionId}，调用方从 Channel 反解 sessionID。
+//
+// 注意：录制会话的**画面帧**不在此通道上 —— 帧复用 liveview 帧通道
+// （execution:liveview:{sessionId}），坐标系与可丢广播语义共用一套。
+func (r *RedisClient) SubscribeRecording(ctx context.Context) (*redis.PubSub, error) {
+	pubsub := r.client.PSubscribe(ctx, types.RecordingSessionPattern)
+	if _, err := pubsub.Receive(ctx); err != nil {
+		pubsub.Close()
+		return nil, fmt.Errorf("subscribe recording failed: %w", err)
+	}
+	r.logger.Info("subscribed to recording channel", logger.String("pattern", types.RecordingSessionPattern))
+	return pubsub, nil
+}

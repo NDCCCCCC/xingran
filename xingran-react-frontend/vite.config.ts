@@ -108,8 +108,20 @@ export default defineConfig(({ mode }) => {
   // process.env 优先（CI `APP_VERSION=v1.56.0 npm run build` 直接覆盖），
   // 其次 loadEnv 读取的 .env 文件；都没有则回落 "dev"。
   // Release 口径与后端 -ldflags -X main.Version 使用同一个版本号。
+  // 兜底：仓库根 VERSION 文件（scripts/build/bump-version.mjs 维护，构建成功后 patch+1）
+  const versionFromFile = (() => {
+    try {
+      return fs.readFileSync(path.resolve(__dirname, "..", "VERSION"), "utf8").trim();
+    } catch {
+      return "";
+    }
+  })();
   const appVersion =
-    process.env.APP_VERSION || process.env.VITE_APP_VERSION || env.VITE_APP_VERSION || "dev";
+    process.env.APP_VERSION ||
+    process.env.VITE_APP_VERSION ||
+    env.VITE_APP_VERSION ||
+    versionFromFile ||
+    "dev";
 
   return {
     base,

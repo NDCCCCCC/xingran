@@ -73,6 +73,9 @@ var ActiveMigrations = []struct {
 	// 两分支已注册但漏入本清单，MissingRecords 会把它们误判为 Extra）。
 	{244, "monitor_permission_f_type_seed"},
 	{245, "rpa_permission_f_type_seed"},
+	// Phase 155 / LIVEVIEW-04：RPA 实时画面页面菜单（C 型，父=「RPA 管理」）。
+	// 按维护约定同步登记（PG + sqlite 两分支都已调用）。
+	{255, "rpa_liveview_menu"},
 	{246, "backup_remove_permission_f_type_seed"},
 	{247, "misc_rbac_f_type_seed"},
 	// 工单分类读权限载体：补 ops:workorder:category:list 的 status=0 F 行
@@ -84,6 +87,19 @@ var ActiveMigrations = []struct {
 	// v1.57：端口写审计名称快照列 + 历史回填（审计页 UUID → 名称二期）。
 	// 按维护约定同步登记。
 	{254, "port_write_audit_name_snapshot"},
+	// Phase 158 / CLEANUP-01~02：RPA 批量执行项报告表（sys_rpa_batch_item_reports，
+	// 取代 100/95/5 假常量）+ sys_rpa_schedules 补建 + 调度 4 权限码 F 型播种。
+	// 按维护约定同步登记（PG + sqlite 两分支都已调用）。
+	{257, "rpa_batch_report_and_schedule_perm"},
+	// Phase 158 / REC-02：RPA 定时调度页面菜单（C 型，父=「RPA 管理」，order=18）。
+	// 归属协议第 6 条：schedules 页面只走 sys_menu seed 注册，前端不改
+	// componentLoader/DynamicRoutes。不扩权限面（调度 4 权限码由 257 播种）。
+	// 按维护约定同步登记（PG + sqlite 两分支都已调用）。
+	{258, "rpa_schedule_menu"},
+	// W7.1 / 缺陷 A：sys_rpa_tasks.script 动作类型别名归一化（goto/url → navigate）。
+	// 生产库实证 6 个 goto 任务；worker 侧 alias 归一化是兜底，本迁移是根治。
+	// 按维护约定同步登记（PG + sqlite 两分支都已调用）。
+	{261, "rpa_action_type_alias_normalize"},
 }
 
 // ReconcileResult 对账结果：registry 与库内 sys_schema_migrations 记录的差异。

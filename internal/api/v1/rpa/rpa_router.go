@@ -21,7 +21,12 @@ func workerAuthConfig(core *core.Core) (rpa.WorkerTokenService, bool) {
 // SetupPublicWorkerRouter 设置公开的 Worker 路由（不需要认证）
 func SetupPublicWorkerRouter(r *gin.RouterGroup, core *core.Core) {
 	// Phase 103 CONV-03 (D-103-20): 第 6 参数注入 base.CacheProvider
-	services := rpa.NewServiceGroup(core.GetDB(), core.Config, core.NoticeHub, core.Cache, nil, system.NewCacheProvider(core.DataCacheService))
+	// CONTRACT-01（D1）: 第 5 参 passwordCipher 必须注入 core.SM4Cipher。
+	// 历史传 nil → CredentialService 的加解密辅助方法 nil 解引用 panic，
+	// 凭证创建/更新必然 500。core 在 initSM4Cipher 阶段已构造该 cipher
+	// （security.sm4Key 缺失时 core.SM4Cipher 为 nil，服务层将返回
+	// 「凭证加密器未配置」可读错误，而不是 panic）。
+	services := rpa.NewServiceGroup(core.GetDB(), core.Config, core.NoticeHub, core.Cache, core.SM4Cipher, system.NewCacheProvider(core.DataCacheService))
 	tokenSvc, required := workerAuthConfig(core)
 	handler := NewWorkerHandler(services.WorkerService, core).WithTokenService(tokenSvc)
 
@@ -34,6 +39,20 @@ func SetupPublicWorkerRouter(r *gin.RouterGroup, core *core.Core) {
 	workerGuard := middleware.WorkerAuth(tokenSvc, required)
 	r.POST("/workers/:id/heartbeat", workerGuard, handler.Heartbeat)
 	r.POST("/workers/progress", middleware.WorkerAuth(tokenSvc, required), handler.Progress)
+
+	// Phase 155 / LIVEVIEW-01/05：实时画面的 Worker 上行端点（帧 + 审计）。
+	// 与 heartbeat/progress 同一处置：WorkerAuth 而非用户权限码（Worker 不是用户，
+	// 无 RBAC 主体）。scan-routes 会把本组登记为无权限码，与既有 worker 组一致。
+	liveHandler := NewLiveViewHandler(services.LiveViewService, services.ExecutionService).WithCore(core)
+	r.POST("/workers/liveview/frame", middleware.WorkerAuth(tokenSvc, required), liveHandler.IngestWorkerFrame)
+	r.POST("/workers/liveview/event", middleware.WorkerAuth(tokenSvc, required), liveHandler.IngestWorkerAudit)
+
+	// Phase W6 / REC-01：录制会话的 Worker 上行端点（状态 / 产出 / 拾取结果）。
+	// 处置与 liveview 上行完全一致（WorkerAuth 而非用户权限码）。
+	recordingHandler := NewRecordingHandler(services.RecordingService)
+	r.POST("/workers/recording/status", middleware.WorkerAuth(tokenSvc, required), recordingHandler.IngestWorkerStatus)
+	r.POST("/workers/recording/result", middleware.WorkerAuth(tokenSvc, required), recordingHandler.IngestWorkerResult)
+	r.POST("/workers/recording/pick", middleware.WorkerAuth(tokenSvc, required), recordingHandler.IngestWorkerPick)
 }
 
 // SetupRPARouter 设置 RPA 路由（统一入口）
@@ -46,9 +65,19 @@ func SetupPublicWorkerRouter(r *gin.RouterGroup, core *core.Core) {
 // flow 组已下线（2026-11-11）：7 端点为执行引擎内部能力直接暴露（条件评估/
 // 数据映射/错误处理），前端零调用、不应公开暴露；内部消费方走 service 层直调，
 // 不经 HTTP。原 SetupFlowRouter 与其注册一并移除。
+//
+// Phase 158 / CLEANUP-03：flow 组的服务端实现（flow_handler.go /
+// data_mapper.go / error_handling.go / flow_control.go）经 grep 取证确认
+// 零非测试调用方后整体删除 —— 它们是「接口齐全但无人调用」的死代码，
+// 与本注释描述的「已下线」状态一致（此前只下线了路由，实现仍留在仓库）。
 func SetupRPARouter(r *gin.RouterGroup, core *core.Core) {
 	// Phase 103 CONV-03 (D-103-20): 第 6 参数注入 base.CacheProvider
-	services := rpa.NewServiceGroup(core.GetDB(), core.Config, core.NoticeHub, core.Cache, nil, system.NewCacheProvider(core.DataCacheService))
+	// CONTRACT-01（D1）: 第 5 参 passwordCipher 必须注入 core.SM4Cipher。
+	// 历史传 nil → CredentialService 的加解密辅助方法 nil 解引用 panic，
+	// 凭证创建/更新必然 500。core 在 initSM4Cipher 阶段已构造该 cipher
+	// （security.sm4Key 缺失时 core.SM4Cipher 为 nil，服务层将返回
+	// 「凭证加密器未配置」可读错误，而不是 panic）。
+	services := rpa.NewServiceGroup(core.GetDB(), core.Config, core.NoticeHub, core.Cache, core.SM4Cipher, system.NewCacheProvider(core.DataCacheService))
 	excelService := rpa.NewRPAExcelService(core.GetDB())
 
 	// 任务路由
@@ -65,6 +94,19 @@ func SetupRPARouter(r *gin.RouterGroup, core *core.Core) {
 
 	// AI 辅助路由
 	SetupAIRouter(r.Group("/ai"), NewAIHandler(services.AIService).WithCore(core), core)
+
+	// Phase 155 / LIVEVIEW-01~05：实时画面端点组（在 /executions 前缀下追加
+	// /:id/liveview/* 子组；尾追加不改既有执行路由行，归属协议第 6 条）。
+	SetupLiveViewRouter(r.Group("/executions"), services, core)
+
+	// Phase 158 / CLEANUP-02：定时调度端点组（尾追加，不改既有行 —— ROADMAP
+	// 「文件面漏项补登」要求本 phase 补上此前漏登的 Schedule CRUD 路由注册）。
+	// sys_rpa_schedules 此前零服务零 API（D18），本组补齐 CRUD + 触发 + 启停。
+	SetupScheduleRouter(r.Group("/schedules"), services, core)
+
+	// Phase W6 / REC-01：录制与拾取会话端点组（尾追加，不改既有行 —— 归属协议第 1 条）。
+	// 画面帧复用 155 liveview 帧通道；本组只承载会话生命周期与产出查询。
+	SetupRecordingRouter(r.Group("/recordings"), services, core)
 }
 
 // SetupTaskRouter 设置任务路由（读端点 ANY-of ops:rpa:task:list；写端点 strict 单码）
@@ -118,6 +160,10 @@ func SetupExecutionRouter(r *gin.RouterGroup, handler *ExecutionHandler, core *c
 	r.GET("/:id/batch-report", middleware.RequirePermissions([]string{string(permission.RpaExecutionList)}, core), handler.GetBatchReport)
 	r.GET("/:id/human-intervention", middleware.RequirePermissions([]string{string(permission.RpaExecutionList)}, core), handler.RequestHumanIntervention)
 	r.POST("/:id/human-intervention", middleware.RequirePermissions([]string{string(permission.RpaExecutionList)}, core), handler.SubmitHumanIntervention)
+
+	// Phase 155 / LIVEVIEW-01~05：实时画面端点组由 SetupLiveViewRouter 注册
+	// （见 liveview_router.go，在 SetupRPARouter 内对同一 /executions 前缀追加
+	// /:id/liveview/* 子组）。此处不挂载，保持本函数的既有行不变。
 }
 
 // SetupAIRouter 设置 AI 辅助路由（11 端点统一 strict rpa:ai:use；逐行显式挂载

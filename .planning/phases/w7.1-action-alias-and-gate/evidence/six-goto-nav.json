@@ -1,0 +1,80 @@
+[
+  {
+    "id": "a0a6fc75-f6ed-49b2-b739-b1b8a6ba6be5",
+    "name": "百度搜索结果提取测试",
+    "aliasRaw": "goto",
+    "navTypeAfterFix": "navigate",
+    "navUrlParamsPushed": true,
+    "status": "success",
+    "elapsedMs": 1380,
+    "pageUrl": "https://www.baidu.com/",
+    "hostMatched": true,
+    "screenshot": "..\\..\\..\\out\\w71-evidence\\01-a0a6fc75.png",
+    "netBlocked": false
+  },
+  {
+    "id": "0b9e835c-4bb7-4bac-9140-50ee9aa34eb0",
+    "name": "多字段表单填写测试",
+    "aliasRaw": "goto",
+    "navTypeAfterFix": "navigate",
+    "navUrlParamsPushed": true,
+    "status": "success",
+    "elapsedMs": 2797,
+    "pageUrl": "https://github.com/signup",
+    "hostMatched": true,
+    "screenshot": "..\\..\\..\\out\\w71-evidence\\02-0b9e835c.png",
+    "netBlocked": false
+  },
+  {
+    "id": "bee8f1a3-8641-4994-b4fd-ea50fd5f36e6",
+    "name": "循环批量搜索测试",
+    "aliasRaw": "goto",
+    "navTypeAfterFix": "navigate",
+    "navUrlParamsPushed": true,
+    "status": "success",
+    "elapsedMs": 1011,
+    "pageUrl": "https://www.baidu.com/",
+    "hostMatched": true,
+    "screenshot": "..\\..\\..\\out\\w71-evidence\\03-bee8f1a3.png",
+    "netBlocked": false
+  },
+  {
+    "id": "26a2e233-6e6c-4520-8a3d-7586b9cb2cc2",
+    "name": "条件判断与分支测试",
+    "aliasRaw": "goto",
+    "navTypeAfterFix": "navigate",
+    "navUrlParamsPushed": true,
+    "status": "success",
+    "elapsedMs": 251,
+    "pageUrl": "https://www.baidu.com/",
+    "hostMatched": true,
+    "screenshot": "..\\..\\..\\out\\w71-evidence\\04-26a2e233.png",
+    "netBlocked": false
+  },
+  {
+    "id": "583ff33a-f958-4612-86b0-2eb2d33dd5f8",
+    "name": "页面导航与滚动测试",
+    "aliasRaw": "goto",
+    "navTypeAfterFix": "navigate",
+    "navUrlParamsPushed": true,
+    "status": "success",
+    "elapsedMs": 252,
+    "pageUrl": "https://www.baidu.com/",
+    "hostMatched": true,
+    "screenshot": "..\\..\\..\\out\\w71-evidence\\05-583ff33a.png",
+    "netBlocked": false
+  },
+  {
+    "id": "91df86ab-3691-4655-8e19-2e6bc52efc0c",
+    "name": "综合端到端业务流程测试",
+    "aliasRaw": "goto",
+    "navTypeAfterFix": "navigate",
+    "navUrlParamsPushed": true,
+    "status": "success",
+    "elapsedMs": 248,
+    "pageUrl": "https://www.baidu.com/",
+    "hostMatched": true,
+    "screenshot": "..\\..\\..\\out\\w71-evidence\\06-91df86ab.png",
+    "netBlocked": false
+  }
+]

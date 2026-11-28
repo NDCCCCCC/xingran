@@ -71,6 +71,8 @@ const ENCRYPTION_BLACKLIST: string[] = [
   "/system/auth/captcha",
   "/system/auth/encryption-config", // 防止无限循环：加密配置端点本身不能被加密
   "/upload",
+  "/system/branding/public", // 免认证公开读取，登录前调用
+  "/system/branding/logo", // multipart 上传（上传分支另有 FormData 判定）
 ];
 
 // Token 认证白名单（不需要 Token 的 API）
@@ -79,6 +81,9 @@ const AUTH_WHITELIST: string[] = [
   "/system/auth/public-key",
   "/system/auth/captcha",
   "/system/auth/refresh", // 刷新 Token 接口本身不需要 AccessToken
+  // 站点品牌公开端点：登录页渲染前就需拉取，此时必然没有 token
+  "/system/branding/public",
+  "/system/branding/logo",
 ];
 
 // 需要更长超时时间的接口
@@ -253,7 +258,13 @@ api.interceptors.request.use(
 
     config.headers.set("X-Request-ID", generateRequestId());
 
-    if (config.data && shouldEncryptRequest(config.url || "", config.method || "")) {
+    // FormData（文件上传）不走请求体加密：JSON.stringify(FormData) 会得到 "{}"，
+    // 加密后文件内容丢失；后端 RequestDecryption 对 multipart/form-data 也是直接跳过。
+    if (
+      config.data &&
+      !(config.data instanceof FormData) &&
+      shouldEncryptRequest(config.url || "", config.method || "")
+    ) {
       try {
         const publicKey = await fetchPublicKey();
         const sm4KeyHex = generateSM4Key();

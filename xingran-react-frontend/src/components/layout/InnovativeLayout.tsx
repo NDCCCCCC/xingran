@@ -9,6 +9,7 @@ import { useNavigate } from "react-router-dom";
 import LayoutSwitcher from "@/design-system/components/LayoutSwitcher";
 import DensitySwitcher from "@/design-system/components/DensitySwitcher";
 import { useAuthStore } from "@/store/authStore";
+import { useBrandStore } from "@/store/brandStore";
 import { DASHBOARD, MONITOR_DASHBOARD, LOGIN } from "@/constants/routes";
 import {
   DashboardOutlined,
@@ -129,6 +130,8 @@ const createSpaceIconStyles = (isActive: boolean, color: string) => ({
 
 const InnovativeLayout: FC<InnovativeLayoutProps> = ({ children }) => {
   const navigate = useNavigate();
+  // 品牌文案：brandStore（App 启动已拉取；失败=DEFAULT_BRANDING 兜底）
+  const brand = useBrandStore((s) => s.config);
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
   const [activeSpace, setActiveSpace] = useState<string>("dashboard");
@@ -237,7 +240,7 @@ const InnovativeLayout: FC<InnovativeLayoutProps> = ({ children }) => {
                 color: "var(--theme-text-secondary)",
               }}
             >
-              XingRan-Next
+              {brand.siteName}
             </span>
           </Space>
 

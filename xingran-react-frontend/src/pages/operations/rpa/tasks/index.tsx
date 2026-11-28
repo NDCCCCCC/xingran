@@ -15,12 +15,20 @@ import { usePagination } from "@/hooks/usePagination";
 import { handleSuccess as showSuccessMessage } from "@/utils/errorHandler";
 import { getTaskColumns } from "./columns";
 import { TaskEditModal } from "./modals";
+// Phase 156 / NOCODE-04：新增任务走三步向导
+import { TaskWizard } from "../wizard/TaskWizard";
+import type { WizardDraft } from "../wizard/payload";
+import { toTaskPayload } from "../wizard/payload";
+import type { Action } from "@/types/rpa";
 import { post } from "@/lib/api";
+// Phase W6 / REC-01：录制面板（录制/拾取会话的前端入口）
+import { RecordingPanel } from "../recording/RecordingPanel";
 // Phase 71 (W3)：裸 Input/Select → 契约组件。
 // 任务状态为固定枚举（业务禁搜）→ children 改写 options + showSearch={false}。
-// 注意：搜索区这组值是「执行态」字符串（pending/running/completed/failed/cancelled），
-// 与 constants.tsx 里 TASK_STATUS_OPTIONS（0/1/2 草稿/启用/禁用）和
-// EXECUTION_STATUS_OPTIONS（success 而非 completed）都不同，故就地命名保留原值。
+// CONTRACT-02：任务页筛选必须筛「任务态」——与后端 TaskListParams.Status
+// (*rpamodels.TaskStatus，0=启用 / 1=停用) 同构。历史这里是执行态字符串
+// （pending/running/completed/failed/cancelled），后端 Status 是 *int → 请求体
+// 直接 unmarshal 失败 400（D2 实证 "cannot unmarshal string into ... status of type int"）。
 import { AppInput, AppSelect } from "@/components/ui";
 import { useActionPermission } from "@/components/shared/useActionPermission";
 import FilterBar from "@/components/shared/FilterBar";
@@ -28,13 +36,11 @@ import { PERMISSION_CODES } from "@/constants/permissionCodes";
 
 const { Content } = Layout;
 
-// 搜索区任务状态（沿用本页原有值，勿与 constants.tsx 的两组枚举混用）
+// 搜索区任务状态：任务态 0/1（启用/停用），与后端 TaskStatus 枚举同构。
+// 数值必须保持 number —— 传字符串会被后端 binding 拒绝（CONTRACT-02）。
 const TASK_SEARCH_STATUS_OPTIONS = [
-  { label: "等待中", value: "pending" },
-  { label: "运行中", value: "running" },
-  { label: "已完成", value: "completed" },
-  { label: "失败", value: "failed" },
-  { label: "已取消", value: "cancelled" },
+  { label: "启用", value: 0 },
+  { label: "停用", value: 1 },
 ];
 
 const TaskManagement: FC = () => {
@@ -100,6 +106,16 @@ const TaskManagement: FC = () => {
   );
 
   const [executeLoading, setExecuteLoading] = useState(false);
+
+  // Phase 156 / NOCODE-04：「新增任务」改为打开三步向导（不再直接弹编辑器）。
+  // 归属协议补登项：tasks/index.tsx:212-223 的「新增任务」按钮改开向导。
+  // 编辑器仍保留（编辑既有任务时使用），只是「新增」走更友好的向导路径。
+  const [wizardOpen, setWizardOpen] = useState(false);
+
+  // Phase W6 / REC-01：录制面板开关（向导第 1 步「录一段操作」的真按钮）。
+  const [recordingOpen, setRecordingOpen] = useState(false);
+  // 录制产物回填给向导（第 2 步步骤列表的直接来源）。
+  const [recordedActions, setRecordedActions] = useState<Action[]>([]);
 
   const refreshData = useCallback(() => {
     loadTasks();
@@ -210,16 +226,29 @@ const TaskManagement: FC = () => {
             actions={
               <Space>
                 {canAdd && (
-                  <Button
-                    type="primary"
-                    icon={<PlusOutlined />}
-                    onClick={() => {
-                      handleAdd();
-                      setModalVisible(true);
-                    }}
-                  >
-                    新增任务
-                  </Button>
+                  <Space>
+                    {/* NOCODE-04：主入口走三步向导（一般员工路径） */}
+                    <Button
+                      type="primary"
+                      icon={<PlusOutlined />}
+                      data-testid="task-add-wizard"
+                      onClick={() => {
+                        setWizardOpen(true);
+                      }}
+                    >
+                      新增任务
+                    </Button>
+                    {/* 高级入口：直接开编辑器（熟悉动作配置的人用，保留既有能力） */}
+                    <Button
+                      data-testid="task-add-advanced"
+                      onClick={() => {
+                        handleAdd();
+                        setModalVisible(true);
+                      }}
+                    >
+                      高级新建
+                    </Button>
+                  </Space>
                 )}
               </Space>
             }
@@ -297,6 +326,72 @@ const TaskManagement: FC = () => {
           onOk={handleModalOk}
           onCancel={handleModalCancel}
         />
+
+        {/*
+          NOCODE-04：三步向导承载。
+          用 Modal（宽 900）而不是跳页：向导是「新建任务」的上下文内动作，
+          弹窗能保留用户原有的筛选/分页状态，关闭即回到列表，符合
+          Power Automate Desktop 的交互习惯。
+        */}
+        <Modal
+          open={wizardOpen}
+          onCancel={() => setWizardOpen(false)}
+          footer={null}
+          width={900}
+          destroyOnHidden
+          title="新建自动化任务"
+          data-testid="task-wizard-modal"
+        >
+          <TaskWizard
+            key={recordedActions.length > 0 ? "with-recording" : "fresh"}
+            initialActions={recordedActions.length > 0 ? recordedActions : undefined}
+            onSave={async (draft: WizardDraft) => {
+              await post("/rpa/tasks", toTaskPayload(draft));
+              showSuccessMessage("创建");
+              setWizardOpen(false);
+              refreshData();
+            }}
+            onCancel={() => setWizardOpen(false)}
+            onOpenAIGenerator={() => {
+              // 向导内部已自带 AI 生成器入口；此处仅作为无动作时的兜底提示
+              message.info("请在上方「用中文说」里点下一步，系统会打开智能生成");
+            }}
+            // Phase W6 / REC-01：「录制」从指引文案改为真按钮 → 打开录制面板。
+            // 录制完成（Worker 产出 actions 经后端落库）→ 直接填进第 2 步步骤列表。
+            onOpenRecorder={() => setRecordingOpen(true)}
+          />
+        </Modal>
+
+        {/*
+          Phase W6 / REC-01：录制面板承载。
+          独立 Modal（宽 1080）：录制画面需要更大的可视区域；关闭面板即中止会话
+          （面板卸载时 abort，后端闲置超时兜底回收执行机资源）。
+        */}
+        <Modal
+          open={recordingOpen}
+          onCancel={() => setRecordingOpen(false)}
+          footer={null}
+          width={1080}
+          destroyOnHidden
+          title="录制一段操作"
+          data-testid="recording-panel-modal"
+        >
+          <RecordingPanel
+            taskId={undefined}
+            targetUrl={undefined}
+            onFinish={(actions) => {
+              // REC-01 验收路径：停止 → actions 直接填进第 2 步步骤列表。
+              // 实现方式：暂存录制产物 → 关录制面板 → 重开向导（key 变化触发
+              // TaskWizard 重挂载，initialActions 通道把动作带回第 1 步预览，
+              // 员工点「下一步」即在步骤列表里核对）。
+              setRecordedActions(actions);
+              setRecordingOpen(false);
+              message.success(`录制完成，共整理出 ${actions.length} 个步骤`);
+              setWizardOpen(true);
+            }}
+            onCancel={() => setRecordingOpen(false)}
+          />
+        </Modal>
       </Content>
     </Layout>
   );

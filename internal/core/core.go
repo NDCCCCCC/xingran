@@ -401,6 +401,17 @@ func (c *Core) initCacheAndWarmUp() error {
 			applogger.Infof("[迁移] 209 菜单缓存已失效 (系统设置 component 路径变更)")
 		}
 
+		// 权限播种迁移（如 260 补 system:config 四码 F 型按钮 + 授权）配套的
+		// user 级菜单缓存失效：Redis 里 menu:user:perms:{userID} 有 30 分钟 TTL，
+		// 不失效的话即使新权限已落库，前端 /my-menus/permissions 仍返回旧快照，
+		// 用户看到"按钮灰着"，只能重新登录或等过期。此处只清 user-scoped 三个
+		// 前缀（菜单本体 tree/router/all 未变，无需连带失效）。
+		if c.DB != nil && c.DB.MenuPermissionChanged {
+			system.InvalidateUserMenuCacheByProvider(context.Background(),
+				system.NewCacheProvider(c.DataCacheService))
+			applogger.Infof("[迁移] 菜单权限播种后 user 级菜单/权限缓存已失效")
+		}
+
 		// 初始化缓存管理器（增强功能）
 		// 缓存预热功能默认禁用，可通过配置启用
 		cacheManagerEnabled := c.Config.Cache.WarmUpEnabled
@@ -609,6 +620,27 @@ func (c *Core) initSchedulerAndTasks() error {
 
 		// 设置全局数据库访问器，供定时任务使用（必须在同步周期性工单任务之前）
 		scheduler.SetDB(c)
+
+		// Phase 158 / CLEANUP-02：RPA 定时调度接线（sys_rpa_schedules 闭环）。
+		//
+		// 此前该表「零服务零 API」（D18）：模型与表都在，却没有任何 CRUD 入口，
+		// 也没有任何调度注册 —— 写了调度也永远不会到点触发。本处把两端接起来：
+		//   - 服务侧：ScheduleService（CRUD + 到期计算 + 到点触发）
+		//   - 调度侧：每个启用的调度挂一条 cron job（invoke_target=rpa_schedule:{id}）
+		// 到点后由 rpa_schedule handler 调 ScheduleService.TriggerNow —— 与手动触发
+		// 共用 TaskService.Execute 同一执行入口（trigger_type=schedule）。
+		//
+		// 放在调度器初始化处而非 initRPAServices：RPA API 路由是无条件注册的，
+		// 若调度注册被 RPA.Enabled 门控就会出现「能建调度但永不触发」的空档。
+		rpaCredentialSvc := rpa.NewCredentialService(c.GetDB(), c.SM4Cipher, c.Cache)
+		rpaTaskSvc := rpa.NewTaskService(c.GetDB(), c.Cache, rpaCredentialSvc)
+		rpaScheduleSvc := rpa.NewScheduleService(
+			c.GetDB(),
+			rpaTaskSvc,
+			scheduler.NewRPAScheduleJobSyncer(c.Scheduler, c.GetDB()),
+		)
+		scheduler.RegisterRPAScheduleTasks(c.Scheduler, c.GetDB(), rpaScheduleSvc)
+		applogger.Infof("RPA 定时调度注册完成")
 
 		// 同步周期性工单模板到调度器
 		if err := scheduler.SyncPeriodicWorkOrderJobs(c.Scheduler); err != nil {
@@ -1139,6 +1171,19 @@ func (c *Core) initRPAScalingService(rpaConfig *config.RPAConfig) error {
 		ScaleDownCooldown: parseDuration(rpaConfig.Scaling.ScaleDownCooldown, rpaDefaultScaleDownCooldown),
 		ScaleUpLimit:      rpaConfig.Scaling.ScaleUpLimit,
 		EnableMockDocker:  rpaConfig.Scaling.EnableMockDocker,
+		Provider:          rpaConfig.Scaling.Provider, // Phase 157 / FLEET-01: container | vdivm
+	}
+
+	// Phase 157 / FLEET-01: VDI provider 子配置（provider=vdivm 时使用）
+	if rpaConfig.Scaling.Provider == rpa.ProviderVDIVM {
+		vdiCfg := rpa.DefaultVDIProviderConfig()
+		vdiCfg.ServerID = rpaConfig.Scaling.VDI.ServerID
+		vdiCfg.ImageID = rpaConfig.Scaling.VDI.ImageID
+		vdiCfg.DesktopGroup = rpaConfig.Scaling.VDI.DesktopGroup
+		if rpaConfig.Scaling.VDI.VMNamePrefix != "" {
+			vdiCfg.VMNamePrefix = rpaConfig.Scaling.VDI.VMNamePrefix
+		}
+		scalingConfig.VDI = vdiCfg
 	}
 
 	dockerConfig := &rpa.DockerConfig{
@@ -1154,8 +1199,11 @@ func (c *Core) initRPAScalingService(rpaConfig *config.RPAConfig) error {
 		return fmt.Errorf("扩缩容配置无效: %w", err)
 	}
 
-	// 创建扩缩容服务
-	scalingService := rpa.NewScalingService(c.GetDB(), scalingConfig, dockerConfig)
+	// 创建扩缩容服务（未知 provider 值在此报错）
+	scalingService, err := rpa.NewScalingService(c.GetDB(), scalingConfig, dockerConfig)
+	if err != nil {
+		return fmt.Errorf("创建扩缩容服务失败: %w", err)
+	}
 
 	// 启动扩缩容监控
 	if err := scalingService.Start(context.Background()); err != nil {

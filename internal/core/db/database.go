@@ -23,6 +23,7 @@ import (
 	"github.com/xingran-next/xingran-go-backend/internal/models/operations"
 	rpamodels "github.com/xingran-next/xingran-go-backend/internal/models/rpa"
 	sysmodels "github.com/xingran-next/xingran-go-backend/internal/models/system"
+	svcrpa "github.com/xingran-next/xingran-go-backend/internal/services/rpa"
 	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -37,6 +38,11 @@ type Database struct {
 	// 缓存 —— 迁移执行期 c.Cache 尚未创建, 迁移函数内拿不到 cache 实例
 	// (Phase 70 PATTERNS 事实 1 的时序约束)。
 	SettingsMenuComponentChanged bool
+	// MenuPermissionChanged 表示本次启动的菜单权限播种迁移（如 260 补 F 型按钮
+	// 并授权）实际改写了 sys_menu / sys_role_menu。core.go 在缓存服务就绪后按此
+	// 标志失效 user 级菜单缓存（menu:user:perms 等），否则 30min TTL 内前端权限集
+	// 仍是旧快照，用户必须重新登录或等缓存过期才能看到新按钮权限。
+	MenuPermissionChanged bool
 	// migrationLockConn 持有启动期 PG advisory lock 的专用 *sql.Conn。
 	// 仅 AutoMigrate 期间非空;releaseMigrationAdvisoryLock 后重置为 nil。
 	// 不导出,避免外部代码误关连接导致 pg_advisory_unlock noop。
@@ -258,6 +264,12 @@ func (d *Database) sanitizeSQLiteModelDefaults() error {
 	// 该模型在 sqlite 分支注册进 AutoMigrate,故必须一并净化;剥离后由
 	// BeforeCreate 钩子(uuid.New()) 填充 ID,PG 下行为等价。
 	modelsToSanitize = append(modelsToSanitize, &models.DeptOUMapping{})
+	// Phase 155 / LIVEVIEW-05: sys_rpa_audit_logs 的 ID tag 含
+	// default:gen_random_uuid()（PG-only 函数式默认），sqlite 建表报
+	// near "(": syntax error。该模型在 sqlite 分支单独 append 进 migrateList
+	// （不在 MigrateModelList），故必须在此显式纳入净化；剥离后由
+	// AuditLog.BeforeCreate（uuid.New()）填充 ID，PG 下行为等价。
+	modelsToSanitize = append(modelsToSanitize, &rpamodels.AuditLog{})
 	for _, model := range modelsToSanitize {
 		stmt := &gorm.Statement{DB: d.DB}
 		if err := stmt.Parse(model); err != nil {
@@ -893,7 +905,51 @@ func (d *Database) AutoMigrate() error {
 		// default:300/5/0 为常量默认值),无需经过 sanitizeSQLiteModelDefaults 净化。
 		// sys_rpa_schedules/variables/templates 未注册:services/api 无任何运行期
 		// 查询引用,不在本症链路,避免无谓漂移。
+		// ↑ Phase 158 / CLEANUP-02 更新：sys_rpa_schedules 已有运行期查询引用
+		//   （services/rpa/schedule_service.go CRUD + 调度触发），故在此注册；
+		//   sys_rpa_variables/templates 仍无引用，维持不注册。
 		migrateList = append(migrateList, &rpamodels.Task{})
+		// Phase 158 / CLEANUP-01~02：sys_rpa_batch_item_reports（批量执行项报告真值表，
+		// 读侧据此真统计取代 100/95/5 假常量）+ sys_rpa_schedules（定时调度）。
+		// 两模型 tag 均无 PG-only DDL 片段（jsonb 为合法 type-name、default 为常量），
+		// 无需经过 sanitizeSQLiteModelDefaults 净化。PG 分支不注册的原因同上（零漂移）：
+		// PG 新部署由 scripts/dbprovision 建表，存量库由 migration_257 补建。
+		migrateList = append(migrateList,
+			&rpamodels.BatchItemReport{},
+			&rpamodels.Schedule{},
+		)
+		// CONTRACT-04（D4）: 选择器学习两表（sys_rpa_selector_success /
+		// sys_rpa_selector_failure）。模型定义在服务层（services/rpa/selector_learner.go
+		// 的 SelectorSuccessRecord / SelectorFailureRecord），已补 TableName。
+		// 仅 sqlite 分支注册（PG 新部署由 scripts/dbprovision 建表，存量库已有表，
+		// 零漂移原则同上方 RPA 块）。
+		// 两模型 tag 已去掉 PG-only 的 default:gen_random_uuid()（改由
+		// BeforeCreate 应用层填 UUID），故无需 sanitizeSQLiteModelDefaults 净化，
+		// 真实 AutoMigrate 在 sqlite 下可直接建表。
+		migrateList = append(migrateList,
+			&svcrpa.SelectorSuccessRecord{},
+			&svcrpa.SelectorFailureRecord{},
+		)
+		// CONTRACT-01: sys_rpa_credentials / sys_rpa_sessions 历史由归档 SQL
+		// (102_add_rpa_tables.sql 同族) 创建，sqlite 分支此前**从未注册** ——
+		// 全新 sqlite 文件库下凭证 CRUD 直接 "no such table: sys_rpa_credentials"
+		// （即使 cipher 注入修好了也 500）。仅 sqlite 分支注册（PG 零漂移）。
+		// 两模型 tag 已核查：RPACredential 的 check:status IN (0,1) 与
+		// RPASession 的 bool default 均为 sqlite 可接受语法，无 PG-only 片段。
+		migrateList = append(migrateList,
+			&rpamodels.RPACredential{},
+			&rpamodels.RPASession{},
+		)
+		// Phase 153 / RUNTIME-04: sys_rpa_human_interventions 与凭证两表同因
+		// —— sqlite 分支从未注册，干预事件落库直接 "no such table"。模型 tag
+		// （jsonb type-name / default:'pending'）为 sqlite 可接受语法，零漂移
+		// 原则同上方 RPA 块。
+		migrateList = append(migrateList, &svcrpa.HumanInterventionEvent{})
+		// Phase 155 / LIVEVIEW-05：sys_rpa_audit_logs 与上两表同族缺漏 —— sqlite
+		// 分支从未注册，实时画面审计（以及 VDI 审计）落库直接 "no such table"。
+		// 模型 tag 已核查：jsonb type-name 为 sqlite 可接受语法（GORM 归一为 text），
+		// OldValue/NewValue 加了 serializer:json，零漂移原则同上方 RPA 块。
+		migrateList = append(migrateList, &rpamodels.AuditLog{})
 		// sys_oper_log 历史由归档 SQL 创建,PG 存量库已存在;仅 sqlite 分支注册进
 		// AutoMigrate(全新文件库必须建表,否则 operlog.Record 写入报 "no such table")。
 		// PG 不注册的原因同上(零漂移);PG 新部署由 scripts/dbprovision 建表。
@@ -1182,7 +1238,57 @@ func (d *Database) AutoMigrate() error {
 		if err := d.runAndRecord(245, "rpa_permission_f_type_seed", migrations.Migrate245RpaPermissionFTypeSeed); err != nil {
 			applogger.Errorf("rpa 域权限种子迁移失败 (非阻断,留待下次启动): %v", err)
 		}
-		// G4 整改（task-3）：system:backup:remove 备份删除独立码 F 型种子。**非阻断**：
+		// 255：Phase 155 / LIVEVIEW-04 —— RPA 实时画面页面菜单（C 型，父=「RPA 管理」）。
+		// 归属协议第 6 条：live 页面只走 sys_menu seed 注册，前端不改 componentLoader/
+		// DynamicRoutes。不扩权限面（复用 ops:rpa:execution:list）。**非阻断**。
+		if err := d.runAndRecord(255, "rpa_liveview_menu", migrations.Migrate255LiveViewMenu); err != nil {
+			applogger.Errorf("RPA 实时画面菜单播种失败 (非阻断,留待下次启动): %v", err)
+		}
+		// 256：Phase 156 / NOCODE-04 —— 新建自动化任务三步向导页面菜单（C 型，
+		// 父=「RPA 管理」）。归属协议第 6 条：wizard 页面只走 sys_menu seed 注册，
+		// 前端不改 componentLoader/DynamicRoutes。不扩权限面（复用 ops:rpa:task:add）。**非阻断**。
+		if err := d.runAndRecord(256, "rpa_nocode_wizard_menu", migrations.Migrate256NocodeWizardMenu); err != nil {
+			applogger.Errorf("新建任务向导菜单播种失败 (非阻断,留待下次启动): %v", err)
+		}
+		// 257：Phase 158 / CLEANUP-01~02 —— 批量执行项报告表（sys_rpa_batch_item_reports）
+		// + sys_rpa_schedules 补建 + 调度 4 个权限码 F 型播种。**非阻断**：
+		// 建表/播种失败只影响批量报告真统计与调度按钮可见性，不影响既有链路。
+		if err := d.runAndRecord(257, "rpa_batch_report_and_schedule_perm", migrations.Migrate257RPABatchReportAndSchedulePerm); err != nil {
+			applogger.Errorf("RPA 批量报告表与调度权限种子迁移失败 (非阻断,留待下次启动): %v", err)
+		}
+		// 258：Phase 158 / REC-02 —— RPA 定时调度页面菜单（C 型，父=「RPA 管理」，order=18）。
+		// 归属协议第 6 条：schedules 页面只走 sys_menu seed 注册，前端不改
+		// componentLoader/DynamicRoutes。不扩权限面（调度 4 权限码由 257 播种）。**非阻断**。
+		if err := d.runAndRecord(258, "rpa_schedule_menu", migrations.Migrate258RpaScheduleMenu); err != nil {
+			applogger.Errorf("RPA 定时调度菜单播种失败 (非阻断,留待下次启动): %v", err)
+		}
+		// 259：站点品牌信息 seed —— 登录页/侧边栏文案收敛为 sys_config brand.* 可配置项。
+		// 失败只影响品牌可配置化（前端仍有硬编码 fallback），不阻断启动。**非阻断**。
+		if err := d.runAndRecord(259, "brand_config_seed", migrations.Migrate259BrandConfigSeed); err != nil {
+			applogger.Errorf("站点品牌配置种子迁移失败 (非阻断,留待下次启动): %v", err)
+		}
+		// 260：system:config 四个动作细码 F 型播种（孤儿码转正）。
+		// 缺行会让前端权限集不含 view/add/edit/remove → 参数配置与站点品牌按钮恒禁用。
+		// F 行由 grantActionPermissionToParentHoldersChanged 授给持 system:config 的角色。
+		// changed 标志供 core.go 失效 user 级菜单缓存（否则 30min TTL 内前端仍读到旧权限集）。**非阻断**。
+		changed260 := false
+		if err := d.runAndRecord(260, "config_action_permission_f_type_seed", func(db *gorm.DB) error {
+			var err error
+			changed260, err = migrations.Migrate260ConfigActionPermissionFTypeSeed(db)
+			return err
+		}); err != nil {
+			applogger.Errorf("system:config 动作权限种子迁移失败 (非阻断,留待下次启动): %v", err)
+		} else if changed260 {
+			d.MenuPermissionChanged = true
+		}
+		// 261：W7.1 / 缺陷 A —— sys_rpa_tasks.script 里的动作类型别名归一化
+		// （goto/url → navigate）。alias 是 worker 侧兜底，本迁移是数据根治。
+		// **非阻断**：迁移失败只让历史数据保持旧写法（worker 仍能靠 alias 跑通），
+		// 不影响启动与执行；但会记 ERROR 且不写版本号，下次启动重试。
+		if err := d.runAndRecord(261, "rpa_action_type_alias_normalize",
+			migrations.Migrate261RPActionTypeAliasNormalize); err != nil {
+			applogger.Errorf("RPA 动作类型别名归一化迁移失败 (非阻断,留待下次启动): %v", err)
+		}
 		// 缺权限行只让普通角色备份删除 403 / 前端删除按钮不显示；父菜单缺失时迁移内部降级返回 nil。
 		if err := d.runAndRecord(246, "backup_remove_permission_f_type_seed", migrations.Migrate246BackupRemovePermissionFTypeSeed); err != nil {
 			applogger.Errorf("备份删除权限种子迁移失败 (非阻断,留待下次启动): %v", err)
@@ -1365,6 +1471,27 @@ func (d *Database) AutoMigrate() error {
 		// sqlite 分支: G4 整改 system:backup:remove 备份删除独立码 F 型种子（双方言迁移）。**非阻断**。
 		if err := d.runAndRecord(246, "backup_remove_permission_f_type_seed", migrations.Migrate246BackupRemovePermissionFTypeSeed); err != nil {
 			applogger.Errorf("备份删除权限种子迁移失败 (非阻断,留待下次启动): %v", err)
+		}
+		// sqlite 分支: 255 Phase 155 / LIVEVIEW-04 RPA 实时画面菜单（双方言迁移）。**非阻断**。
+		if err := d.runAndRecord(255, "rpa_liveview_menu", migrations.Migrate255LiveViewMenu); err != nil {
+			applogger.Errorf("RPA 实时画面菜单播种失败 (非阻断,留待下次启动): %v", err)
+		}
+		// sqlite 分支: 256 Phase 156 / NOCODE-04 新建任务向导菜单（双方言迁移）。**非阻断**。
+		if err := d.runAndRecord(256, "rpa_nocode_wizard_menu", migrations.Migrate256NocodeWizardMenu); err != nil {
+			applogger.Errorf("新建任务向导菜单播种失败 (非阻断,留待下次启动): %v", err)
+		}
+		// sqlite 分支: 257 Phase 158 / CLEANUP-01~02 批量报告表 + 调度表补建 + 调度权限码播种。**非阻断**。
+		if err := d.runAndRecord(257, "rpa_batch_report_and_schedule_perm", migrations.Migrate257RPABatchReportAndSchedulePerm); err != nil {
+			applogger.Errorf("RPA 批量报告表与调度权限种子迁移失败 (非阻断,留待下次启动): %v", err)
+		}
+		// sqlite 分支: 258 Phase 158 / REC-02 RPA 定时调度页面菜单（双方言迁移）。**非阻断**。
+		if err := d.runAndRecord(258, "rpa_schedule_menu", migrations.Migrate258RpaScheduleMenu); err != nil {
+			applogger.Errorf("RPA 定时调度菜单播种失败 (非阻断,留待下次启动): %v", err)
+		}
+		// sqlite 分支: 261 W7.1 / 缺陷 A RPA 动作类型别名归一化（双方言幂等）。**非阻断**。
+		if err := d.runAndRecord(261, "rpa_action_type_alias_normalize",
+			migrations.Migrate261RPActionTypeAliasNormalize); err != nil {
+			applogger.Errorf("RPA 动作类型别名归一化迁移失败 (非阻断,留待下次启动): %v", err)
 		}
 		// sqlite 分支: 杂项 RBAC F 型种子（task-4，双方言迁移）。**非阻断**。
 		if err := d.runAndRecord(247, "misc_rbac_f_type_seed", migrations.Migrate247MiscRbacFTypeSeed); err != nil {

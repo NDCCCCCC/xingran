@@ -279,3 +279,49 @@ browser:
 ## 许可证
 
 MIT License
+
+<!-- capacity-n: 8 -->
+
+## 容量模型：一 VM 一容器一 Chromium 多 page（Phase 157 / FLEET-02）
+
+> 决策依据与推导全文见 `.planning/notes/261123-rpa-worker-capacity-model.md`；
+> 本节是该决策在部署面的权威配置，与 `docker-compose*.yml`、`configs/config.yaml`
+> 由 `deployments/drift_test.go`（`cd rpa-worker && go test ./deployments/`）锁定一致。
+
+### 模型
+
+**1 VM = 1 Worker 容器 = 1 Chromium = N page**，N = `worker.max_concurrency` = compose 的
+`MAX_CONCURRENCY` = 上方锚点 `capacity-n`（当前 **8**，8GB VM 基准）。
+
+### 为什么不是「一 VM 多容器」
+
+| 乘法 | 一 VM 多容器的问题 |
+|---|---|
+| **shm 乘法** | 每容器独立 shm，随容器数线性叠加；一容器一 Chromium 只需一份 shm（1gb + `--disable-dev-shm-usage`） |
+| **带宽乘法** | screencast/LIVEVIEW 每容器独立出向带宽（单路 ~2–8 Mbps），多容器线性叠加挤爆 VM 出口 |
+| **运维乘法** | 端口/健康检查/日志/升级按容器数翻倍；扩缩容的调度单位应收敛到 VM |
+
+### 扩缩容粒度 = VM，不是容器
+
+生产路径 `rpa.scaling.provider: vdivm`：`ScalingService` 经 `VDIVMProvider` 调
+`internal/services/vdi` 的 `CreateVM/StartVM/StopVM/ListVMs`（服务器配置复用 `sys_vdi_server` 表）。
+VM 启动后轮询 worker 心跳（`sys_rpa_worker.last_heartbeat`），worker 注册上线才算 Provision
+成功，超时自动回收。镜像预装 Chromium + worker + 单容器 systemd 单元，VM 起来即服务。
+
+本地 dev 路径 `rpa.scaling.provider: container`（默认）：沿用 Docker 容器 provider，
+`enable_mock_docker: true` 时用 `NewMockDockerClient`（无 Docker 也可跑通全流程）。
+
+### 8GB VM 基准参数（compose + config.yaml 由漂移校验锁定）
+
+| 参数 | 值 | 说明 |
+|---|---|---|
+| `MAX_CONCURRENCY` / `max_concurrency` | 8 | 容器内并行 page 数 |
+| `shm_size` | 1gb | 配合 CHROME_FLAGS 的 `--disable-dev-shm-usage` |
+| `limits.memory` | 6G | 8GB VM 留 2G 给系统 |
+| `limits.cpus` | '4' | 8GB VM 建议 4 vCPU |
+| `headless` | true | 无头模式 |
+
+### 一 VM 多容器的保留场景
+
+仅多租户 / 多浏览器版本 / 滚动升级不停机时启用：要求 VM ≥ 32GB、每容器 shm ≤ 1GB，
+并在容量实测决策矩阵中单列（见 capacity-model 笔记 §4）。

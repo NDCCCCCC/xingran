@@ -3276,3 +3276,48 @@ body {
   text-align: center;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
 }
+
+/* ==================== 通知中心面板（NotificationBell） ==================== */
+/* 面板：亮色纯白；暗色沿用主题墨绿（硬编码白会毁暗色模式） */
+.notification-panel {
+  background: #ffffff;
+}
+
+[data-color-mode="dark"] .notification-panel {
+  background: var(--theme-bg-primary);
+}
+
+/* 通知列表滚动条：6px 细条、全圆角、透明轨道、中性灰滑块，悬停加深 */
+.notification-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.18) transparent;
+}
+
+.notification-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.notification-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.notification-scroll::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.18);
+  border-radius: 9999px;
+}
+
+.notification-scroll::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(0, 0, 0, 0.32);
+}
+
+[data-color-mode="dark"] .notification-scroll {
+  scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
+}
+
+[data-color-mode="dark"] .notification-scroll::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.22);
+}
+
+[data-color-mode="dark"] .notification-scroll::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(255, 255, 255, 0.36);
+}

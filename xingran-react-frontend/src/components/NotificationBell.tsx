@@ -35,17 +35,14 @@ dayjs.locale("zh-cn");
 const NOTIFICATION_CONTENT_STYLE = {
   width: "400px",
   maxHeight: "480px",
-  background: "var(--theme-bg-primary)",
 } as const;
 
 const HEADER_STYLE = {
   borderBottomColor: "var(--theme-border-primary)",
-  background: "linear-gradient(to bottom, var(--theme-bg-primary), var(--theme-bg-secondary))",
 } as const;
 
 const LIST_CONTAINER_STYLE = {
   maxHeight: "400px",
-  background: "var(--theme-bg-secondary)",
 } as const;
 
 const EMPTY_STYLE = {
@@ -54,7 +51,6 @@ const EMPTY_STYLE = {
 
 const FOOTER_STYLE = {
   borderTopColor: "var(--theme-border-secondary)",
-  background: "var(--theme-bg-tertiary)",
 } as const;
 
 /**
@@ -183,7 +179,7 @@ const NotificationBell: FC = () => {
   // 渲染通知列表
   const notificationContent = (
     <div
-      className="rounded-lg overflow-hidden border border-slate-200 shadow-lg"
+      className="notification-panel rounded-lg overflow-hidden border border-slate-200 shadow-lg"
       style={NOTIFICATION_CONTENT_STYLE}
     >
       {/* 头部 */}
@@ -242,7 +238,7 @@ const NotificationBell: FC = () => {
             />
           </div>
         ) : (
-          <div className="overflow-y-auto" style={LIST_CONTAINER_STYLE}>
+          <div className="overflow-y-auto notification-scroll" style={LIST_CONTAINER_STYLE}>
             {notifications.map((notice, index) => (
               <div
                 key={notice.id}
@@ -253,9 +249,7 @@ const NotificationBell: FC = () => {
                     index < notifications.length - 1
                       ? "1px solid var(--theme-border-secondary)"
                       : "none",
-                  background: !notice.isRead
-                    ? "linear-gradient(to right, var(--theme-primary-light), transparent)"
-                    : "transparent",
+                  background: "transparent",
                   borderLeft: !notice.isRead
                     ? "3px solid var(--theme-primary)"
                     : "3px solid transparent",
@@ -263,7 +257,7 @@ const NotificationBell: FC = () => {
                 onClick={() => handleClickNotification(notice)}
                 onMouseEnter={(e) => {
                   if (!notice.isRead) return;
-                  e.currentTarget.style.background = "var(--theme-primary-light)";
+                  e.currentTarget.style.background = "var(--bg-overlay-hover)";
                 }}
                 onMouseLeave={(e) => {
                   if (!notice.isRead) return;

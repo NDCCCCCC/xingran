@@ -9,45 +9,34 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/redis/go-redis/v9"
 	"github.com/xingran-next/xingran-go-backend/internal/core"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/internal/services/rpa"
 	"github.com/xingran-next/xingran-go-backend/internal/utils/operlog"
 	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"github.com/xingran-next/xingran-go-backend/pkg/middleware"
+	"gorm.io/gorm"
 )
 
 // WorkerHandler Worker 处理器
 type WorkerHandler struct {
 	workerService rpa.WorkerService
-	redisClient   *redis.Client
 	core          *core.Core
 	// tokenSvc DEBT-03：Worker Token 换发服务（nil = 认证未配置，register 不换发）。
 	tokenSvc rpa.WorkerTokenService
 }
 
 // NewWorkerHandler 创建 Worker 处理器
+//
+// Phase 158 / CLEANUP-01：删除「每实例 redis.NewClient」。
+// 此前本构造函数每次都新建一条 Redis 连接（PoolSize=10）且从不 Close，
+// 路由每次装配都会泄漏一个连接池；Redis 发布一律改走 core.Cache
+// （由 rpa.PublishScaleCommand 复用其底层客户端）。
 func NewWorkerHandler(workerService rpa.WorkerService, core *core.Core) *WorkerHandler {
-	// Get Redis client from cache
-	h := &WorkerHandler{
+	return &WorkerHandler{
 		workerService: workerService,
 		core:          core,
 	}
-
-	// Try to get Redis client from cache
-	if cache := core.Cache; cache != nil {
-		// The cache implementation has a client field, but we need to access it
-		// For now, create a new Redis client using config
-		cfg := core.Config
-		h.redisClient = redis.NewClient(&redis.Options{
-			Addr:     fmt.Sprintf("%s:%d", cfg.Cache.Host, cfg.Cache.Port),
-			Password: cfg.Cache.Password,
-			DB:       cfg.Cache.DB,
-			PoolSize: 10,
-		})
-	}
-
-	return h
 }
 
 // WithCore 覆盖 core 依赖（链式调用，供 router 在构造后再次注入用于操作日志埋点）
@@ -77,6 +66,10 @@ func (h *WorkerHandler) List(c *gin.Context) {
 	if !bindAndValidate(c, &params) {
 		return
 	}
+	if !validateListParams(c, params.Validate()) {
+		return
+	}
+	params.Status = normalizeOptionalStringFilter(params.Status)
 
 	setPaginationDefaults(&params.Current, &params.PageSize)
 
@@ -347,16 +340,15 @@ type AutoScaleConfig struct {
 	CheckInterval      int  `json:"check_interval"` // seconds
 }
 
-// GetAutoScaleConfig 获取自动扩缩容配置
-// @Summary 查询自动扩缩容配置
-// @Description 查询 RPA 自动扩缩容配置
-// @Tags RPA管理
-// @Produce json
-// @Success 200 {object} object
-// @Failure 500 {object} object
-// @Router /rpa/workers/autoscale/config [get]
-func (h *WorkerHandler) GetAutoScaleConfig(c *gin.Context) {
-	config := AutoScaleConfig{
+// autoScaleConfigKey 自动扩缩容配置的 sys_config 落库键（Phase 158 / CLEANUP-01）。
+const autoScaleConfigKey = "sys.rpa.autoscale.config"
+
+// defaultAutoScaleConfig 自动扩缩容配置默认值。
+//
+// 这是「首次使用尚未落库」的兜底值，不是假数据：一旦 POST 过配置，
+// GET 即返回落库值（读-改-写路径见 saveAutoScaleConfig）。
+func defaultAutoScaleConfig() *AutoScaleConfig {
+	return &AutoScaleConfig{
 		Enabled:            false,
 		ScaleUpThreshold:   10,
 		ScaleDownThreshold: 5,
@@ -364,12 +356,27 @@ func (h *WorkerHandler) GetAutoScaleConfig(c *gin.Context) {
 		MaxConcurrency:     10,
 		CheckInterval:      30,
 	}
+}
+
+// GetAutoScaleConfig 获取自动扩缩容配置
+// @Summary 查询自动扩缩容配置
+// @Description 查询 RPA 自动扩缩容配置（持久化于 sys_config，重启后仍生效）
+// @Tags RPA管理
+// @Produce json
+// @Success 200 {object} object
+// @Failure 500 {object} object
+// @Router /rpa/workers/autoscale/config [get]
+func (h *WorkerHandler) GetAutoScaleConfig(c *gin.Context) {
+	config, err := h.loadAutoScaleConfig(c.Request.Context())
+	if handleError(c, err, http.StatusInternalServerError, "查询自动扩缩容配置失败") {
+		return
+	}
 	success(c, config)
 }
 
 // UpdateAutoScaleConfig 更新自动扩缩容配置
 // @Summary 更新自动扩缩容配置
-// @Description 更新 RPA 自动扩缩容配置
+// @Description 更新 RPA 自动扩缩容配置（持久化于 sys_config）
 // @Tags RPA管理
 // @Accept json
 // @Produce json
@@ -383,9 +390,92 @@ func (h *WorkerHandler) UpdateAutoScaleConfig(c *gin.Context) {
 		return
 	}
 
+	if err := h.saveAutoScaleConfig(c.Request.Context(), &config); err != nil {
+		handleError(c, err, http.StatusInternalServerError, "保存自动扩缩容配置失败")
+		return
+	}
+
 	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "RPA工作节点", operlog.OperTypeUpdate)
 
 	successMsg(c, "自动扩缩容配置已更新")
+}
+
+// loadAutoScaleConfig 从 sys_config 读取自动扩缩容配置。
+//
+// Phase 158 / CLEANUP-01：此前直接返回硬编码默认值（GET 恒等于常量、POST 丢弃
+// 请求体），是本 phase 的第二处假配置。落库键 = sys.rpa.autoscale.config。
+// 键不存在时返回默认配置（首次使用的兜底；一旦写回，读写即一致）。
+func (h *WorkerHandler) loadAutoScaleConfig(ctx context.Context) (*AutoScaleConfig, error) {
+	config := defaultAutoScaleConfig()
+
+	db := h.core.GetDB()
+	if db == nil {
+		return nil, fmt.Errorf("数据库未初始化")
+	}
+
+	var row models.Config
+	err := db.WithContext(ctx).
+		Where("config_key = ?", autoScaleConfigKey).
+		First(&row).Error
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			// 尚未配置过 → 返回默认值（写回后即为真值）
+			return config, nil
+		}
+		return nil, fmt.Errorf("查询自动扩缩容配置失败: %w", err)
+	}
+
+	if row.ConfigValue == "" {
+		return config, nil
+	}
+	if jErr := json.Unmarshal([]byte(row.ConfigValue), config); jErr != nil {
+		return nil, fmt.Errorf("解析自动扩缩容配置失败: %w", jErr)
+	}
+	return config, nil
+}
+
+// saveAutoScaleConfig 把自动扩缩容配置写入 sys_config（读-改-写，幂等）。
+func (h *WorkerHandler) saveAutoScaleConfig(ctx context.Context, config *AutoScaleConfig) error {
+	db := h.core.GetDB()
+	if db == nil {
+		return fmt.Errorf("数据库未初始化")
+	}
+
+	payload, err := json.Marshal(config)
+	if err != nil {
+		return fmt.Errorf("序列化自动扩缩容配置失败: %w", err)
+	}
+	value := string(payload)
+
+	var row models.Config
+	err = db.WithContext(ctx).
+		Where("config_key = ?", autoScaleConfigKey).
+		First(&row).Error
+	switch {
+	case err == nil:
+		if uErr := db.WithContext(ctx).
+			Model(&models.Config{}).
+			Where("id = ?", row.ID).
+			Update("config_value", value).Error; uErr != nil {
+			return fmt.Errorf("更新自动扩缩容配置失败: %w", uErr)
+		}
+		return nil
+	case err == gorm.ErrRecordNotFound:
+		newRow := &models.Config{
+			ConfigName:  "RPA 自动扩缩容配置",
+			ConfigKey:   autoScaleConfigKey,
+			ConfigValue: value,
+			ConfigType:  models.ConfigTypeYes,
+			IsSystem:    models.ConfigIsSystemNo,
+			Remark:      "Phase 158 / CLEANUP-01：RPA Worker 自动扩缩容参数（GET/POST 真读真写）",
+		}
+		if cErr := db.WithContext(ctx).Create(newRow).Error; cErr != nil {
+			return fmt.Errorf("创建自动扩缩容配置失败: %w", cErr)
+		}
+		return nil
+	default:
+		return fmt.Errorf("查询自动扩缩容配置失败: %w", err)
+	}
 }
 
 // ScaleCommand 扩缩容指令
@@ -399,17 +489,18 @@ type ScaleCommand struct {
 }
 
 // publishScaleCommand 发布扩缩容指令到 Redis
+//
+// Phase 158 / CLEANUP-01：改走 core.Cache 复用底层 Redis 客户端，
+// 删除 handler 持有的独立 *redis.Client（每实例新建连接池 → 泄漏）。
 func (h *WorkerHandler) publishScaleCommand(ctx context.Context, cmd *ScaleCommand) error {
 	channel := "worker:scale:all"
 	if cmd.WorkerID != "" {
 		channel = fmt.Sprintf("worker:scale:%s", cmd.WorkerID)
 	}
 
-	// Use JSON marshal
-	data, err := json.Marshal(cmd)
-	if err != nil {
-		return fmt.Errorf("marshal scale command failed: %w", err)
+	if h.core == nil {
+		return fmt.Errorf("core 未注入，无法发布扩缩容指令")
 	}
 
-	return h.redisClient.Publish(ctx, channel, data).Err()
+	return rpa.PublishScaleCommand(ctx, h.core.Cache, channel, cmd)
 }

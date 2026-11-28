@@ -3,20 +3,22 @@
  */
 
 import type { ColumnsType } from "antd/es/table";
-import { EyeOutlined } from "@ant-design/icons";
+import { EyeOutlined, StopOutlined } from "@ant-design/icons";
 import type { Execution } from "@/types/rpa";
-import ActionButtons from "@/components/shared/ActionButtons";
+import ActionButtons, { type ActionButton } from "@/components/shared/ActionButtons";
 import { renderExecutionStatusTag } from "../constants";
 import { createDateTimeColumn } from "@/utils/tableHelpers";
 
 export interface ExecutionColumnsParams {
   handleViewDetail: (record: Execution) => void;
+  /** RUNTIME-03：行内取消入口（二次确认 + 调 /cancel，落点协议第 4 条） */
+  handleCancel?: (record: Execution) => void;
   /** 由 useServerSort 注入,返回字段当前排序方向 */
   getSortOrder?: (field: string) => "ascend" | "descend" | null;
 }
 
 export function getExecutionColumns(params: ExecutionColumnsParams): ColumnsType<Execution> {
-  const { handleViewDetail, getSortOrder } = params;
+  const { handleViewDetail, handleCancel, getSortOrder } = params;
 
   return [
     {
@@ -115,10 +117,10 @@ export function getExecutionColumns(params: ExecutionColumnsParams): ColumnsType
     {
       title: "操作",
       key: "action",
-      width: 120,
+      width: 160,
       fixed: "right",
       render: (_: unknown, record: Execution) => {
-        const actions = [
+        const actions: ActionButton[] = [
           {
             key: "detail",
             label: "详情",
@@ -126,6 +128,17 @@ export function getExecutionColumns(params: ExecutionColumnsParams): ColumnsType
             onClick: () => handleViewDetail(record),
           },
         ];
+        // RUNTIME-03：仅 pending/running/paused 可取消（终态无出边）
+        const cancellable = ["pending", "running", "paused"].includes(record.status);
+        if (handleCancel && cancellable) {
+          actions.push({
+            key: "cancel",
+            label: "取消",
+            icon: <StopOutlined />,
+            danger: true,
+            onClick: () => handleCancel(record),
+          });
+        }
         return <ActionButtons actions={actions} />;
       },
     },

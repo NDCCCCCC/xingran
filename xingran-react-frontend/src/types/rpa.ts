@@ -12,22 +12,54 @@ import type { PageParams } from "./base";
 export type TaskStatus = "pending" | "running" | "completed" | "failed" | "cancelled";
 
 /**
- * 动作类型
+ * 动作类型全集（与 rpa-worker/internal/types/types.go 的 ActionType 常量严格同源）
+ *
+ * REC-03：这是前端动作类型的**唯一真相源**。历史上这里是手写的联合类型
+ * （只有 13 个值，且混入了 Go 侧根本不存在的 `press`），与 worker 的 26 个
+ * 常量形成双源漂移 —— 前端能表达的动作与 worker 能执行的动作对不上。
+ *
+ * 现在改为「常量数组是真相源、类型由它派生」，类型与值不可能再分叉：
+ *   - 增删动作只改这一个数组；
+ *   - `ActionType` 自动跟随；
+ *   - 任何 `Record<ActionType, string>` 之类的映射表在编译期被迫全覆盖。
+ *
+ * 顺序与 Go 侧 types.go 的常量声明顺序一致（基础动作 → 扩充动作）。
+ * 新增/删除动作必须同步 rpa-worker/internal/types/types.go，
+ * 跨语言一致性由 internal/services/rpa/action_type_consistency_test.go 锁住。
  */
-export type ActionType =
-  | "navigate" // 导航到URL
-  | "click" // 点击元素
-  | "fill" // 填写表单
-  | "select" // 下拉选择
-  | "wait" // 等待
-  | "screenshot" // 截图
-  | "extract" // 提取数据
-  | "scroll" // 滚动
-  | "hover" // 悬停
-  | "press" // 按键
-  | "upload" // 上传文件
-  | "download" // 下载文件
-  | "iframe"; // 切换iframe
+export const RPA_ACTION_TYPES = [
+  "navigate", // 导航到URL
+  "click", // 点击元素
+  "fill", // 填写表单
+  "select", // 下拉选择
+  "wait", // 等待
+  "screenshot", // 截图
+  "extract", // 提取数据
+  "scroll", // 滚动
+  "upload", // 上传文件
+  "download", // 下载文件
+  "evaluate", // 执行页面脚本
+  "waitFor", // 等待元素出现
+  "close", // 关闭页面
+  "loop", // 循环执行
+  "pause", // 暂停待人工
+  "condition", // 条件判断
+  "autologin", // 自动登录
+  "assert", // 断言
+  "hover", // 悬停
+  "doubleClick", // 双击
+  "rightClick", // 右键点击
+  "drag", // 拖拽
+  "keyboard", // 按键
+  "switchTab", // 切换页签
+  "iframe", // 切换内嵌页面
+  "script", // 自定义脚本
+] as const;
+
+/**
+ * 动作类型（由 RPA_ACTION_TYPES 派生，保证类型与值同源）
+ */
+export type ActionType = (typeof RPA_ACTION_TYPES)[number];
 
 /**
  * 选择器类型

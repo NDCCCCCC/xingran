@@ -23,7 +23,7 @@ services:
       # Worker 配置
       - WORKER_ID=${WORKER_ID:-worker-${HOSTNAME}}
       - WORKER_NAME=${WORKER_NAME:-rpa-worker-1}
-      - MAX_CONCURRENCY=${MAX_CONCURRENCY:-5}
+      - MAX_CONCURRENCY=${MAX_CONCURRENCY:-8}
 
       # 后端 API 配置
       - BACKEND_URL=${BACKEND_URL:-http://10.62.10.34:9000/api/v1}
@@ -44,8 +44,8 @@ services:
       - LOG_LEVEL=${LOG_LEVEL:-info}
       - LOG_FORMAT=${LOG_FORMAT:-json}
 
-      # 共享内存配置（Chrome需要）
-      - SHM_SIZE=2gb
+      # 共享内存配置（Chrome 需要；配合 --disable-dev-shm-usage，8GB VM 基准见 README 容量模型）
+      - SHM_SIZE=1gb
     # 移除 depends_on，因为不再依赖本地 Redis
     restart: unless-stopped
     # 使用 host 网络模式以便访问外部服务（可选）
@@ -53,14 +53,14 @@ services:
     # network_mode: host
     networks:
       - rpa-network
-    # 共享内存配置
-    shm_size: 2gb
-    # 资源限制
+    # 共享内存配置（8GB VM 基准：1gb + --disable-dev-shm-usage，见 README 容量模型）
+    shm_size: 1gb
+    # 资源限制（8GB VM：留 2G 给系统，6G 给容器）
     deploy:
       resources:
         limits:
-          memory: 2G
-          cpus: '2'
+          memory: 6G
+          cpus: '4'
         reservations:
           memory: 512M
           cpus: '0.5'
